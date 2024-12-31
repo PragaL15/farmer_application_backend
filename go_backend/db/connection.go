@@ -3,13 +3,10 @@ package db
 import (
     "database/sql"
     "log"
-
-    _ "github.com/lib/pq" // PostgreSQL driver
+    _ "github.com/lib/pq" 
 )
 
 var DB *sql.DB
-
-// ConnectDB establishes a connection to the PostgreSQL database
 func ConnectDB() {
     var err error
     connStr := "user=postgres password=pragalya123 dbname=broker_retailer host=localhost sslmode=disable"

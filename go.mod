@@ -1,4 +1,4 @@
-module go_backend
+module github.com/PragaL15/go_newBackend
 
 go 1.23.1
 

@@ -2,12 +2,13 @@ package handlers
 
 import (
     "github.com/gofiber/fiber/v2"
-    "go_backend/db"
+    "github.com/PragaL15/go_newBackend/go_backend/db"
     "log"
+		"database/sql" 
 )
 
-// GetAllUsers fetches all users from the user_table
 func GetAllUsers(c *fiber.Ctx) error {
+	
     rows, err := db.DB.Query("SELECT * FROM user_table")
     if err != nil {
         log.Printf("Failed to fetch users: %v", err)
@@ -19,11 +20,11 @@ func GetAllUsers(c *fiber.Ctx) error {
     for rows.Next() {
         var user = make(map[string]interface{})
         var userID, userTypeID, mandiID sql.NullInt64
-        var name, mobileNum, email, address, pincode, location, businessLicenseNo, validity, gstNo, businessName, businessType, mandiTypeID sql.NullString
+        var name, mobileNum, email, address, pincode, location, businessLicenseNo, validity, gstNo, businessName, businessType, mandiTypeID, remarks, col1 sql.NullString
         var dtOfCommenceBusiness, expiryDt sql.NullTime
 
         err = rows.Scan(&userID, &userTypeID, &name, &dtOfCommenceBusiness, &mobileNum, &email, &address,
-            &pincode, &location, &businessLicenseNo, &validity, &gstNo, &expiryDt, &businessName, &businessType, &mandiID, &mandiTypeID)
+            &pincode, &location, &businessLicenseNo, &validity, &gstNo, &expiryDt, &businessName, &businessType, &mandiID, &mandiTypeID, &remarks, &col1)
         if err != nil {
             log.Printf("Failed to scan user: %v", err)
             continue
@@ -46,6 +47,8 @@ func GetAllUsers(c *fiber.Ctx) error {
         user["business_type"] = businessType.String
         user["mandi_id"] = mandiID.Int64
         user["mandi_type_id"] = mandiTypeID.String
+        user["remarks"] = remarks.String
+        user["col1"] = col1.String
 
         users = append(users, user)
     }
