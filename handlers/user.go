@@ -4,12 +4,12 @@ import (
     "github.com/gofiber/fiber/v2"
     "github.com/PragaL15/go_newBackend/go_backend/db"
     "log"
-		"database/sql" 
+    "database/sql"
 )
 
 func GetAllUsers(c *fiber.Ctx) error {
-	
-    rows, err := db.DB.Query("SELECT * FROM user_table")
+ 
+	rows, err := db.DB.Query("SELECT * FROM public.get_all_users();")
     if err != nil {
         log.Printf("Failed to fetch users: %v", err)
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch users"})
