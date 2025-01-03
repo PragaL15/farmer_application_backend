@@ -1,3 +1,5 @@
+
+
 CREATE OR REPLACE PROCEDURE get_all_users()
 LANGUAGE plpgsql AS $$
 BEGIN
