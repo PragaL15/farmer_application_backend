@@ -1,7 +1,10 @@
+### Stored procedurals
+1. user_bank_details
+```sql
 package handlers
 import (
     "github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+    "github.com/PragaL15/go_newBackend/go_backend/db"
     "log"
     "database/sql"
 )
@@ -47,3 +50,5 @@ func GetAllUsers(c *fiber.Ctx) error {
     }
     return c.JSON(users)
 }
+```
+---
