@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION manage_user_bank_details(
+CREATE OR REPLACE FUNCTION manage_user_bank_details(user_id integer)
     operation_type VARCHAR, 
     p_id INTEGER DEFAULT NULL,
     p_user_id INTEGER DEFAULT NULL,
