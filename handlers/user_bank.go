@@ -26,7 +26,6 @@ func GetUserBankDetails(c *fiber.Ctx) error {
             account_holder_name, bank_name, branch_name, date_of_creation, status
         FROM manage_user_bank_details($1, 'SELECT', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     `
-
     rows, err := db.DB.Query(query, parsedUserID)
     if err != nil {
         log.Printf("Failed to execute query: %v", err)
