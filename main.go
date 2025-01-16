@@ -11,6 +11,8 @@ func main() {
     db.ConnectDB()
     app := fiber.New()
     app.Get("/users", handlers.GetAllUsers) 
-    app.Get("/user-bankdetails", handlers.GetUserBankDetails) 
+    app.Post("/user-bank-details", handlers.InsertUserBankDetail)
+    app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
+    app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
     log.Fatal(app.Listen(":3000"))
 }
