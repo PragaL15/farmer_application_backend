@@ -7,6 +7,7 @@ import (
 )
 
 var DB *sql.DB
+
 func ConnectDB() {
     var err error
     connStr := "user=postgres password=pragalya123 dbname=broker_retailer host=localhost sslmode=disable"
