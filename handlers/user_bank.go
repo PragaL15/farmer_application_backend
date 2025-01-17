@@ -1,29 +1,33 @@
 package handlers
 
 import (
-    "log"
-    "strconv"
-    "github.com/gofiber/fiber/v2"
-    "github.com/PragaL15/go_newBackend/go_backend/db"
+	"fmt"
+	"log"
+	"strconv"
+
+	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"github.com/gofiber/fiber/v2"
 )
 
 func InsertUserBankDetail(c *fiber.Ctx) error {
     type Request struct {
-        UserID            int    `json:"user_id"`
+        UserID            int    `json:"user_id"` 
         CardNumber        string `json:"card_number"`
         UpiID             string `json:"upi_id"`
         IFSCCode          string `json:"ifsc_code"`
         AccountNumber     string `json:"account_number"`
         AccountHolderName string `json:"account_holder_name"`
         BankName          string `json:"bank_name"`
-        BranchName        string `json:"branch_name"`
+        BranchName        string `json:"branch_name1"`
         Status            bool   `json:"status"`
+        Namea             string `json:"namea"`
+    
     }
     var req Request
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
     }
-
+    fmt.Println(req)
     _, err := db.DB.Exec(`
         SELECT manage_user_bank_details(
             'INSERT',
@@ -40,7 +44,6 @@ func InsertUserBankDetail(c *fiber.Ctx) error {
 
     return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "User bank detail added successfully"})
 }
-
 func UpdateUserBankDetail(c *fiber.Ctx) error {
     type Request struct {
         ID                int    `json:"id"`
@@ -57,7 +60,6 @@ func UpdateUserBankDetail(c *fiber.Ctx) error {
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
     }
-
     _, err := db.DB.Exec(`
         CALL manage_user_bank_details(
             'UPDATE',
