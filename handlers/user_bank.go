@@ -27,8 +27,9 @@ func InsertUserBankDetail(c *fiber.Ctx) error {
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
     }
-    
+
     fmt.Println(req)
+    
     _, err := db.DB.Exec(`
         SELECT manage_user_bank_details(
             'INSERT',
