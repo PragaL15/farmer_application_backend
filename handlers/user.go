@@ -1,12 +1,15 @@
 package handlers
+
 import (
     "github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+    "github.com/PragaL15/go_newBackend/go_backend/db"
     "log"
     "database/sql"
+    "context"
 )
+
 func GetAllUsers(c *fiber.Ctx) error {
-	rows, err := db.DB.Query("SELECT * FROM public.get_all_users();")
+    rows, err := db.Pool.Query(context.Background(), "SELECT * FROM public.get_all_users();")
     if err != nil {
         log.Printf("Failed to fetch users: %v", err)
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch users"})
@@ -20,7 +23,7 @@ func GetAllUsers(c *fiber.Ctx) error {
         var dtOfCommenceBusiness, expiryDt sql.NullTime
         err = rows.Scan(&userID, &userTypeID, &name, &dtOfCommenceBusiness, &mobileNum, &email, &address,
             &pincode, &location, &businessLicenseNo, &validity, &gstNo, &expiryDt, &businessName, &businessType, &mandiID, &mandiTypeID, &remarks, &col1)
-            if err != nil {
+        if err != nil {
             log.Printf("Failed to scan user: %v", err)
             continue
         }

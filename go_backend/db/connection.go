@@ -1,22 +1,24 @@
 package db
 
 import (
-    "database/sql"
+    "context"
     "log"
-    _ "github.com/lib/pq" 
+    "github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *sql.DB
+var Pool *pgxpool.Pool
 
 func ConnectDB() {
     var err error
-    connStr := "user=postgres password=pragalya123 dbname=broker_retailer host=localhost sslmode=disable"
-    DB, err = sql.Open("postgres", connStr)
+    connStr := "postgresql://postgres:pragalya123@localhost:5432/broker_retailer"
+
+    Pool, err = pgxpool.New(context.Background(), connStr)
     if err != nil {
         log.Fatalf("Failed to connect to the database: %v", err)
     }
 
-    if err = DB.Ping(); err != nil {
+
+    if err := Pool.Ping(context.Background()); err != nil {
         log.Fatalf("Failed to ping the database: %v", err)
     }
 
