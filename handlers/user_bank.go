@@ -1,5 +1,4 @@
 package handlers
-
 import (
     "context"
     "github.com/gofiber/fiber/v2"
@@ -8,7 +7,6 @@ import (
     "log"
     "strconv"
 )
-
 func InsertUserBankDetail(c *fiber.Ctx) error {
     type Request struct {
         UserID            int    `json:"user_id" validate:"required,min=1"` 
@@ -88,12 +86,10 @@ func DeleteUserBankDetail(c *fiber.Ctx) error {
     if id == "" {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID is required"})
     }
-
     idInt, err := strconv.Atoi(id)
     if err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
     }
-
     _, err = db.Pool.Exec(context.Background(), `
         CALL manage_user_bank_details(
             'DELETE',
@@ -102,11 +98,9 @@ func DeleteUserBankDetail(c *fiber.Ctx) error {
             NULL
         );
     `, idInt)
-
     if err != nil {
         log.Printf("Failed to delete user bank detail: %v", err)
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete record"})
     }
-
     return c.JSON(fiber.Map{"message": "Record deleted successfully"})
 }
