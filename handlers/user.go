@@ -9,24 +9,27 @@ import (
 )
 
 func GetAllUsers(c *fiber.Ctx) error {
-    rows, err := db.Pool.Query(context.Background(), "SELECT * FROM public.get_all_users();")
+    rows, err := db.Pool.Query(context.Background(), "SELECT * FROM public.user_table;")
     if err != nil {
         log.Printf("Failed to fetch users: %v", err)
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch users"})
     }
     defer rows.Close()
+
     users := []map[string]interface{}{}
     for rows.Next() {
         var user = make(map[string]interface{})
         var userID, userTypeID, mandiID sql.NullInt64
-        var name, mobileNum, email, address, pincode, location, businessLicenseNo, validity, gstNo, businessName, businessType, mandiTypeID, remarks, col1 sql.NullString
+        var name, mobileNum, email, address, pincode, location, businessLicenseNo, validity, gstNo, businessName,state, businessType, mandiTypeID, remarks, col1 , col2 sql.NullString
         var dtOfCommenceBusiness, expiryDt sql.NullTime
+
         err = rows.Scan(&userID, &userTypeID, &name, &dtOfCommenceBusiness, &mobileNum, &email, &address,
-            &pincode, &location, &businessLicenseNo, &validity, &gstNo, &expiryDt, &businessName, &businessType, &mandiID, &mandiTypeID, &remarks, &col1)
+            &pincode, &location, &businessLicenseNo, &validity, &gstNo, &expiryDt, &businessName, &businessType, &mandiID, &mandiTypeID, &remarks, &col1, &col2, &state)
         if err != nil {
             log.Printf("Failed to scan user: %v", err)
             continue
         }
+
         user["user_id"] = userID.Int64
         user["user_type_id"] = userTypeID.Int64
         user["name"] = name.String
@@ -36,6 +39,7 @@ func GetAllUsers(c *fiber.Ctx) error {
         user["address"] = address.String
         user["pincode"] = pincode.String
         user["location"] = location.String
+        user["state"] = location.String
         user["business_license_no"] = businessLicenseNo.String
         user["validity"] = validity.String
         user["gst_no"] = gstNo.String
@@ -46,7 +50,10 @@ func GetAllUsers(c *fiber.Ctx) error {
         user["mandi_type_id"] = mandiTypeID.String
         user["remarks"] = remarks.String
         user["col1"] = col1.String
+        user["col2"] = col2.String
+
         users = append(users, user)
     }
+
     return c.JSON(users)
 }
