@@ -69,19 +69,16 @@ func ConnectDB() {
     config.MaxConnLifetime = time.Duration(maxConnLifetime) * time.Minute
     config.MaxConnIdleTime = time.Duration(maxConnIdleTime) * time.Minute
     config.HealthCheckPeriod = time.Duration(healthCheckPeriod) * time.Minute
-
     Pool, err = pgxpool.NewWithConfig(context.Background(), config)
     if err != nil {
         log.Fatalf("Failed to create connection pool: %v", err)
     }
-
     if err := Pool.Ping(context.Background()); err != nil {
         log.Fatalf("Failed to ping database: %v", err)
     }
 
     log.Println("Database connection pool established successfully!")
 }
-
 func CloseDB() {
     if Pool != nil {
         Pool.Close()
