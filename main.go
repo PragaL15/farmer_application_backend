@@ -50,9 +50,21 @@ func main() {
 	app := fiber.New()
 
 	app.Get("/users", handlers.GetAllUsers)
+
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
+	app.Post("/categoryDetails",handlers.InsertCategory)
+	app.Post("/driverDetails",handlers.InsertDriver)
+	app.Post("/locationDetails",handlers.InsertLocation)
+
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
+	app.Put("/categoryUpdate", handlers.UpdateCategory)
+	app.Put("/driverUpdate", handlers.UpdateDriver)
+	app.Put("/locationUpdate", handlers.UpdateLocation)
+
 	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
+	app.Delete("/categoryDelete/:id", handlers.DeleteCategory)
+	app.Delete("/driverDelete/:id", handlers.DeleteDriver)
+	app.Delete("/locationDelete/:id", handlers.DeleteLocation)
 
 	go func() {
 		logger.Printf("Server is running on port %s", port)
