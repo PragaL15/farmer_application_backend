@@ -60,6 +60,7 @@ func main() {
 	app.Post("/stateDetails",handlers.InsertMasterState)
 	app.Post("/vehicleDetails",handlers.InsertMasterVehicle)
 	app.Post("/violationDetails",handlers.InsertMasterViolation)
+	app.Post("/userTableDetails",handlers.InsertUser)
 
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
 	app.Put("/categoryUpdate", handlers.UpdateCategory)
@@ -70,6 +71,7 @@ func main() {
 	app.Put("/statesUpdate", handlers.UpdateMasterState)
 	app.Put("/vehicleUpdate", handlers.UpdateMasterVehicle)
 	app.Put("/violationUpdate", handlers.UpdateMasterViolation)
+	app.Put("/usertableUpdate", handlers.UpdateUser)
 
 	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
 	app.Delete("/categoryDelete/:id", handlers.DeleteCategory)
@@ -80,6 +82,7 @@ func main() {
 	app.Delete("/stateDelete/:id", handlers.DeleteMasterState)
 	app.Delete("/vehicleDelete/:id", handlers.DeleteMasterVehicle)
 	app.Delete("/violationDelete/:id", handlers.DeleteMasterViolation)
+	app.Delete("/usertableDelete/:id", handlers.DeleteUser)
 
 	go func() {
 		logger.Printf("Server is running on port %s", port)
