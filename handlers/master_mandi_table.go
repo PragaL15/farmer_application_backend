@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
@@ -26,7 +25,6 @@ func InsertMasterMandi(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
 	}
-
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
