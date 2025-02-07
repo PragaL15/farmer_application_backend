@@ -29,7 +29,6 @@ func InsertMasterMandi(c *fiber.Ctx) error {
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	_, err := db.Pool.Exec(context.Background(), `
 		CALL insert_master_mandi($1, $2, $3, $4, $5, $6, $7, $8, $9);
 	`, req.MandiLocation, req.MandiNumber, req.MandiIncharge, req.MandiInchargeNum,

@@ -101,8 +101,6 @@ func DeleteMasterVehicle(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 	}
-
-	// Call stored procedure to delete the vehicle
 	_, err = db.Pool.Exec(context.Background(), `
 		CALL delete_master_vehicle($1);
 	`, idInt)
