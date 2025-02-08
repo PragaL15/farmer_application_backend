@@ -36,32 +36,26 @@ func ConnectDB() {
     if err != nil {
         log.Fatalf("Invalid value for DB_MAX_CONNS: %v", err)
     }
-
     minConns, err := strconv.Atoi(minConnsStr)
     if err != nil {
         log.Fatalf("Invalid value for DB_MIN_CONNS: %v", err)
     }
-
     maxConnLifetime, err := strconv.Atoi(maxConnLifetimeStr)
     if err != nil {
         log.Fatalf("Invalid value for DB_MAX_CONN_LIFETIME: %v", err)
     }
-
     maxConnIdleTime, err := strconv.Atoi(maxConnIdleTimeStr)
     if err != nil {
         log.Fatalf("Invalid value for DB_MAX_CONN_IDLE_TIME: %v", err)
     }
-
     healthCheckPeriod, err := strconv.Atoi(healthCheckPeriodStr)
     if err != nil {
         log.Fatalf("Invalid value for DB_HEALTH_CHECK_PERIOD: %v", err)
     }
-
     config, err := pgxpool.ParseConfig(dbURL)
     if err != nil {
         log.Fatalf("Unable to parse database URL: %v", err)
     }
-
     config.MaxConns = int32(maxConns)
     config.MinConns = int32(minConns)
     config.MaxConnLifetime = time.Duration(maxConnLifetime) * time.Minute
@@ -74,12 +68,11 @@ func ConnectDB() {
     if err := Pool.Ping(context.Background()); err != nil {
         log.Fatalf("Failed to ping database: %v", err)
     }
-
     log.Println("Database connection pool established successfully!")
 }
 func CloseDB() {
     if Pool != nil {
         Pool.Close()
-        log.Println("🔌 Database connection pool closed.")
+        log.Println("Database connection pool closed.")
     }
 }
