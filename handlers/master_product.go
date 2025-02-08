@@ -77,7 +77,6 @@ func DeleteMasterProduct(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 	}
 
-	// Call stored procedure to delete the product
 	_, err = db.Pool.Exec(context.Background(), `
 		CALL delete_master_product($1);
 	`, idInt)
