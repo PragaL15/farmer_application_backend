@@ -18,7 +18,6 @@ func LoadEnv() {
         log.Println("Warning: No .env file found or unable to load.")
     }
 }
-
 func ConnectDB() {
     LoadEnv()
 
@@ -27,7 +26,6 @@ func ConnectDB() {
         dbURL = "postgresql://postgres:pragalya123@localhost:5432/broker_retailer"
         log.Println("Warning: Using default database connection string. Consider using environment variables.")
     }
-
     maxConnsStr := os.Getenv("DB_MAX_CONNS")
     minConnsStr := os.Getenv("DB_MIN_CONNS")
     maxConnLifetimeStr := os.Getenv("DB_MAX_CONN_LIFETIME")
