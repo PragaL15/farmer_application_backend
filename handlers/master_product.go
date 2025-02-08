@@ -76,7 +76,6 @@ func DeleteMasterProduct(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 	}
-
 	_, err = db.Pool.Exec(context.Background(), `
 		CALL delete_master_product($1);
 	`, idInt)
@@ -85,6 +84,5 @@ func DeleteMasterProduct(c *fiber.Ctx) error {
 		log.Printf("Failed to delete product: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete product"})
 	}
-
 	return c.JSON(fiber.Map{"message": "Product deleted successfully"})
 }
