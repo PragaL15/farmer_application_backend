@@ -51,6 +51,7 @@ func main() {
 
 	app.Get("/users", handlers.GetAllUsers)
 
+	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
 	app.Post("/categoryDetails",handlers.InsertCategory)
 	app.Post("/driverDetails",handlers.InsertDriver)
@@ -62,6 +63,7 @@ func main() {
 	app.Post("/violationDetails",handlers.InsertMasterViolation)
 	app.Post("/userTableDetails",handlers.InsertUser)
 
+	//Updating API's
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
 	app.Put("/categoryUpdate", handlers.UpdateCategory)
 	app.Put("/driverUpdate", handlers.UpdateDriver)
@@ -73,6 +75,7 @@ func main() {
 	app.Put("/violationUpdate", handlers.UpdateMasterViolation)
 	app.Put("/usertableUpdate", handlers.UpdateUser)
 
+	//Deleting API's
 	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
 	app.Delete("/categoryDelete/:id", handlers.DeleteCategory)
 	app.Delete("/driverDelete/:id", handlers.DeleteDriver)
