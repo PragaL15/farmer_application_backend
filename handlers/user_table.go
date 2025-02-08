@@ -138,7 +138,6 @@ func UpdateUser(c *fiber.Ctx) error {
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	_, err := db.Pool.Exec(context.Background(), `
 		CALL update_user($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21);
 	`, req.UserID, req.UserTypeID, req.Name, req.DtOfCommenceBusiness, req.MobileNum, req.Email, req.Address, req.Pincode, req.Location, req.BusinessLicenseNo, req.Validity, req.GstNo, req.ExpiryDt, req.BusinessName, req.BusinessType, req.MandiID, req.MandiTypeID, req.Remarks, req.Col1, req.Col2, req.State)
@@ -147,10 +146,8 @@ func UpdateUser(c *fiber.Ctx) error {
 		log.Printf("Failed to update user: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}
-
 	return c.JSON(fiber.Map{"message": "User updated successfully"})
 }
-
 func DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
