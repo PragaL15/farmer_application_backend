@@ -89,12 +89,10 @@ func InsertUser(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
 	}
-
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	_, err := db.Pool.Exec(context.Background(), `
 		CALL insert_user($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20);
 	`, req.UserTypeID, req.Name, req.DtOfCommenceBusiness, req.MobileNum, req.Email, req.Address, req.Pincode, req.Location, req.BusinessLicenseNo, req.Validity, req.GstNo, req.ExpiryDt, req.BusinessName, req.BusinessType, req.MandiID, req.MandiTypeID, req.Remarks, req.Col1, req.Col2, req.State)
