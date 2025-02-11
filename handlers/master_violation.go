@@ -96,6 +96,7 @@ func GetViolations(c *fiber.Ctx) error {
 		log.Printf("Failed to fetch violation records: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch violations"})
 	}
+	
 	defer rows.Close()
 
 	var violations []map[string]interface{}
