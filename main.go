@@ -49,6 +49,7 @@ func main() {
 
 	app := fiber.New()
 
+	//get API's
 	app.Get("/users", handlers.GetAllUsers)
 	app.Get("/getCategories", handlers.GetCategories)
 	app.Get("/getDrivers", handlers.GetDrivers)
@@ -59,6 +60,7 @@ func main() {
 	app.Get("/getVehicles", handlers.GetVehicles)
 	app.Get("/getViolations", handlers.GetViolations)
   
+	
 	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
 	app.Post("/categoryDetails",handlers.InsertCategory)
