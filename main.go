@@ -50,7 +50,15 @@ func main() {
 	app := fiber.New()
 
 	app.Get("/users", handlers.GetAllUsers)
-
+	app.Get("/getCategories", handlers.GetCategories)
+	app.Get("/getDrivers", handlers.GetDrivers)
+	app.Get("/getLocations", handlers.GetLocations)
+	app.Get("/getMandi", handlers.GetMandi)
+	app.Get("/getProducts", handlers.GetProducts)
+	app.Get("/getStates", handlers.GetStates)
+	app.Get("/getVehicles", handlers.GetVehicles)
+	app.Get("/getViolations", handlers.GetViolations)
+  
 	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
 	app.Post("/categoryDetails",handlers.InsertCategory)

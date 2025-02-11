@@ -85,3 +85,30 @@ func DeleteMasterState(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "State deleted successfully"})
 }
+func GetStates(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_states()")
+	if err != nil {
+		log.Printf("Failed to fetch state records: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch states"})
+	}
+	defer rows.Close()
+
+	var states []map[string]interface{}
+
+	for rows.Next() {
+		var id *int
+		var stateName *string
+
+		if err := rows.Scan(&id, &stateName); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		states = append(states, map[string]interface{}{
+			"id":    id,
+			"state": stateName,
+		})
+	}
+
+	return c.JSON(states)
+}

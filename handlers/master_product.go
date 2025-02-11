@@ -86,3 +86,32 @@ func DeleteMasterProduct(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"message": "Product deleted successfully"})
 }
+func GetProducts(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_products()")
+	if err != nil {
+		log.Printf("Failed to fetch product records: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch products"})
+	}
+	defer rows.Close()
+
+	var products []map[string]interface{}
+
+	for rows.Next() {
+		var productID, categoryID, status *int
+		var productName *string
+
+		if err := rows.Scan(&productID, &categoryID, &productName, &status); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		products = append(products, map[string]interface{}{
+			"product_id":   productID,
+			"category_id":  categoryID,
+			"product_name": productName,
+			"status":       status,
+		})
+	}
+
+	return c.JSON(products)
+}

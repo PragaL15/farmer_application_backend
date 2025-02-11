@@ -6,6 +6,7 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
 	"log"
+	"time"
 	"strconv"
 )
 
@@ -93,4 +94,42 @@ func DeleteCategory(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Category deleted successfully"})
+}
+func GetCategories(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_categories()")
+	if err != nil {
+			log.Printf("Failed to fetch categories: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch categories"})
+	}
+	defer rows.Close()
+
+	var categories []map[string]interface{}
+
+	for rows.Next() {
+			var categoryID int
+			var categoryName string
+			var superCatID *int
+			var createdAt, updatedAt time.Time
+			var col1, col2, remarks *string
+
+			if err := rows.Scan(&categoryID, &categoryName, &superCatID, &createdAt, &updatedAt, &col1, &col2, &remarks); err != nil {
+					log.Printf("Error scanning row: %v", err)
+					return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+			}
+
+			category := map[string]interface{}{
+					"category_id":   categoryID,
+					"category_name": categoryName,
+					"super_cat_id":  superCatID,
+					"created_at":    createdAt.Format(time.RFC3339), // Convert to string
+					"updated_at":    updatedAt.Format(time.RFC3339), // Convert to string
+					"col1":          col1,
+					"col2":          col2,
+					"remarks":       remarks,
+			}
+
+			categories = append(categories, category)
+	}
+
+	return c.JSON(categories)
 }

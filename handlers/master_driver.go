@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
-
+"time"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
@@ -120,4 +120,66 @@ func DeleteDriver(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Driver deleted successfully"})
+}
+
+func GetDrivers(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_drivers()")
+	if err != nil {
+		log.Printf("Failed to fetch drivers: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch drivers"})
+	}
+	defer rows.Close()
+
+	var drivers []map[string]interface{}
+
+	for rows.Next() {
+		var driverID, driverAge, experienceYears, vehicleID, assignedRouteID, violation *int
+		var driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, col1, col2 *string
+		var dateOfJoining, licenseExpiryDate, d_o_b *time.Time
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(
+			&driverID, &driverName, &driverAge, &driverLicense, &driverNumber,
+			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears, &vehicleID,
+			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &createdAt, &col1, &col2,
+			&d_o_b, &violation, &updatedAt,
+		); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		driver := map[string]interface{}{
+			"driver_id":           driverID,
+			"driver_name":         driverName,
+			"driver_age":          driverAge,
+			"driver_license":      driverLicense,
+			"driver_number":       driverNumber,
+			"driver_address":      driverAddress,
+			"driver_status":       driverStatus,
+			"date_of_joining":     formatDate(dateOfJoining),
+			"experience_years":    experienceYears,
+			"vehicle_id":          vehicleID,
+			"license_expiry_date": formatDate(licenseExpiryDate),
+			"emergency_contact":   emergencyContact,
+			"assigned_route_id":   assignedRouteID,
+			"created_at":          createdAt.Format(time.RFC3339),
+			"col1":                col1,
+			"col2":                col2,
+			"d_o_b":               formatDate(d_o_b),
+			"violation":           violation,
+			"updated_at":          updatedAt.Format(time.RFC3339),
+		}
+
+		drivers = append(drivers, driver)
+	}
+
+	return c.JSON(drivers)
+}
+
+// formatDate handles nil time values
+func formatDate(t *time.Time) interface{} {
+	if t == nil {
+		return nil
+	}
+	return t.Format("2006-01-02")
 }

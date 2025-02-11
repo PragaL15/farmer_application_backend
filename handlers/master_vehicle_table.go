@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
-
+"time"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
@@ -113,3 +113,51 @@ func DeleteMasterVehicle(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Vehicle deleted successfully"})
 }
 
+func GetVehicles(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_vehicles()")
+	if err != nil {
+		log.Printf("Failed to fetch vehicle records: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch vehicles"})
+	}
+	defer rows.Close()
+
+	var vehicles []map[string]interface{}
+
+	for rows.Next() {
+		var vehicleID, insuranceID, vehicleMake, vehicleModel, vehicleEngineType, vehicleInsuranceID *int
+		var vehicleName, vehicleManufactureYear, vehicleWarranty, vehicleRegistrationNo, vehicleColor, col1, col2, col3 *string
+		var vehiclePurchaseDate *time.Time
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(
+			&vehicleID, &insuranceID, &vehicleName, &vehicleManufactureYear, &vehicleWarranty, 
+			&vehicleMake, &vehicleModel, &vehicleRegistrationNo, &vehicleEngineType, &vehiclePurchaseDate, 
+			&vehicleColor, &col1, &col2, &col3, &createdAt, &updatedAt, &vehicleInsuranceID,
+		); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		vehicles = append(vehicles, map[string]interface{}{
+			"vehicle_id":           vehicleID,
+			"insurance_id":         insuranceID,
+			"vehicle_name":         vehicleName,
+			"vehicle_manufacture_year": vehicleManufactureYear,
+			"vehicle_warranty":     vehicleWarranty,
+			"vehicle_make":         vehicleMake,
+			"vehicle_model":        vehicleModel,
+			"vehicle_registration_no": vehicleRegistrationNo,
+			"vehicle_engine_type":  vehicleEngineType,
+			"vehicle_purchase_date": vehiclePurchaseDate,
+			"vehicle_color":        vehicleColor,
+			"col1":                 col1,
+			"col2":                 col2,
+			"col3":                 col3,
+			"created_at":           createdAt.Format(time.RFC3339),
+			"updated_at":           updatedAt.Format(time.RFC3339),
+			"vehicle_insurance_id": vehicleInsuranceID,
+		})
+	}
+
+	return c.JSON(vehicles)
+}

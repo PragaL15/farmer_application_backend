@@ -90,3 +90,32 @@ func DeleteMasterViolation(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Violation deleted successfully"})
 }
+func GetViolations(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_violations()")
+	if err != nil {
+		log.Printf("Failed to fetch violation records: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch violations"})
+	}
+	defer rows.Close()
+
+	var violations []map[string]interface{}
+
+	for rows.Next() {
+		var id, status *int
+		var violationName, levelOfSerious *string
+
+		if err := rows.Scan(&id, &violationName, &levelOfSerious, &status); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		violations = append(violations, map[string]interface{}{
+			"id":               id,
+			"violation_name":   violationName,
+			"level_of_serious": levelOfSerious,
+			"status":           status,
+		})
+	}
+
+	return c.JSON(violations)
+}

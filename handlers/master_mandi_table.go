@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"log"
+	"time"
 	"strconv"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
@@ -99,4 +100,47 @@ func DeleteMasterMandi(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Mandi deleted successfully"})
+}
+func GetMandi(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_mandis()")
+	if err != nil {
+		log.Printf("Failed to fetch mandi records: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch mandi records"})
+	}
+	defer rows.Close()
+
+	var mandis []map[string]interface{}
+
+	for rows.Next() {
+		var mandiID, mandiCity, mandiState *int
+		var mandiLocation, mandiNumber, mandiIncharge, mandiInchargeNum, mandiPincode, mandiAddress, remarks *string
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(
+			&mandiID, &mandiLocation, &mandiNumber, &mandiIncharge, &mandiInchargeNum,
+			&mandiPincode, &mandiAddress, &createdAt, &updatedAt, &remarks, &mandiCity, &mandiState,
+		); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		mandi := map[string]interface{}{
+			"mandi_id":           mandiID,
+			"mandi_location":     mandiLocation,
+			"mandi_number":       mandiNumber,
+			"mandi_incharge":     mandiIncharge,
+			"mandi_incharge_num": mandiInchargeNum,
+			"mandi_pincode":      mandiPincode,
+			"mandi_address":      mandiAddress,
+			"created_at":         createdAt.Format(time.RFC3339),
+			"updated_at":         updatedAt.Format(time.RFC3339),
+			"remarks":            remarks,
+			"mandi_city":         mandiCity,
+			"mandi_state":        mandiState,
+		}
+
+		mandis = append(mandis, mandi)
+	}
+
+	return c.JSON(mandis)
 }

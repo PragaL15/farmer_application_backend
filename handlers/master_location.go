@@ -87,3 +87,32 @@ func DeleteLocation(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Location deleted successfully"})
 }
+
+
+func GetLocations(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_locations()")
+	if err != nil {
+		log.Printf("Failed to fetch locations: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch locations"})
+	}
+	defer rows.Close()
+
+	var locations []map[string]interface{}
+
+	for rows.Next() {
+		var id int
+		var location *string
+
+		if err := rows.Scan(&id, &location); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		locations = append(locations, map[string]interface{}{
+			"id":       id,
+			"location": location,
+		})
+	}
+
+	return c.JSON(locations)
+}
