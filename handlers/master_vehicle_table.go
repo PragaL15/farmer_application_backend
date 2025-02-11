@@ -158,6 +158,5 @@ func GetVehicles(c *fiber.Ctx) error {
 			"vehicle_insurance_id": vehicleInsuranceID,
 		})
 	}
-
 	return c.JSON(vehicles)
 }
