@@ -98,18 +98,19 @@ func GetProducts(c *fiber.Ctx) error {
 
 	for rows.Next() {
 		var productID, categoryID, status *int
-		var productName *string
+		var productName, categoryName *string
 
-		if err := rows.Scan(&productID, &categoryID, &productName, &status); err != nil {
+		if err := rows.Scan(&productID, &categoryID, &categoryName, &productName, &status); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
 		products = append(products, map[string]interface{}{
-			"product_id":   productID,
-			"category_id":  categoryID,
-			"product_name": productName,
-			"status":       status,
+			"product_id":    productID,
+			"category_id":   categoryID,
+			"category_name": categoryName,
+			"product_name":  productName,
+			"status":        status,
 		})
 	}
 
