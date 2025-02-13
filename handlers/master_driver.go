@@ -133,14 +133,17 @@ func GetDrivers(c *fiber.Ctx) error {
 	var drivers []map[string]interface{}
 
 	for rows.Next() {
-		var driverID, driverAge, experienceYears, vehicleID, assignedRouteID, violation *int
-		var driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, col1, col2 *string
-		var dateOfJoining, licenseExpiryDate, d_o_b *time.Time
-		var createdAt, updatedAt time.Time
+		var (
+			driverID, driverAge, experienceYears, vehicleID, assignedRouteID, violation *int
+			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, col1, col2, vehicleName *string
+			dateOfJoining, licenseExpiryDate, d_o_b *time.Time
+			createdAt, updatedAt time.Time
+		)
 
 		if err := rows.Scan(
 			&driverID, &driverName, &driverAge, &driverLicense, &driverNumber,
 			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears, &vehicleID,
+			&vehicleName, // New field added
 			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &createdAt, &col1, &col2,
 			&d_o_b, &violation, &updatedAt,
 		); err != nil {
@@ -159,6 +162,7 @@ func GetDrivers(c *fiber.Ctx) error {
 			"date_of_joining":     formatDate(dateOfJoining),
 			"experience_years":    experienceYears,
 			"vehicle_id":          vehicleID,
+			"vehicle_name":        vehicleName, // New field included
 			"license_expiry_date": formatDate(licenseExpiryDate),
 			"emergency_contact":   emergencyContact,
 			"assigned_route_id":   assignedRouteID,
