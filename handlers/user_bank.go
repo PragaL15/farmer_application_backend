@@ -63,7 +63,6 @@ func UpdateUserBankDetail(c *fiber.Ctx) error {
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
     }
-
     _, err := db.Pool.Exec(context.Background(), `
         CALL manage_user_bank_details(
             'UPDATE',
@@ -77,7 +76,6 @@ func UpdateUserBankDetail(c *fiber.Ctx) error {
         log.Printf("Failed to update user bank detail: %v", err)
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user bank detail"})
     }
-
     return c.JSON(fiber.Map{"message": "User bank detail updated successfully"})
 }
 
