@@ -85,6 +85,7 @@ func DeleteMasterState(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "State deleted successfully"})
 }
+
 func GetStates(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_states()")
 	if err != nil {

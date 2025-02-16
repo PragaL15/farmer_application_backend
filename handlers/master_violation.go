@@ -117,6 +117,5 @@ func GetViolations(c *fiber.Ctx) error {
 			"status":           status,
 		})
 	}
-
 	return c.JSON(violations)
 }

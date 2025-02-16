@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"log"
-	"time"
 	"strconv"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
@@ -114,11 +113,11 @@ func GetMandi(c *fiber.Ctx) error {
 	for rows.Next() {
 		var mandiID, mandiCity, mandiState *int
 		var mandiLocation, mandiNumber, mandiIncharge, mandiInchargeNum, mandiPincode, mandiAddress, remarks *string
-		var createdAt, updatedAt time.Time
+		
 
 		if err := rows.Scan(
 			&mandiID, &mandiLocation, &mandiNumber, &mandiIncharge, &mandiInchargeNum,
-			&mandiPincode, &mandiAddress, &createdAt, &updatedAt, &remarks, &mandiCity, &mandiState,
+			&mandiPincode, &mandiAddress, &remarks, &mandiCity, &mandiState,
 		); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
@@ -132,8 +131,6 @@ func GetMandi(c *fiber.Ctx) error {
 			"mandi_incharge_num": mandiInchargeNum,
 			"mandi_pincode":      mandiPincode,
 			"mandi_address":      mandiAddress,
-			"created_at":         createdAt.Format(time.RFC3339),
-			"updated_at":         updatedAt.Format(time.RFC3339),
 			"remarks":            remarks,
 			"mandi_city":         mandiCity,
 			"mandi_state":        mandiState,

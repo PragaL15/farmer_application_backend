@@ -6,7 +6,7 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
 	"log"
-	"time"
+	
 	"strconv"
 )
 
@@ -14,9 +14,6 @@ func InsertCategory(c *fiber.Ctx) error {
 	type Request struct {
 		CategoryName string `json:"category_name" validate:"required,max=255"`
 		SuperCatID   *int   `json:"super_cat_id"`
-		Col1         string `json:"col1"`
-		Col2         string `json:"col2"`
-		Remarks      string `json:"remarks"`
 	}
 
 	var req Request
@@ -30,8 +27,8 @@ func InsertCategory(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(), `
-		CALL insert_category($1, $2, $3, $4, $5);
-	`, req.CategoryName, req.SuperCatID, req.Col1, req.Col2, req.Remarks)
+		CALL insert_category($1, $2);
+	`, req.CategoryName, req.SuperCatID)
 
 	if err != nil {
 		log.Printf("Failed to insert category: %v", err)
@@ -46,9 +43,6 @@ func UpdateCategory(c *fiber.Ctx) error {
 		CategoryID   int    `json:"category_id" validate:"required,min=1"`
 		CategoryName string `json:"category_name" validate:"required,max=255"`
 		SuperCatID   *int   `json:"super_cat_id"`
-		Col1         string `json:"col1"`
-		Col2         string `json:"col2"`
-		Remarks      string `json:"remarks"`
 	}
 
 	var req Request
@@ -62,8 +56,8 @@ func UpdateCategory(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(), `
-		CALL update_category($1, $2, $3, $4, $5, $6);
-	`, req.CategoryID, req.CategoryName, req.SuperCatID, req.Col1, req.Col2, req.Remarks)
+		CALL update_category($1, $2, $3);
+	`, req.CategoryID, req.CategoryName, req.SuperCatID)
 
 	if err != nil {
 		log.Printf("Failed to update category: %v", err)
@@ -109,10 +103,9 @@ func GetCategories(c *fiber.Ctx) error {
 			var categoryID int
 			var categoryName string
 			var superCatID *int
-			var createdAt, updatedAt time.Time
-			var col1, col2, remarks *string
+	
 
-			if err := rows.Scan(&categoryID, &categoryName, &superCatID, &createdAt, &updatedAt, &col1, &col2, &remarks); err != nil {
+			if err := rows.Scan(&categoryID, &categoryName, &superCatID); err != nil {
 					log.Printf("Error scanning row: %v", err)
 					return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 			}
@@ -121,11 +114,7 @@ func GetCategories(c *fiber.Ctx) error {
 					"category_id":   categoryID,
 					"category_name": categoryName,
 					"super_cat_id":  superCatID,
-					"created_at":    createdAt.Format(time.RFC3339), // Convert to string
-					"updated_at":    updatedAt.Format(time.RFC3339), // Convert to string
-					"col1":          col1,
-					"col2":          col2,
-					"remarks":       remarks,
+					
 			}
 
 			categories = append(categories, category)

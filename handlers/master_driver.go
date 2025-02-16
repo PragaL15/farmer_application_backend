@@ -122,6 +122,7 @@ func DeleteDriver(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Driver deleted successfully"})
 }
 
+
 func GetDrivers(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_drivers()")
 	if err != nil {
@@ -135,17 +136,15 @@ func GetDrivers(c *fiber.Ctx) error {
 	for rows.Next() {
 		var (
 			driverID, driverAge, experienceYears, vehicleID, assignedRouteID, violation *int
-			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, col1, col2, vehicleName *string
+			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, vehicleName *string
 			dateOfJoining, licenseExpiryDate, d_o_b *time.Time
-			createdAt, updatedAt time.Time
 		)
 
 		if err := rows.Scan(
 			&driverID, &driverName, &driverAge, &driverLicense, &driverNumber,
 			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears, &vehicleID,
-			&vehicleName, // New field added
-			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &createdAt, &col1, &col2,
-			&d_o_b, &violation, &updatedAt,
+			&vehicleName, // Newly added field
+			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &d_o_b, &violation,
 		); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
@@ -162,16 +161,12 @@ func GetDrivers(c *fiber.Ctx) error {
 			"date_of_joining":     formatDate(dateOfJoining),
 			"experience_years":    experienceYears,
 			"vehicle_id":          vehicleID,
-			"vehicle_name":        vehicleName, // New field included
+			"vehicle_name":        vehicleName, // Included in response
 			"license_expiry_date": formatDate(licenseExpiryDate),
 			"emergency_contact":   emergencyContact,
 			"assigned_route_id":   assignedRouteID,
-			"created_at":          createdAt.Format(time.RFC3339),
-			"col1":                col1,
-			"col2":                col2,
 			"d_o_b":               formatDate(d_o_b),
 			"violation":           violation,
-			"updated_at":          updatedAt.Format(time.RFC3339),
 		}
 
 		drivers = append(drivers, driver)

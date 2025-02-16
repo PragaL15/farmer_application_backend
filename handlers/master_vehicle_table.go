@@ -126,15 +126,14 @@ func GetVehicles(c *fiber.Ctx) error {
 	for rows.Next() {
 		var vehicleID, insuranceID, vehicleMake, vehicleModel, vehicleEngineType, vehicleInsuranceID *int
 		var vehicleMakeName, vehicleModelName, vehicleEngineTypeName *string
-		var vehicleName, vehicleManufactureYear, vehicleWarranty, vehicleRegistrationNo, vehicleColor, col1, col2, col3 *string
+		var vehicleName, vehicleManufactureYear, vehicleWarranty, vehicleRegistrationNo, vehicleColor*string
 		var vehiclePurchaseDate *time.Time
-		var createdAt, updatedAt time.Time
 
 		if err := rows.Scan(
 			&vehicleID, &insuranceID, &vehicleName, &vehicleManufactureYear, &vehicleWarranty,
 			&vehicleMake, &vehicleMakeName, &vehicleModel, &vehicleModelName, &vehicleRegistrationNo,
 			&vehicleEngineType, &vehicleEngineTypeName, &vehiclePurchaseDate, &vehicleColor,
-			&col1, &col2, &col3, &createdAt, &updatedAt, &vehicleInsuranceID,
+		 &vehicleInsuranceID,
 		); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
@@ -155,11 +154,6 @@ func GetVehicles(c *fiber.Ctx) error {
 			"vehicle_engine_type_name": vehicleEngineTypeName,
 			"vehicle_purchase_date":   vehiclePurchaseDate,
 			"vehicle_color":           vehicleColor,
-			"col1":                    col1,
-			"col2":                    col2,
-			"col3":                    col3,
-			"created_at":              createdAt.Format(time.RFC3339),
-			"updated_at":              updatedAt.Format(time.RFC3339),
 			"vehicle_insurance_id":    vehicleInsuranceID,
 		})
 	}
