@@ -43,6 +43,7 @@ func UpdateCategory(c *fiber.Ctx) error {
 		CategoryID   int    `json:"category_id" validate:"required,min=1"`
 		CategoryName string `json:"category_name" validate:"required,max=255"`
 		SuperCatID   *int   `json:"super_cat_id"`
+		
 	}
 
 	var req Request
