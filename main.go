@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv" 
+	"github.com/joho/godotenv"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/PragaL15/go_newBackend/handlers"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func createLogger() (*log.Logger, *os.File) {
@@ -34,20 +35,22 @@ func createLogger() (*log.Logger, *os.File) {
 }
 
 func main() {
-	_ = godotenv.Load() 
+	_ = godotenv.Load()
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "3000" 
+		port = "3000"
 	}
 
 	logger, logFile := createLogger()
-	defer logFile.Close() 
+	defer logFile.Close()
 	logger.Println(" Server is starting...")
 
 	db.ConnectDB()
 	defer db.CloseDB()
 
 	app := fiber.New()
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:8100",}))
 
 	//get API's
 	app.Get("/users", handlers.GetAllUsers)
@@ -97,6 +100,8 @@ func main() {
 	app.Delete("/violationDelete/:id", handlers.DeleteMasterViolation)
 	app.Delete("/usertableDelete/:id", handlers.DeleteUser)
 
+	//Fetching API's
+	app.Get("/super-categories", handlers.GetSuperCategories)
 	go func() {
 		logger.Printf("Server is running on port %s", port)
 		if err := app.Listen(":" + port); err != nil {
