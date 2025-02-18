@@ -20,17 +20,14 @@ func InsertCategory(c *fiber.Ctx) error {
 		Col2         string `json:"col2"`
 		Remarks      string `json:"remarks"`
 	}
-
 	var req Request
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
 	}
-
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	if req.SuperCatID.Int64 == -1 {
 		req.SuperCatID = null.IntFromPtr(nil)
 	}
