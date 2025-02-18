@@ -6,14 +6,18 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
 	"log"
-	
 	"strconv"
+	"github.com/guregu/null/v5"
+
 )
 
 func InsertCategory(c *fiber.Ctx) error {
 	type Request struct {
 		CategoryName string `json:"category_name" validate:"required,max=255"`
-		SuperCatID   *int   `json:"super_cat_id"`
+		SuperCatID   null.Int   `json:"super_cat_id"`
+		Col1         string `json:"col1"`
+		Col2         string `json:"col2"`
+		Remarks      string `json:"remarks"`
 	}
 
 	var req Request
@@ -24,6 +28,10 @@ func InsertCategory(c *fiber.Ctx) error {
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if req.SuperCatID.Int64 == -1 {
+		req.SuperCatID = null.IntFromPtr(nil)
 	}
 
 	_, err := db.Pool.Exec(context.Background(), `
@@ -43,7 +51,9 @@ func UpdateCategory(c *fiber.Ctx) error {
 		CategoryID   int    `json:"category_id" validate:"required,min=1"`
 		CategoryName string `json:"category_name" validate:"required,max=255"`
 		SuperCatID   *int   `json:"super_cat_id"`
-		
+		Col1         string `json:"col1"`
+		Col2         string `json:"col2"`
+		Remarks      string `json:"remarks"`
 	}
 
 	var req Request
@@ -90,35 +100,32 @@ func DeleteCategory(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Category deleted successfully"})
 }
-func GetCategories(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_categories()")
+
+func GetSuperCategories(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT category_id,category_name,super_cat_id,remarks FROM master_category_table where super_cat_id is null;
+	`)
 	if err != nil {
-			log.Printf("Failed to fetch categories: %v", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch categories"})
+		log.Printf("Failed to fetch categories: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch categories"})
 	}
 	defer rows.Close()
 
-	var categories []map[string]interface{}
+	type Category struct {
+		CategoryID   int    `json:"category_id"`
+		CategoryName string `json:"category_name"`
+		SuperCatID   null.Int   `json:"super_cat_id"`
+		Remarks      string `json:"remarks"`
+	}
 
+	categories := make([]Category, 0)
 	for rows.Next() {
-			var categoryID int
-			var categoryName string
-			var superCatID *int
-	
-
-			if err := rows.Scan(&categoryID, &categoryName, &superCatID); err != nil {
-					log.Printf("Error scanning row: %v", err)
-					return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
-			}
-
-			category := map[string]interface{}{
-					"category_id":   categoryID,
-					"category_name": categoryName,
-					"super_cat_id":  superCatID,
-					
-			}
-
-			categories = append(categories, category)
+		var category Category
+		if err := rows.Scan(&category.CategoryID, &category.CategoryName, &category.SuperCatID,  &category.Remarks); err != nil {
+			log.Printf("Failed to scan category: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch categories"})
+		}
+		categories = append(categories, category)
 	}
 
 	return c.JSON(categories)

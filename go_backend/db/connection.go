@@ -8,7 +8,7 @@ import (
     "time"
 
     "github.com/jackc/pgx/v5/pgxpool"
-    "github.com/joho/godotenv" 
+    "github.com/joho/godotenv"
 )
 
 var Pool *pgxpool.Pool
