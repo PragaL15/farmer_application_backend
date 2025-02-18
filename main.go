@@ -54,11 +54,11 @@ func main() {
 	app.Get("/getCategories", handlers.GetCategories)
 	app.Get("/getDrivers", handlers.GetDrivers)
 	app.Get("/getLocations", handlers.GetLocations)
-	app.Get("/getMandi", handlers.GetMandi)
-	app.Get("/getProducts", handlers.GetProducts)
+	app.Get("/getMandis", handlers.GetMandi)
+	app.Get("/getProducts", handlers.GetProducts) // -> Based on the categories
 	app.Get("/getStates", handlers.GetStates)
 	app.Get("/getVehicles", handlers.GetVehicles)
-	app.Get("/getViolations", handlers.GetViolations)
+	app.Get("/getViolations", handlers.GetViolations) // -> 
   
 	
 	//posting API's
