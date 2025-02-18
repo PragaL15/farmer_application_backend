@@ -122,21 +122,17 @@ func GetCategories(c *fiber.Ctx) error {
 		var category Category
 		var superCatID sql.NullInt32
 		var remarks sql.NullString
-
 		if err := rows.Scan(&category.CategoryID, &category.CategoryName, &superCatID, &remarks); err != nil {
 			log.Printf("Failed to scan category: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process categories"})
 		}
-
 		category.SuperCatID = int(superCatID.Int32) 
 		if !remarks.Valid {
 			category.Remarks = "No remarks" 
 		} else {
 			category.Remarks = remarks.String
 		}
-
 		categories = append(categories, category)
 	}
-
 	return c.JSON(categories)
 }
