@@ -75,6 +75,7 @@ func main() {
 	app.Post("/userTableDetails",handlers.InsertUser)
 	app.Post("/businessDetails",handlers.InsertBusiness)
 
+
 	//Updating API's
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
 	app.Put("/categoryUpdate", handlers.UpdateCategory)
@@ -88,6 +89,7 @@ func main() {
 	app.Put("/usertableUpdate", handlers.UpdateUser)
 	app.Put("/businessUpdate", handlers.UpdateBusiness)
 
+	
 	//Deleting API's
 	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
 	app.Delete("/categoryDelete/:id", handlers.DeleteCategory)
