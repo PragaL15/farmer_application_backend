@@ -130,26 +130,21 @@ func GetDrivers(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch drivers"})
 	}
 	defer rows.Close()
-
 	var drivers []map[string]interface{}
-
 	for rows.Next() {
 		var (
 			driverID, driverAge, experienceYears, assignedRouteID int
-			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, vehicleName *string
+			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact *string
 			dateOfJoining, licenseExpiryDate, d_o_b *time.Time
 		)
-
 		if err := rows.Scan(
 			&driverID, &driverName, &driverAge, &driverLicense, &driverNumber,
 			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears,
-			&vehicleName, 
 			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &d_o_b,
 		); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
-
 		driver := map[string]interface{}{
 			"driver_id":           driverID,
 			"driver_name":         driverName,
@@ -160,16 +155,13 @@ func GetDrivers(c *fiber.Ctx) error {
 			"driver_status":       driverStatus,
 			"date_of_joining":     formatDate(dateOfJoining),
 			"experience_years":    experienceYears,
-			"vehicle_name":        vehicleName, 
 			"license_expiry_date": formatDate(licenseExpiryDate),
 			"emergency_contact":   emergencyContact,
 			"assigned_route_id":   assignedRouteID,
 			"d_o_b":               formatDate(d_o_b),
 		}
-
 		drivers = append(drivers, driver)
 	}
-
 	return c.JSON(drivers)
 }
 
@@ -179,3 +171,9 @@ func formatDate(t *time.Time) interface{} {
 	}
 	return t.Format("2006-01-02")
 }
+
+
+
+
+
+
