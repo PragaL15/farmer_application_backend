@@ -60,7 +60,8 @@ func main() {
 	app.Get("/getVehicles", handlers.GetVehicles)
 	app.Get("/getViolations", handlers.GetViolations)  
 	app.Get("/getBusinesses", handlers.GetBusinesses)  
-  
+	app.Get("/getDriverViolation", handlers.GetDriverViolations)
+
 	
 	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
@@ -89,7 +90,7 @@ func main() {
 	app.Put("/usertableUpdate", handlers.UpdateUser)
 	app.Put("/businessUpdate", handlers.UpdateBusiness)
 
-	
+
 	//Deleting API's
 	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
 	app.Delete("/categoryDelete/:id", handlers.DeleteCategory)

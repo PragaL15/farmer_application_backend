@@ -81,7 +81,6 @@ func UpdateBusiness(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Business updated successfully"})
 }
 
-
 func DeleteBusiness(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
