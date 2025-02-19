@@ -55,10 +55,11 @@ func main() {
 	app.Get("/getDrivers", handlers.GetDrivers)
 	app.Get("/getLocations", handlers.GetLocations)
 	app.Get("/getMandis", handlers.GetMandi)
-	app.Get("/getProducts", handlers.GetProducts) // -> Based on the categories
+	app.Get("/getProducts", handlers.GetProducts) 
 	app.Get("/getStates", handlers.GetStates)
 	app.Get("/getVehicles", handlers.GetVehicles)
-	app.Get("/getViolations", handlers.GetViolations) // -> 
+	app.Get("/getViolations", handlers.GetViolations)  
+	app.Get("/getBusinesses", handlers.GetBusinesses)  
   
 	
 	//posting API's
@@ -72,6 +73,7 @@ func main() {
 	app.Post("/vehicleDetails",handlers.InsertMasterVehicle)
 	app.Post("/violationDetails",handlers.InsertMasterViolation)
 	app.Post("/userTableDetails",handlers.InsertUser)
+	app.Post("/businessDetails",handlers.InsertBusiness)
 
 	//Updating API's
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
@@ -84,6 +86,7 @@ func main() {
 	app.Put("/vehicleUpdate", handlers.UpdateMasterVehicle)
 	app.Put("/violationUpdate", handlers.UpdateMasterViolation)
 	app.Put("/usertableUpdate", handlers.UpdateUser)
+	app.Put("/businessUpdate", handlers.UpdateBusiness)
 
 	//Deleting API's
 	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
@@ -96,6 +99,7 @@ func main() {
 	app.Delete("/vehicleDelete/:id", handlers.DeleteMasterVehicle)
 	app.Delete("/violationDelete/:id", handlers.DeleteMasterViolation)
 	app.Delete("/usertableDelete/:id", handlers.DeleteUser)
+	app.Delete("/businessDelete/:id", handlers.DeleteBusiness)
 
 	go func() {
 		logger.Printf("Server is running on port %s", port)
@@ -115,3 +119,7 @@ func main() {
 
 	logger.Println("Server stopped cleanly")
 }
+
+
+
+
