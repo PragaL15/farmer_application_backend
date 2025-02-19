@@ -106,7 +106,6 @@ func DeleteBusiness(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Business deleted successfully"})
 }
 
-// Get Businesses
 func GetBusinesses(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_all_businesses_func()")
 	if err != nil {
@@ -119,10 +118,10 @@ func GetBusinesses(c *fiber.Ctx) error {
 
 	for rows.Next() {
 		var bid, bTypeID, bLocationID, bStateID, bMandiID sql.NullInt32
-		var bTypeName, bName, bAddress, bPhoneNum, bEmail, bGstNum, bPanNum sql.NullString
+		var bTypeName, bName, bAddress, bPhoneNum, bEmail, bGstNum, bPanNum, stateName, location sql.NullString
 
-		if err := rows.Scan(&bid, &bTypeID, &bTypeName, &bName, &bLocationID, &bStateID, &bMandiID,
-			&bAddress, &bPhoneNum, &bEmail, &bGstNum, &bPanNum); err != nil {
+		if err := rows.Scan(&bid, &bTypeID, &bTypeName, &bName, &bLocationID, &location, &bStateID, &stateName, 
+			&bMandiID, &bAddress, &bPhoneNum, &bEmail, &bGstNum, &bPanNum); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
@@ -133,7 +132,9 @@ func GetBusinesses(c *fiber.Ctx) error {
 			"b_typename":   bTypeName.String,
 			"b_name":       bName.String,
 			"b_location_id": bLocationID.Int32,
+			"location":     location.String,
 			"b_state_id":   bStateID.Int32,
+			"state_name":   stateName.String,
 			"b_mandiid":    bMandiID.Int32,
 			"b_address":    bAddress.String,
 			"b_phone_num":  bPhoneNum.String,
@@ -145,3 +146,4 @@ func GetBusinesses(c *fiber.Ctx) error {
 
 	return c.JSON(businesses)
 }
+
