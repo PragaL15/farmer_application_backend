@@ -124,7 +124,7 @@ func DeleteDriver(c *fiber.Ctx) error {
 
 
 func GetDrivers(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_drivers()")
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_all_drivers()")
 	if err != nil {
 		log.Printf("Failed to fetch drivers: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch drivers"})
@@ -135,16 +135,16 @@ func GetDrivers(c *fiber.Ctx) error {
 
 	for rows.Next() {
 		var (
-			driverID, driverAge, experienceYears, vehicleID, assignedRouteID, violation *int
+			driverID, driverAge, experienceYears, assignedRouteID int
 			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact, vehicleName *string
 			dateOfJoining, licenseExpiryDate, d_o_b *time.Time
 		)
 
 		if err := rows.Scan(
 			&driverID, &driverName, &driverAge, &driverLicense, &driverNumber,
-			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears, &vehicleID,
-			&vehicleName, // Newly added field
-			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &d_o_b, &violation,
+			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears,
+			&vehicleName, 
+			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &d_o_b,
 		); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
@@ -160,13 +160,11 @@ func GetDrivers(c *fiber.Ctx) error {
 			"driver_status":       driverStatus,
 			"date_of_joining":     formatDate(dateOfJoining),
 			"experience_years":    experienceYears,
-			"vehicle_id":          vehicleID,
-			"vehicle_name":        vehicleName, // Included in response
+			"vehicle_name":        vehicleName, 
 			"license_expiry_date": formatDate(licenseExpiryDate),
 			"emergency_contact":   emergencyContact,
 			"assigned_route_id":   assignedRouteID,
 			"d_o_b":               formatDate(d_o_b),
-			"violation":           violation,
 		}
 
 		drivers = append(drivers, driver)
@@ -175,7 +173,6 @@ func GetDrivers(c *fiber.Ctx) error {
 	return c.JSON(drivers)
 }
 
-// formatDate handles nil time values
 func formatDate(t *time.Time) interface{} {
 	if t == nil {
 		return nil
