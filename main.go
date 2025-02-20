@@ -50,7 +50,7 @@ func main() {
 	app := fiber.New()
 
 	//get API's
-	app.Get("/users", handlers.GetAllUsers)
+	app.Get("/getUsers", handlers.GetAllUsers)
 	app.Get("/getCategories", handlers.GetCategories)
 	app.Get("/getDrivers", handlers.GetDrivers)
 	app.Get("/getLocations", handlers.GetLocations)
