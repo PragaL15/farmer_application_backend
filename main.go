@@ -61,6 +61,7 @@ func main() {
 	app.Get("/getViolations", handlers.GetViolations)  
 	app.Get("/getBusinesses", handlers.GetBusinesses)  
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
+	app.Get("/getOrderStatus", handlers.GetOrderStatuses)
 
 	
 	//posting API's
@@ -75,6 +76,7 @@ func main() {
 	app.Post("/violationDetails",handlers.InsertMasterViolation)
 	app.Post("/userTableDetails",handlers.InsertUser)
 	app.Post("/businessDetails",handlers.InsertBusiness)
+	app.Post("/orderStatusDetails",handlers.InsertOrderStatus)
 
 
 	//Updating API's
@@ -89,6 +91,7 @@ func main() {
 	app.Put("/violationUpdate", handlers.UpdateMasterViolation)
 	app.Put("/usertableUpdate", handlers.UpdateUser)
 	app.Put("/businessUpdate", handlers.UpdateBusiness)
+	app.Put("/orderStatusUpdate", handlers.UpdateOrderStatus)
 
 
 	//Deleting API's
