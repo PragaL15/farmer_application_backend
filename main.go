@@ -77,7 +77,6 @@ func main() {
 	app.Post("/businessDetails",handlers.InsertBusiness)
 	app.Post("/orderStatusDetails",handlers.InsertOrderStatus)
 
-
 	//Updating API's
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
 	app.Put("/categoryUpdate", handlers.UpdateCategory)
