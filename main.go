@@ -62,6 +62,7 @@ func main() {
 	app.Get("/getBusinesses", handlers.GetBusinesses)  
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
 	app.Get("/getOrderStatus", handlers.GetOrderStatuses)
+	app.Get("/getBusinessStatus", handlers.GetBusinessTypes)
 
 	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
