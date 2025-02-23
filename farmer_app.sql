@@ -335,6 +335,21 @@ $$;
 ALTER FUNCTION public.get_business_by_id(business_id integer) OWNER TO postgres;
 
 --
+-- Name: get_business_types(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_business_types() RETURNS TABLE(b_typeid integer, b_typename character varying, remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY SELECT * FROM business_type_table;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_business_types() OWNER TO postgres;
+
+--
 -- Name: get_categories(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -587,6 +602,22 @@ $$;
 
 
 ALTER FUNCTION public.insert_business(p_b_typeid integer, p_b_name character varying, p_b_location_id integer, p_b_state_id integer, p_b_address text, p_b_email character varying, p_b_gst_num character varying, p_b_pan_num character varying, p_b_mandi_id integer, p_b_phone_num text) OWNER TO postgres;
+
+--
+-- Name: insert_business_type(character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_business_type(p_b_typename character varying, p_remarks text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO business_type_table (b_typename, remarks)
+    VALUES (p_b_typename, p_remarks);
+END;
+$$;
+
+
+ALTER FUNCTION public.insert_business_type(p_b_typename character varying, p_remarks text) OWNER TO postgres;
 
 --
 -- Name: insert_category(character varying, integer, text, text, text); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -884,6 +915,81 @@ $$;
 ALTER FUNCTION public.sp_get_order_status() OWNER TO postgres;
 
 --
+-- Name: sp_get_orders(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.sp_get_orders() RETURNS TABLE(order_id integer, date_of_order timestamp without time zone, order_status integer, order_status_name character varying, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, retailer_name character varying, wholeseller_id integer, wholeseller_name character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, pincode character varying, address text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT
+        o.order_id,
+        o.date_of_order,
+        o.order_status,
+        os.order_status AS order_status_name,
+        o.expected_delivery_date,
+        o.actual_delivery_date,
+        o.retailer_id,
+        r.b_name AS retailer_name,
+        o.wholeseller_id,
+        w.b_name AS wholeseller_name,
+        o.location_id,
+        ml.location AS location_name,
+        o.state_id,
+        ms.state AS state_name,
+        o.pincode,
+        o.address
+    FROM order_table o
+    LEFT JOIN order_status_table os ON o.order_status = os.order_status_id
+    LEFT JOIN business_table r ON o.retailer_id = r.bid
+    LEFT JOIN business_table w ON o.wholeseller_id = w.bid
+    LEFT JOIN master_location ml ON o.location_id = ml.id
+    LEFT JOIN master_states ms ON o.state_id = ms.id;
+END;
+$$;
+
+
+ALTER FUNCTION public.sp_get_orders() OWNER TO postgres;
+
+--
+-- Name: sp_insert_order(integer, timestamp without time zone, timestamp without time zone, integer, integer, integer, integer, character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.sp_insert_order(p_order_status integer, p_expected_delivery_date timestamp without time zone, p_actual_delivery_date timestamp without time zone, p_retailer_id integer, p_wholeseller_id integer, p_location_id integer, p_state_id integer, p_pincode character varying, p_address text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO order_table (
+        date_of_order,
+        order_status,
+        expected_delivery_date,
+        actual_delivery_date,
+        retailer_id,
+        wholeseller_id,
+        location_id,
+        state_id,
+        pincode,
+        address
+    ) VALUES (
+        CURRENT_TIMESTAMP,
+        p_order_status,
+        p_expected_delivery_date,
+        p_actual_delivery_date,
+        p_retailer_id,
+        p_wholeseller_id,
+        p_location_id,
+        p_state_id,
+        p_pincode,
+        p_address
+    );
+END;
+$$;
+
+
+ALTER FUNCTION public.sp_insert_order(p_order_status integer, p_expected_delivery_date timestamp without time zone, p_actual_delivery_date timestamp without time zone, p_retailer_id integer, p_wholeseller_id integer, p_location_id integer, p_state_id integer, p_pincode character varying, p_address text) OWNER TO postgres;
+
+--
 -- Name: sp_insert_order_status(character varying); Type: PROCEDURE; Schema: public; Owner: postgres
 --
 
@@ -898,6 +1004,25 @@ $$;
 
 
 ALTER PROCEDURE public.sp_insert_order_status(IN p_order_status character varying) OWNER TO postgres;
+
+--
+-- Name: sp_update_order(integer, integer, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.sp_update_order(p_order_id integer, p_order_status integer, p_actual_delivery_date timestamp without time zone) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE order_table
+    SET 
+        order_status = p_order_status,
+        actual_delivery_date = p_actual_delivery_date
+    WHERE order_id = p_order_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.sp_update_order(p_order_id integer, p_order_status integer, p_actual_delivery_date timestamp without time zone) OWNER TO postgres;
 
 --
 -- Name: sp_update_order_status(integer, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -966,6 +1091,24 @@ $$;
 
 
 ALTER FUNCTION public.update_business(_bid integer, _b_typeid integer, _b_name character varying, _b_location character varying, _b_mandiid integer, _b_address text, _b_comt text, _b_email character varying, _b_gstnum character varying, _b_pan character varying) OWNER TO postgres;
+
+--
+-- Name: update_business_type(integer, character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_business_type(p_b_typeid integer, p_b_typename character varying, p_remarks text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE business_type_table
+    SET b_typename = p_b_typename,
+        remarks = p_remarks
+    WHERE b_typeid = p_b_typeid;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_business_type(p_b_typeid integer, p_b_typename character varying, p_remarks text) OWNER TO postgres;
 
 --
 -- Name: update_category(integer, character varying, integer, text, text, text); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -1187,6 +1330,54 @@ $$;
 
 
 ALTER PROCEDURE public.update_master_violation(IN p_id integer, IN p_violation_name text, IN p_level_of_serious text, IN p_status integer) OWNER TO postgres;
+
+--
+-- Name: update_order_history(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_order_history() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Insert updated order details into order_history_table
+    INSERT INTO order_history_table (
+        order_id, 
+        date_of_order, 
+        order_status, 
+        expected_delivery_date, 
+        actual_delivery_date, 
+        retailer_id, 
+        wholeseller_id, 
+        location_id, 
+        state_id, 
+        pincode, 
+        address, 
+        delivery_completed_date
+    )
+    VALUES (
+        NEW.order_id, 
+        NEW.date_of_order, 
+        NEW.order_status, 
+        NEW.expected_delivery_date, 
+        NEW.actual_delivery_date, 
+        NEW.retailer_id, 
+        NEW.wholeseller_id, 
+        NEW.location_id, 
+        NEW.state_id, 
+        NEW.pincode, 
+        NEW.address,
+        CASE 
+            WHEN NEW.order_status = 6 THEN CURRENT_TIMESTAMP 
+            ELSE NULL 
+        END
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_order_history() OWNER TO postgres;
 
 --
 -- Name: update_user(integer, character varying, character varying, character varying, text, character varying, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1856,6 +2047,51 @@ ALTER SEQUENCE public.master_violation_table_new_id_seq OWNED BY public.master_v
 
 
 --
+-- Name: order_history_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.order_history_table (
+    order_id integer NOT NULL,
+    date_of_order timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    order_status integer,
+    expected_delivery_date timestamp without time zone,
+    actual_delivery_date timestamp without time zone,
+    retailer_id integer,
+    wholeseller_id integer,
+    location_id integer,
+    state_id integer,
+    pincode character varying(10),
+    address text,
+    delivery_completed_date timestamp without time zone,
+    history_id integer NOT NULL
+);
+
+
+ALTER TABLE public.order_history_table OWNER TO postgres;
+
+--
+-- Name: order_history_table_history_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.order_history_table_history_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.order_history_table_history_id_seq OWNER TO postgres;
+
+--
+-- Name: order_history_table_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.order_history_table_history_id_seq OWNED BY public.order_history_table.history_id;
+
+
+--
 -- Name: order_item_table; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1895,7 +2131,7 @@ ALTER SEQUENCE public.order_item_table_product_order_id_seq OWNED BY public.orde
 --
 
 CREATE TABLE public.order_status_table (
-    order_id integer NOT NULL,
+    order_status_id integer NOT NULL,
     order_status character varying(50) NOT NULL
 );
 
@@ -1921,7 +2157,7 @@ ALTER SEQUENCE public.order_status_table_order_id_seq OWNER TO postgres;
 -- Name: order_status_table_order_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.order_status_table_order_id_seq OWNED BY public.order_status_table.order_id;
+ALTER SEQUENCE public.order_status_table_order_id_seq OWNED BY public.order_status_table.order_status_id;
 
 
 --
@@ -1931,7 +2167,7 @@ ALTER SEQUENCE public.order_status_table_order_id_seq OWNED BY public.order_stat
 CREATE TABLE public.order_table (
     order_id integer NOT NULL,
     date_of_order timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    order_status character varying(50),
+    order_status integer,
     expected_delivery_date timestamp without time zone,
     actual_delivery_date timestamp without time zone,
     retailer_id integer,
@@ -1939,8 +2175,7 @@ CREATE TABLE public.order_table (
     location_id integer,
     state_id integer,
     pincode character varying(10),
-    address text,
-    CONSTRAINT order_table_order_status_check CHECK (((order_status)::text = ANY ((ARRAY['pending'::character varying, 'failed'::character varying, 'success'::character varying])::text[])))
+    address text
 );
 
 
@@ -1975,7 +2210,6 @@ ALTER SEQUENCE public.order_table_order_id_seq OWNED BY public.order_table.order
 CREATE TABLE public.product_price_table (
     id bigint NOT NULL,
     product_id bigint,
-    product_price_id bigint,
     price double precision,
     bid integer
 );
@@ -2592,6 +2826,13 @@ ALTER TABLE ONLY public.master_violation_table ALTER COLUMN id SET DEFAULT nextv
 
 
 --
+-- Name: order_history_table history_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_history_table ALTER COLUMN history_id SET DEFAULT nextval('public.order_history_table_history_id_seq'::regclass);
+
+
+--
 -- Name: order_item_table product_order_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2599,10 +2840,10 @@ ALTER TABLE ONLY public.order_item_table ALTER COLUMN product_order_id SET DEFAU
 
 
 --
--- Name: order_status_table order_id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: order_status_table order_status_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.order_status_table ALTER COLUMN order_id SET DEFAULT nextval('public.order_status_table_order_id_seq'::regclass);
+ALTER TABLE ONLY public.order_status_table ALTER COLUMN order_status_id SET DEFAULT nextval('public.order_status_table_order_id_seq'::regclass);
 
 
 --
@@ -2824,6 +3065,14 @@ INSERT INTO public.master_violation_table VALUES ('drunk and drive', 'medium', 2
 
 
 --
+-- Data for Name: order_history_table; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 4, '2025-02-27 09:55:59.551139', '2025-02-22 09:58:54.219252', 5, 6, 1, 2, '123456', '123 Street, City', NULL, 1);
+INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-22 10:01:52.229039', 2);
+
+
+--
 -- Data for Name: order_item_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -2846,6 +3095,8 @@ INSERT INTO public.order_status_table VALUES (7, 'Returned');
 -- Data for Name: order_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.order_table VALUES (2, '2025-02-22 09:55:59.551139', 4, '2025-02-25 09:55:59.551139', NULL, 5, 6, 2, 1, '654321', '456 Avenue, City');
+INSERT INTO public.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City');
 
 
 --
@@ -3039,6 +3290,13 @@ SELECT pg_catalog.setval('public.master_violation_table_new_id_seq', 2, true);
 
 
 --
+-- Name: order_history_table_history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.order_history_table_history_id_seq', 2, true);
+
+
+--
 -- Name: order_item_table_product_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -3056,7 +3314,7 @@ SELECT pg_catalog.setval('public.order_status_table_order_id_seq', 7, true);
 -- Name: order_table_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.order_table_order_id_seq', 1, false);
+SELECT pg_catalog.setval('public.order_table_order_id_seq', 2, true);
 
 
 --
@@ -3343,6 +3601,14 @@ ALTER TABLE ONLY public.master_violation_table
 
 
 --
+-- Name: order_history_table order_history_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_history_table
+    ADD CONSTRAINT order_history_table_pkey PRIMARY KEY (history_id);
+
+
+--
 -- Name: order_item_table order_item_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3355,7 +3621,7 @@ ALTER TABLE ONLY public.order_item_table
 --
 
 ALTER TABLE ONLY public.order_status_table
-    ADD CONSTRAINT order_status_table_pkey PRIMARY KEY (order_id);
+    ADD CONSTRAINT order_status_table_pkey PRIMARY KEY (order_status_id);
 
 
 --
@@ -3428,6 +3694,14 @@ ALTER TABLE ONLY public.transporter_table
 
 ALTER TABLE ONLY public.type_of_insurance
     ADD CONSTRAINT type_of_insurance_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: order_status_table unique_order_status_id; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_status_table
+    ADD CONSTRAINT unique_order_status_id UNIQUE (order_status_id);
 
 
 --
@@ -3511,6 +3785,13 @@ ALTER TABLE ONLY public.warehouse_list
 
 
 --
+-- Name: order_table trigger_update_order_history; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trigger_update_order_history BEFORE UPDATE ON public.order_table FOR EACH ROW EXECUTE FUNCTION public.update_order_history();
+
+
+--
 -- Name: driver_violation_table driver_violation_table_driver_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3591,11 +3872,27 @@ ALTER TABLE ONLY public.master_mandi_table
 
 
 --
+-- Name: order_table fk_order_status; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_table
+    ADD CONSTRAINT fk_order_status FOREIGN KEY (order_status) REFERENCES public.order_status_table(order_status_id) ON DELETE SET NULL;
+
+
+--
 -- Name: insurance_table fk_provider; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.insurance_table
     ADD CONSTRAINT fk_provider FOREIGN KEY (insurance_provider) REFERENCES public.insurance_provider(id);
+
+
+--
+-- Name: order_table fk_retailer; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_table
+    ADD CONSTRAINT fk_retailer FOREIGN KEY (retailer_id) REFERENCES public.business_table(bid) ON DELETE SET NULL;
 
 
 --
@@ -3644,6 +3941,14 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.master_vehicle_table
     ADD CONSTRAINT fk_vehicle_model FOREIGN KEY (vehicle_model) REFERENCES public.vehicle_model(id);
+
+
+--
+-- Name: order_table fk_wholeseller; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_table
+    ADD CONSTRAINT fk_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES public.business_table(bid) ON DELETE SET NULL;
 
 
 --
