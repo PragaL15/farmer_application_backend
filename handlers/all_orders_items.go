@@ -18,7 +18,10 @@ func GetOrderDetails(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	ordersMap := make(map[int]map[string]interface{}) // Group by order_id
+	ordersMap := make(map[int]map[string]interface{}) // Orders storage
+	productsMap := make(map[int][]map[string]interface{}) // Products storage
+
+	var orders []map[string]interface{} // Final list of orders
 
 	for rows.Next() {
 		var orderID, retailerID, wholesellerID, unitID, orderItemID int
@@ -41,49 +44,55 @@ func GetOrderDetails(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
-		// If orderID is not yet in the map, initialize it
+		// Ensure each order_id is unique
 		if _, exists := ordersMap[orderID]; !exists {
 			ordersMap[orderID] = map[string]interface{}{
-				"order_id":          orderID,
-				"date_of_order":     dateOfOrder.Format(time.RFC3339),
-				"order_status_name": orderStatus,
-				"retailer_id":       retailerID,
-				"retailer_name":     retailerName,
-				"wholeseller_id":    wholesellerID,
-				"wholeseller_name":  wholesellerName,
-				"location_name":     locationName,
-				"state_name":        stateName,
-				"pincode":           pincode,  // ✅ Now stored as a string
-				"address":           address,
+				"order_id":           orderID,
+				"date_of_order":      dateOfOrder.Format(time.RFC3339),
+				"order_status_name":  orderStatus,
+				"retailer_id":        retailerID,
+				"retailer_name":      retailerName,
+				"wholeseller_id":     wholesellerID,
+				"wholeseller_name":   wholesellerName,
+				"location_name":      locationName,
+				"state_name":         stateName,
+				"pincode":            pincode,
+				"address":            address,
 				"total_order_amount": totalOrderAmount,
-				"products":          []map[string]interface{}{}, // Initialize empty array
 			}
+			// Initialize empty products array
+			productsMap[orderID] = []map[string]interface{}{}
 		}
 
-		// Append the order item to the products list
-		ordersMap[orderID]["products"] = append(ordersMap[orderID]["products"].([]map[string]interface{}), map[string]interface{}{
-			"order_item_id":        orderItemID,
-			"product_id":           productID,
-			"product_name":         productName,
-			"quantity":             quantity,
-			"unit_id":              unitID,
-			"amt_of_order_item":    formatNullFloat64(amtOfOrderItem),
-			"expected_delivery_date": formatNullTime(expectedDeliveryDate),
-			"actual_delivery_date":   formatNullTime(actualDeliveryDate),
-			"order_item_status_name": formatNullString(orderItemStatus),
-		})
+		// Ensure product is added to the correct order_id
+		if orderItemID != 0 && orderID > 0 {
+			product := map[string]interface{}{
+				"order_item_id":         orderItemID,
+				"product_id":            productID,
+				"product_name":          productName,
+				"quantity":              quantity,
+				"unit_id":               unitID,
+				"amt_of_order_item":     formatNullFloat64(amtOfOrderItem),
+				"expected_delivery_date": formatNullTime(expectedDeliveryDate),
+				"actual_delivery_date":   formatNullTime(actualDeliveryDate),
+				"order_item_status_name": formatNullString(orderItemStatus),
+			}
+
+			// Append product to correct order's product list
+			productsMap[orderID] = append(productsMap[orderID], product)
+		}
 	}
 
-	// Convert map values into a slice
-	var orders []map[string]interface{}
-	for _, order := range ordersMap {
+	// Merge orders with their products
+	for orderID, order := range ordersMap {
+		order["products"] = productsMap[orderID]
 		orders = append(orders, order)
 	}
 
 	return c.JSON(orders)
 }
 
-// Helper functions for formatting nullable SQL fields
+// Helper functions for nullable SQL fields
 func formatNullTime(nt sql.NullTime) string {
 	if nt.Valid {
 		return nt.Time.Format(time.RFC3339)
