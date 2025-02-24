@@ -28,15 +28,12 @@ type Order struct {
 	Address              string  `json:"address"`
 }
 
-// Format time safely, return an empty string for NULL values
 func formatTimestamp(t sql.NullTime) string {
 	if t.Valid {
-		return t.Time.Format("2006-01-02 15:04:05") // Format: YYYY-MM-DD HH:MM:SS
+		return t.Time.Format("2006-01-02 15:04:05") 
 	}
-	return "" // Return empty string if NULL
+	return "" 
 }
-
-// Get all orders with formatted timestamps and NULL-safe handling
 
 func GetOrders(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM sp_get_orders()")
@@ -60,7 +57,6 @@ func GetOrders(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		// Format timestamps safely
 		order.DateOfOrder = formatTimestamp(dateOfOrder)
 		order.ExpectedDeliveryDate = formatTimestamp(expectedDeliveryDate)
 		order.ActualDeliveryDate = formatTimestamp(actualDeliveryDate)
@@ -71,9 +67,6 @@ func GetOrders(c *fiber.Ctx) error {
 	return c.JSON(orders)
 }
 
-
-
-// Insert a new order
 func InsertOrder(c *fiber.Ctx) error {
 	var req Order
 	if err := c.BodyParser(&req); err != nil {
@@ -92,7 +85,6 @@ func InsertOrder(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Order inserted successfully"})
 }
 
-// Update an existing order
 func UpdateOrder(c *fiber.Ctx) error {
 	var req struct {
 		OrderID            int    `json:"order_id"`
