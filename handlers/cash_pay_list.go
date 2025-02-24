@@ -9,7 +9,6 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// Insert Payment Method
 func InsertListPaymentMethod(c *fiber.Ctx) error {
 	type Request struct {
 		PaymentType string `json:"payment_type" validate:"required,max=50"`
@@ -35,7 +34,6 @@ func InsertListPaymentMethod(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Payment method added successfully"})
 }
 
-// Update Payment Method
 func UpdateListPaymentMethod(c *fiber.Ctx) error {
 	type Request struct {
 		ID          int    `json:"id" validate:"required,min=1"`

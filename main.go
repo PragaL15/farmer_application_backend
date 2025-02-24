@@ -83,7 +83,6 @@ func main() {
 	app.Post("/businessDetails",handlers.InsertBusiness)
 	app.Post("/orderStatusDetails",handlers.InsertOrderStatus)
 	app.Post("/ordersDetails",handlers.InsertOrder)
-	app.Post("/listPaymentMethodDetails",handlers.InsertListPaymentMethod)
 
 	//Updating API's
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
@@ -99,7 +98,6 @@ func main() {
 	app.Put("/businessUpdate", handlers.UpdateBusiness)
 	app.Put("/orderStatusUpdate", handlers.UpdateOrderStatus)
 	app.Put("/ordersUpdate", handlers.UpdateOrder)
-	app.Put("/listPaymentMethodUpdate", handlers.UpdateListPaymentMethod)
 
 
 	//Deleting API's
