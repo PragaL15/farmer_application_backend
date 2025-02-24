@@ -63,10 +63,12 @@ func main() {
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
 	app.Get("/getOrderStatus", handlers.GetOrderStatuses)
 	app.Get("/getBusinessStatus", handlers.GetBusinessTypes)
-	app.Get("/getOrders", handlers.GetOrders)
+	// app.Get("/getOrders", handlers.GetOrders)
+
 	app.Get("/getModeOfPayments", handlers.GetModeOfPayments)
 	app.Get("/getListPaymentMethod", handlers.GetListPaymentMethods)
 	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
+	app.Get("/getOrderHistoryDetails", handlers. GetOrderHistory)
   
 
 	//posting API's
@@ -81,6 +83,7 @@ func main() {
 	app.Post("/violationDetails",handlers.InsertMasterViolation)
 	app.Post("/userTableDetails",handlers.InsertUser)
 	app.Post("/businessDetails",handlers.InsertBusiness)
+
 	app.Post("/orderStatusDetails",handlers.InsertOrderStatus)
 	app.Post("/ordersDetails",handlers.InsertOrder)
 
@@ -96,6 +99,7 @@ func main() {
 	app.Put("/violationUpdate", handlers.UpdateMasterViolation)
 	app.Put("/usertableUpdate", handlers.UpdateUser)
 	app.Put("/businessUpdate", handlers.UpdateBusiness)
+
 	app.Put("/orderStatusUpdate", handlers.UpdateOrderStatus)
 	app.Put("/ordersUpdate", handlers.UpdateOrder)
 
