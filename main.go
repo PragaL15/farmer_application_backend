@@ -66,6 +66,7 @@ func main() {
 	app.Get("/getOrders", handlers.GetOrders)
 	app.Get("/getModeOfPayments", handlers.GetModeOfPayments)
 	app.Get("/getListPaymentMethod", handlers.GetListPaymentMethods)
+	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
   
 
 	//posting API's

@@ -62,7 +62,6 @@ func UpdateListPaymentMethod(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Payment method updated successfully"})
 }
 
-// Get All Payment Methods
 func GetListPaymentMethods(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_cash_payment_list()")
 	if err != nil {
