@@ -60,6 +60,7 @@ func main() {
 	app.Get("/getListPaymentMethod", handlers.GetListPaymentMethods)
 	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
 	app.Get("/getOrderHistoryDetails", handlers. GetOrderHistory)
+	app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
 
 	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
