@@ -20,24 +20,24 @@ func GetOrderDetails(c *fiber.Ctx) error {
 
 	ordersMap := make(map[int]map[string]interface{}) 
 	productsMap := make(map[int][]map[string]interface{}) 
-
-	var orders []map[string]interface{} 
+	var orders []map[string]interface{}
 
 	for rows.Next() {
-		var orderID, retailerID, wholesellerID, unitID, orderItemID int
+		var orderID, orderItemID, retailerID, wholesellerID, unitID int
 		var productID int64
 		var dateOfOrder time.Time
 		var expectedDeliveryDate, actualDeliveryDate sql.NullTime
-		var orderStatus, retailerName, wholesellerName, locationName, stateName, productName, address, pincode string
-		var orderItemStatus sql.NullString
-		var quantity, totalOrderAmount float64
+		var orderStatus, retailerName, wholesellerName, locationName, stateName, productName, unitName, address, pincode sql.NullString
+		var totalOrderAmount, quantity float64
 		var amtOfOrderItem sql.NullFloat64
+		var orderItemStatus sql.NullString
 
 		err := rows.Scan(
-			&orderID, &orderItemID, &dateOfOrder, &orderStatus, &retailerID, &retailerName,
-			&wholesellerID, &wholesellerName, &locationName, &stateName, &pincode, &address, &totalOrderAmount,
-			&productID, &productName, &quantity, &unitID, &amtOfOrderItem, &expectedDeliveryDate,
-			&actualDeliveryDate, &orderItemStatus,
+			&orderID, &orderItemID, &dateOfOrder, &expectedDeliveryDate, &actualDeliveryDate, 
+			&orderStatus, &retailerID, &retailerName, &wholesellerID, &wholesellerName, 
+			&locationName, &stateName, &pincode, &address, &totalOrderAmount, 
+			&productID, &productName, &quantity, &unitID, &unitName, 
+			&amtOfOrderItem, &orderItemStatus,
 		)
 		if err != nil {
 			log.Printf("Error scanning row: %v", err)
@@ -46,32 +46,33 @@ func GetOrderDetails(c *fiber.Ctx) error {
 
 		if _, exists := ordersMap[orderID]; !exists {
 			ordersMap[orderID] = map[string]interface{}{
-				"order_id":           orderID,
-				"date_of_order":      dateOfOrder.Format(time.RFC3339),
-				"order_status_name":  orderStatus,
-				"retailer_id":        retailerID,
-				"retailer_name":      retailerName,
-				"wholeseller_id":     wholesellerID,
-				"wholeseller_name":   wholesellerName,
-				"location_name":      locationName,
-				"state_name":         stateName,
-				"pincode":            pincode,
-				"address":            address,
-				"total_order_amount": totalOrderAmount,
+				"order_id":               orderID,
+				"date_of_order":          dateOfOrder.Format(time.RFC3339),
+				"expected_delivery_date": formatNullTime(expectedDeliveryDate), 
+				"actual_delivery_date":   formatNullTime(actualDeliveryDate), 
+				"order_status_name":      formatNullString(orderStatus),
+				"retailer_id":            retailerID,
+				"retailer_name":          formatNullString(retailerName),
+				"wholeseller_id":         wholesellerID,
+				"wholeseller_name":       formatNullString(wholesellerName),
+				"location_name":          formatNullString(locationName),
+				"state_name":             formatNullString(stateName),
+				"pincode":                formatNullString(pincode),
+				"address":                formatNullString(address),
+				"total_order_amount":     totalOrderAmount,
 			}
 			productsMap[orderID] = []map[string]interface{}{}
 		}
 
-		if orderItemID != 0 && orderID > 0 {
+		if orderItemID != 0 {
 			product := map[string]interface{}{
 				"order_item_id":         orderItemID,
 				"product_id":            productID,
-				"product_name":          productName,
+				"product_name":          formatNullString(productName),
 				"quantity":              quantity,
 				"unit_id":               unitID,
+				"unit_name":             formatNullString(unitName),
 				"amt_of_order_item":     formatNullFloat64(amtOfOrderItem),
-				"expected_delivery_date": formatNullTime(expectedDeliveryDate),
-				"actual_delivery_date":   formatNullTime(actualDeliveryDate),
 				"order_item_status_name": formatNullString(orderItemStatus),
 			}
 			productsMap[orderID] = append(productsMap[orderID], product)
