@@ -33,6 +33,38 @@ $$;
 ALTER FUNCTION public.add_business(_b_typeid integer, _b_name character varying, _b_location character varying, _b_mandiid integer, _b_address text, _b_comt text, _b_email character varying, _b_gstnum character varying, _b_pan character varying) OWNER TO postgres;
 
 --
+-- Name: add_cash_payment(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.add_cash_payment(payment_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO cash_payment_list (payment_type) VALUES (payment_name);
+END;
+$$;
+
+
+ALTER FUNCTION public.add_cash_payment(payment_name character varying) OWNER TO postgres;
+
+--
+-- Name: add_mode_of_payment(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.add_mode_of_payment(p_payment_mode character varying) RETURNS TABLE(id integer, payment_mode character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO mode_of_payments_list (payment_mode)
+    VALUES (p_payment_mode)
+    RETURNING mode_of_payments_list.id, mode_of_payments_list.payment_mode;
+END;
+$$;
+
+
+ALTER FUNCTION public.add_mode_of_payment(p_payment_mode character varying) OWNER TO postgres;
+
+--
 -- Name: add_user_bank_details(integer, character, character varying, character, character varying, character varying, character varying, character varying, boolean); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -209,6 +241,29 @@ $$;
 ALTER PROCEDURE public.delete_user(IN p_user_id integer) OWNER TO postgres;
 
 --
+-- Name: generate_invoice_number(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.generate_invoice_number() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_invoice_number TEXT;
+BEGIN
+    -- Generate the invoice number with today's date and a sequential ID
+    new_invoice_number := 'INV-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-' || LPAD(NEW.id::TEXT, 5, '0');
+
+    -- Assign the generated number to invoice_number column
+    NEW.invoice_number := new_invoice_number;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.generate_invoice_number() OWNER TO postgres;
+
+--
 -- Name: get_all_businesses_func(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -350,6 +405,22 @@ $$;
 ALTER FUNCTION public.get_business_types() OWNER TO postgres;
 
 --
+-- Name: get_cash_payment_list(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_cash_payment_list() RETURNS TABLE(id integer, payment_type character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT * FROM cash_payment_list;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_cash_payment_list() OWNER TO postgres;
+
+--
 -- Name: get_categories(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -394,6 +465,108 @@ $$;
 
 
 ALTER FUNCTION public.get_driver_violations() OWNER TO postgres;
+
+--
+-- Name: get_invoice_details(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_invoice_details() RETURNS TABLE(id integer, invoice_number character varying, order_id integer, total_amount numeric, discount_amount numeric, invoice_date timestamp without time zone, due_date date, pay_mode integer, pay_mode_name character varying, pay_type integer, pay_type_name character varying, final_amount numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        i.id,
+        i.invoice_number,
+        i.order_id,
+        i.total_amount,
+        i.discount_amount,
+        i.invoice_date,
+        i.due_date,
+        i.pay_mode,
+        m.payment_mode AS pay_mode_name,
+        i.pay_type,
+        c.payment_type AS pay_type_name,
+        i.final_amount
+    FROM invoice_table i
+    LEFT JOIN mode_of_payments_list m ON i.pay_mode = m.id
+    LEFT JOIN cash_payment_list c ON i.pay_type = c.id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_invoice_details() OWNER TO postgres;
+
+--
+-- Name: get_invoice_details_with_business_info(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_invoice_details_with_business_info() RETURNS TABLE(id integer, invoice_number character varying, order_id bigint, retailer_id bigint, retailer_name character varying, retailer_email character varying, retailer_phone text, retailer_address text, retailer_location_id integer, retailer_state_id integer, wholeseller_id bigint, wholeseller_name character varying, wholeseller_email character varying, wholeseller_phone text, wholeseller_address text, wholeseller_location_id integer, wholeseller_state_id integer, total_amount numeric, discount_amount numeric, invoice_date timestamp without time zone, due_date date, pay_mode integer, pay_mode_name character varying, pay_type integer, pay_type_name character varying, final_amount numeric, order_item_id bigint, product_id bigint, product_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        i.id, i.invoice_number, i.order_id, 
+        b_retailer.bid AS retailer_id, b_retailer.b_name AS retailer_name, 
+        b_retailer.b_email AS retailer_email, b_retailer.b_phone_num AS retailer_phone, 
+        b_retailer.b_address AS retailer_address, b_retailer.b_location_id, b_retailer.b_state_id,
+        b_wholeseller.bid AS wholeseller_id, b_wholeseller.b_name AS wholeseller_name, 
+        b_wholeseller.b_email AS wholeseller_email, b_wholeseller.b_phone_num AS wholeseller_phone, 
+        b_wholeseller.b_address AS wholeseller_address, b_wholeseller.b_location_id, b_wholeseller.b_state_id,
+        i.total_amount, i.discount_amount, i.invoice_date, i.due_date,
+        m.id AS pay_mode, m.payment_mode AS pay_mode_name, 
+        c.id AS pay_type, c.payment_type AS pay_type_name,
+        i.final_amount,
+        oi.order_item_id, 
+        p.product_id, p.product_name
+    FROM invoice_table i
+    JOIN order_table o ON i.order_id = o.order_id
+    JOIN business_table b_retailer ON o.retailer_id = b_retailer.bid
+    JOIN business_table b_wholeseller ON o.wholeseller_id = b_wholeseller.bid
+    JOIN mode_of_payments_list m ON i.pay_mode = m.id
+    JOIN cash_payment_list c ON i.pay_type = c.id
+    JOIN order_item_table oi ON o.order_id = oi.order_id
+    JOIN master_product p ON oi.product_id = p.product_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_invoice_details_with_business_info() OWNER TO postgres;
+
+--
+-- Name: get_invoice_details_with_order_info(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_invoice_details_with_order_info() RETURNS TABLE(id integer, invoice_number character varying, order_id bigint, retailer_id integer, wholeseller_id integer, total_amount numeric, discount_amount numeric, invoice_date timestamp without time zone, due_date date, pay_mode integer, pay_mode_name character varying, pay_type integer, pay_type_name character varying, final_amount numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        i.id,
+        i.invoice_number,
+        i.order_id,
+        o.retailer_id,
+        o.wholeseller_id,
+        i.total_amount,
+        i.discount_amount,
+        i.invoice_date,
+        i.due_date,
+        i.pay_mode,
+        m.payment_mode AS pay_mode_name,
+        i.pay_type,
+        c.payment_type AS pay_type_name,
+        i.final_amount
+    FROM invoice_table i
+    LEFT JOIN order_table o ON i.order_id = o.order_id
+    LEFT JOIN mode_of_payments_list m ON i.pay_mode = m.id
+    LEFT JOIN cash_payment_list c ON i.pay_type = c.id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_invoice_details_with_order_info() OWNER TO postgres;
 
 --
 -- Name: get_master_categories(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -558,6 +731,173 @@ $$;
 
 
 ALTER FUNCTION public.get_master_violations() OWNER TO postgres;
+
+--
+-- Name: get_mode_of_payment_details(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_mode_of_payment_details() RETURNS TABLE(id integer, pay_mode integer, pay_type integer, pay_mode_name character varying, pay_type_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        mp.id, 
+        mp.pay_mode, 
+        mp.pay_type, 
+        mpl.payment_mode AS pay_mode_name, 
+        cpl.payment_type AS pay_type_name
+    FROM mode_of_payment mp
+    LEFT JOIN mode_of_payments_list mpl ON mp.pay_mode = mpl.id
+    LEFT JOIN cash_payment_list cpl ON mp.pay_type = cpl.id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_mode_of_payment_details() OWNER TO postgres;
+
+--
+-- Name: get_mode_of_payments(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_mode_of_payments() RETURNS TABLE(id integer, payment_mode character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY SELECT * FROM mode_of_payments_list;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_mode_of_payments() OWNER TO postgres;
+
+--
+-- Name: get_order_details(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_order_details() RETURNS TABLE(order_id bigint, order_item_id bigint, date_of_order timestamp without time zone, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, order_status text, retailer_id bigint, retailer_name text, wholeseller_id bigint, wholeseller_name text, location_name text, state_name text, pincode text, address text, total_order_amount numeric, product_id bigint, product_name text, quantity numeric, unit_id integer, unit_name text, amt_of_order_item numeric, order_item_status text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.order_id::BIGINT,  
+        oi.order_item_id::BIGINT,  
+        o.date_of_order,
+        o.expected_delivery_date, -- ? Moved before order_status
+        o.actual_delivery_date,   -- ? Moved before order_status
+        os.order_status::TEXT,  
+        o.retailer_id::BIGINT, 
+        r.b_name::TEXT,  
+        o.wholeseller_id::BIGINT, 
+        w.b_name::TEXT,  
+        l.location::TEXT,  
+        s.state::TEXT,  
+        o.pincode::TEXT,  
+        o.address::TEXT,  
+        o.total_order_amount,
+        oi.product_id,
+        mp.product_name::TEXT,  
+        oi.quantity,
+        oi.unit_id,
+        u.unit_name::TEXT,  
+        oi.amt_of_order_item,
+        ois.order_status::TEXT  
+    FROM order_table o
+    JOIN order_item_table oi ON o.order_id = oi.order_id
+    LEFT JOIN order_status_table os ON o.order_status = os.order_status_id  
+    LEFT JOIN business_table r ON o.retailer_id = r.bid  
+    LEFT JOIN business_table w ON o.wholeseller_id = w.bid  
+    LEFT JOIN master_location l ON o.location_id = l.id  
+    LEFT JOIN master_states s ON o.state_id = s.id  
+    LEFT JOIN master_product mp ON oi.product_id = mp.product_id
+    LEFT JOIN units_table u ON oi.unit_id = u.id  
+    LEFT JOIN order_status_table ois ON oi.order_item_status = ois.order_status_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_order_details() OWNER TO postgres;
+
+--
+-- Name: get_order_history(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_order_history() RETURNS TABLE(order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, retailer_name character varying, wholeseller_id integer, wholeseller_name character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, pincode character varying, address text, delivery_completed_date timestamp without time zone, history_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        oh.order_id,
+        oh.date_of_order,
+        oh.order_status,
+        oh.expected_delivery_date,
+        oh.actual_delivery_date,
+        oh.retailer_id,
+        COALESCE(b1.b_name, 'Unknown') AS retailer_name,
+        oh.wholeseller_id,
+        COALESCE(b2.b_name, 'Unknown') AS wholeseller_name,
+        oh.location_id,
+        COALESCE(ml.location, 'Unknown') AS location_name,
+        oh.state_id,
+        COALESCE(ms.state, 'Unknown') AS state_name,
+        oh.pincode,
+        oh.address,
+        oh.delivery_completed_date,
+        oh.history_id
+    FROM order_history_table oh
+    LEFT JOIN business_table b1 ON oh.retailer_id = b1.bid
+    LEFT JOIN business_table b2 ON oh.wholeseller_id = b2.bid
+    LEFT JOIN master_location ml ON oh.location_id = ml.id
+    LEFT JOIN master_states ms ON oh.state_id = ms.id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_order_history() OWNER TO postgres;
+
+--
+-- Name: get_orders_with_items(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_orders_with_items() RETURNS TABLE(order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, retailer_name character varying, wholeseller_id integer, wholeseller_name character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, total_order_amount numeric, order_item_id bigint, product_id bigint, product_name character varying, quantity numeric, amt_of_order_item numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.order_id,
+        o.date_of_order,
+        o.order_status,
+        o.expected_delivery_date,
+        o.actual_delivery_date,
+        o.retailer_id,
+        r.b_name AS retailer_name,
+        o.wholeseller_id,
+        w.b_name AS wholeseller_name,
+        o.location_id,
+        ml.location AS location_name,
+        o.state_id,
+        ms.state AS state_name,
+        o.total_order_amount,
+        oi.order_item_id,
+        oi.product_id,
+        mp.product_name,
+        oi.quantity,
+        oi.amt_of_order_item
+    FROM order_table o
+    LEFT JOIN business_table r ON o.retailer_id = r.bid
+    LEFT JOIN business_table w ON o.wholeseller_id = w.bid
+    LEFT JOIN master_location ml ON o.location_id = ml.id
+    LEFT JOIN master_states ms ON o.state_id = ms.id
+    LEFT JOIN order_item_table oi ON o.order_id = oi.order_id
+    LEFT JOIN master_product mp ON oi.product_id = mp.product_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_orders_with_items() OWNER TO postgres;
 
 --
 -- Name: insert_business(integer, integer, integer, text, character varying, character varying, character varying, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -900,6 +1240,24 @@ $$;
 ALTER PROCEDURE public.manage_users(IN op_type text, IN p_user_id integer, IN p_user_type_id integer, IN p_username character varying, IN p_password character varying) OWNER TO postgres;
 
 --
+-- Name: set_default_pay_type(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.set_default_pay_type() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.pay_mode = 1 THEN
+        NEW.pay_type = 5;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.set_default_pay_type() OWNER TO postgres;
+
+--
 -- Name: sp_get_order_status(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1042,6 +1400,34 @@ $$;
 ALTER PROCEDURE public.sp_update_order_status(IN p_order_id integer, IN p_order_status character varying) OWNER TO postgres;
 
 --
+-- Name: update_amt_of_order_item(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_amt_of_order_item() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE 
+    product_price NUMERIC(10,2);
+    tax_rate NUMERIC(5,2);
+BEGIN
+    -- Fetch price and tax_percentage from product_price_table
+    SELECT price, tax_percentage INTO product_price, tax_rate 
+    FROM product_price_table 
+    WHERE product_id = NEW.product_id;
+
+    -- If product exists, calculate the amt_of_order_item
+    IF product_price IS NOT NULL THEN
+        NEW.amt_of_order_item := NEW.quantity * product_price * (1 + tax_rate / 100);
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_amt_of_order_item() OWNER TO postgres;
+
+--
 -- Name: update_business(integer, integer, integer, integer, text, text, character varying, character varying, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
 --
 
@@ -1109,6 +1495,23 @@ $$;
 
 
 ALTER FUNCTION public.update_business_type(p_b_typeid integer, p_b_typename character varying, p_remarks text) OWNER TO postgres;
+
+--
+-- Name: update_cash_payment(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_cash_payment(payment_id integer, payment_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE cash_payment_list 
+    SET payment_type = payment_name 
+    WHERE id = payment_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_cash_payment(payment_id integer, payment_name character varying) OWNER TO postgres;
 
 --
 -- Name: update_category(integer, character varying, integer, text, text, text); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -1332,6 +1735,24 @@ $$;
 ALTER PROCEDURE public.update_master_violation(IN p_id integer, IN p_violation_name text, IN p_level_of_serious text, IN p_status integer) OWNER TO postgres;
 
 --
+-- Name: update_mode_of_payment(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_mode_of_payment(p_id integer, p_payment_mode character varying) RETURNS TABLE(id integer, payment_mode character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE mode_of_payments_list
+    SET payment_mode = p_payment_mode
+    WHERE id = p_id
+    RETURNING mode_of_payments_list.id, mode_of_payments_list.payment_mode;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_mode_of_payment(p_id integer, p_payment_mode character varying) OWNER TO postgres;
+
+--
 -- Name: update_order_history(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1378,6 +1799,29 @@ $$;
 
 
 ALTER FUNCTION public.update_order_history() OWNER TO postgres;
+
+--
+-- Name: update_total_order_amount(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_total_order_amount() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE order_table
+    SET total_order_amount = (
+        SELECT COALESCE(SUM(amt_of_order_item), 0)
+        FROM order_item_table
+        WHERE order_id = NEW.order_id
+    )
+    WHERE order_id = NEW.order_id;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_total_order_amount() OWNER TO postgres;
 
 --
 -- Name: update_user(integer, character varying, character varying, character varying, text, character varying, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1548,6 +1992,40 @@ ALTER SEQUENCE public.business_table_bid_seq OWNED BY public.business_table.bid;
 
 
 --
+-- Name: cash_payment_list; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.cash_payment_list (
+    id integer NOT NULL,
+    payment_type character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.cash_payment_list OWNER TO postgres;
+
+--
+-- Name: cash_payment_list_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.cash_payment_list_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.cash_payment_list_id_seq OWNER TO postgres;
+
+--
+-- Name: cash_payment_list_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.cash_payment_list_id_seq OWNED BY public.cash_payment_list.id;
+
+
+--
 -- Name: daily_price_update; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1568,7 +2046,8 @@ CREATE TABLE public.discount_table (
     dis_id integer NOT NULL,
     unit_id integer,
     quantity_range character varying(50),
-    discount_percentage character varying(10)
+    discount_percentage character varying(10),
+    amount numeric(10,2)
 );
 
 
@@ -1716,6 +2195,100 @@ ALTER SEQUENCE public.insurance_table_insurance_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.insurance_table_insurance_id_seq OWNED BY public.insurance_table.insurance_id;
+
+
+--
+-- Name: invoice_daily_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.invoice_daily_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 999999
+    CACHE 1
+    CYCLE;
+
+
+ALTER SEQUENCE public.invoice_daily_seq OWNER TO postgres;
+
+--
+-- Name: invoice_details_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.invoice_details_table (
+    id bigint NOT NULL,
+    invoice_id bigint,
+    order_item_id bigint,
+    quantity numeric(10,2) NOT NULL,
+    retailer_accepting integer DEFAULT 0
+);
+
+
+ALTER TABLE public.invoice_details_table OWNER TO postgres;
+
+--
+-- Name: invoice_details_table_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.invoice_details_table_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.invoice_details_table_id_seq OWNER TO postgres;
+
+--
+-- Name: invoice_details_table_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.invoice_details_table_id_seq OWNED BY public.invoice_details_table.id;
+
+
+--
+-- Name: invoice_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.invoice_table (
+    id integer NOT NULL,
+    invoice_number character varying(50),
+    order_id bigint,
+    total_amount numeric(10,2) NOT NULL,
+    discount_amount numeric(10,2) DEFAULT 0,
+    invoice_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    due_date date,
+    pay_mode integer,
+    pay_type integer,
+    final_amount numeric(10,2) GENERATED ALWAYS AS ((total_amount - discount_amount)) STORED
+);
+
+
+ALTER TABLE public.invoice_table OWNER TO postgres;
+
+--
+-- Name: invoice_table_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.invoice_table_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.invoice_table_id_seq OWNER TO postgres;
+
+--
+-- Name: invoice_table_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.invoice_table_id_seq OWNED BY public.invoice_table.id;
 
 
 --
@@ -2047,6 +2620,75 @@ ALTER SEQUENCE public.master_violation_table_new_id_seq OWNED BY public.master_v
 
 
 --
+-- Name: mode_of_payment; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.mode_of_payment (
+    id integer NOT NULL,
+    pay_mode integer,
+    pay_type integer
+);
+
+
+ALTER TABLE public.mode_of_payment OWNER TO postgres;
+
+--
+-- Name: mode_of_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.mode_of_payment_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.mode_of_payment_id_seq OWNER TO postgres;
+
+--
+-- Name: mode_of_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.mode_of_payment_id_seq OWNED BY public.mode_of_payment.id;
+
+
+--
+-- Name: mode_of_payments_list; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.mode_of_payments_list (
+    id integer NOT NULL,
+    payment_mode character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.mode_of_payments_list OWNER TO postgres;
+
+--
+-- Name: mode_of_payments_list_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.mode_of_payments_list_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.mode_of_payments_list_id_seq OWNER TO postgres;
+
+--
+-- Name: mode_of_payments_list_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.mode_of_payments_list_id_seq OWNED BY public.mode_of_payments_list.id;
+
+
+--
 -- Name: order_history_table; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2096,10 +2738,13 @@ ALTER SEQUENCE public.order_history_table_history_id_seq OWNED BY public.order_h
 --
 
 CREATE TABLE public.order_item_table (
-    product_order_id bigint NOT NULL,
+    order_item_id bigint NOT NULL,
     order_id bigint,
     product_id bigint,
-    quantity double precision
+    quantity numeric(10,2),
+    unit_id integer,
+    amt_of_order_item numeric(10,3),
+    order_item_status integer
 );
 
 
@@ -2123,7 +2768,7 @@ ALTER SEQUENCE public.order_item_table_product_order_id_seq OWNER TO postgres;
 -- Name: order_item_table_product_order_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.order_item_table_product_order_id_seq OWNED BY public.order_item_table.product_order_id;
+ALTER SEQUENCE public.order_item_table_product_order_id_seq OWNED BY public.order_item_table.order_item_id;
 
 
 --
@@ -2165,7 +2810,7 @@ ALTER SEQUENCE public.order_status_table_order_id_seq OWNED BY public.order_stat
 --
 
 CREATE TABLE public.order_table (
-    order_id integer NOT NULL,
+    order_id bigint NOT NULL,
     date_of_order timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     order_status integer,
     expected_delivery_date timestamp without time zone,
@@ -2175,7 +2820,8 @@ CREATE TABLE public.order_table (
     location_id integer,
     state_id integer,
     pincode character varying(10),
-    address text
+    address text,
+    total_order_amount numeric(10,2) DEFAULT 0
 );
 
 
@@ -2210,8 +2856,10 @@ ALTER SEQUENCE public.order_table_order_id_seq OWNED BY public.order_table.order
 CREATE TABLE public.product_price_table (
     id bigint NOT NULL,
     product_id bigint,
-    price double precision,
-    bid integer
+    price numeric(10,2),
+    bid bigint,
+    tax_percentage numeric(5,2) DEFAULT 0,
+    CONSTRAINT product_price_table_tax_percentage_check CHECK (((tax_percentage >= (0)::numeric) AND (tax_percentage <= (100)::numeric)))
 );
 
 
@@ -2368,6 +3016,40 @@ ALTER SEQUENCE public.type_of_insurance_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.type_of_insurance_id_seq OWNED BY public.type_of_insurance.id;
+
+
+--
+-- Name: units_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.units_table (
+    id integer NOT NULL,
+    unit_name character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.units_table OWNER TO postgres;
+
+--
+-- Name: units_table_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.units_table_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.units_table_id_seq OWNER TO postgres;
+
+--
+-- Name: units_table_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.units_table_id_seq OWNED BY public.units_table.id;
 
 
 --
@@ -2742,6 +3424,13 @@ ALTER TABLE ONLY public.business_type_table ALTER COLUMN b_typeid SET DEFAULT ne
 
 
 --
+-- Name: cash_payment_list id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cash_payment_list ALTER COLUMN id SET DEFAULT nextval('public.cash_payment_list_id_seq'::regclass);
+
+
+--
 -- Name: discount_table dis_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2767,6 +3456,20 @@ ALTER TABLE ONLY public.insurance_provider ALTER COLUMN id SET DEFAULT nextval('
 --
 
 ALTER TABLE ONLY public.insurance_table ALTER COLUMN insurance_id SET DEFAULT nextval('public.insurance_table_insurance_id_seq'::regclass);
+
+
+--
+-- Name: invoice_details_table id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_details_table ALTER COLUMN id SET DEFAULT nextval('public.invoice_details_table_id_seq'::regclass);
+
+
+--
+-- Name: invoice_table id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_table ALTER COLUMN id SET DEFAULT nextval('public.invoice_table_id_seq'::regclass);
 
 
 --
@@ -2826,6 +3529,20 @@ ALTER TABLE ONLY public.master_violation_table ALTER COLUMN id SET DEFAULT nextv
 
 
 --
+-- Name: mode_of_payment id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payment ALTER COLUMN id SET DEFAULT nextval('public.mode_of_payment_id_seq'::regclass);
+
+
+--
+-- Name: mode_of_payments_list id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payments_list ALTER COLUMN id SET DEFAULT nextval('public.mode_of_payments_list_id_seq'::regclass);
+
+
+--
 -- Name: order_history_table history_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2833,10 +3550,10 @@ ALTER TABLE ONLY public.order_history_table ALTER COLUMN history_id SET DEFAULT 
 
 
 --
--- Name: order_item_table product_order_id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: order_item_table order_item_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.order_item_table ALTER COLUMN product_order_id SET DEFAULT nextval('public.order_item_table_product_order_id_seq'::regclass);
+ALTER TABLE ONLY public.order_item_table ALTER COLUMN order_item_id SET DEFAULT nextval('public.order_item_table_product_order_id_seq'::regclass);
 
 
 --
@@ -2879,6 +3596,13 @@ ALTER TABLE ONLY public.transporter_table ALTER COLUMN transporter_id SET DEFAUL
 --
 
 ALTER TABLE ONLY public.type_of_insurance ALTER COLUMN id SET DEFAULT nextval('public.type_of_insurance_id_seq'::regclass);
+
+
+--
+-- Name: units_table id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.units_table ALTER COLUMN id SET DEFAULT nextval('public.units_table_id_seq'::regclass);
 
 
 --
@@ -2963,6 +3687,17 @@ INSERT INTO public.business_type_table VALUES (3, 'Transporter', 'Handles logist
 
 
 --
+-- Data for Name: cash_payment_list; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.cash_payment_list VALUES (1, 'Online Banking');
+INSERT INTO public.cash_payment_list VALUES (2, 'UPI Payment');
+INSERT INTO public.cash_payment_list VALUES (3, 'Mobile Wallets');
+INSERT INTO public.cash_payment_list VALUES (4, 'Credit/Debit Cards');
+INSERT INTO public.cash_payment_list VALUES (5, 'Credit/Pay after delivery');
+
+
+--
 -- Data for Name: daily_price_update; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -2996,6 +3731,21 @@ INSERT INTO public.driver_violation_table VALUES (3, 2, 2, '2024-02-18');
 -- Data for Name: insurance_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+
+
+--
+-- Data for Name: invoice_details_table; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.invoice_details_table VALUES (1, 2, 6, 5.00, 0);
+
+
+--
+-- Data for Name: invoice_table; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.invoice_table VALUES (2, 'INV-20250224-0001', 1, 590.00, 500.00, '2025-02-24 18:25:44.460827', '2025-03-01', 2, 4, DEFAULT);
+INSERT INTO public.invoice_table VALUES (3, 'INV-20250225-00003', 3, 1500.00, 100.00, '2025-02-25 14:14:21.29295', '2025-03-02', 1, 2, DEFAULT);
 
 
 --
@@ -3065,17 +3815,48 @@ INSERT INTO public.master_violation_table VALUES ('drunk and drive', 'medium', 2
 
 
 --
+-- Data for Name: mode_of_payment; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.mode_of_payment VALUES (1, 2, 3);
+INSERT INTO public.mode_of_payment VALUES (2, 2, 3);
+INSERT INTO public.mode_of_payment VALUES (3, 1, 5);
+
+
+--
+-- Data for Name: mode_of_payments_list; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.mode_of_payments_list VALUES (1, 'credit_payment');
+INSERT INTO public.mode_of_payments_list VALUES (2, 'cash_payment');
+
+
+--
 -- Data for Name: order_history_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 4, '2025-02-27 09:55:59.551139', '2025-02-22 09:58:54.219252', 5, 6, 1, 2, '123456', '123 Street, City', NULL, 1);
 INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-22 10:01:52.229039', 2);
+INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 11:29:28.140697', 3);
+INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 11:59:18.925182', 4);
+INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 12:09:45.416871', 5);
+INSERT INTO public.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 21:12:04.580976', 6);
+INSERT INTO public.order_history_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', NULL, 8);
+INSERT INTO public.order_history_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', NULL, 9);
+INSERT INTO public.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 10);
+INSERT INTO public.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 11);
 
 
 --
 -- Data for Name: order_item_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.order_item_table VALUES (6, 1, 2, 5.00, 1, 590.000, NULL);
+INSERT INTO public.order_item_table VALUES (4, 1, 2, 5.00, 1, 590.000, 2);
+INSERT INTO public.order_item_table VALUES (7, 3, 3, 2.00, 1, 750.000, 1);
+INSERT INTO public.order_item_table VALUES (8, 3, 1, 1.00, 2, 750.000, 1);
+INSERT INTO public.order_item_table VALUES (9, 4, 2, 4.00, 1, 472.000, 4);
+INSERT INTO public.order_item_table VALUES (10, 4, 1, 3.00, 1, 1000.000, 4);
 
 
 --
@@ -3095,14 +3876,17 @@ INSERT INTO public.order_status_table VALUES (7, 'Returned');
 -- Data for Name: order_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.order_table VALUES (2, '2025-02-22 09:55:59.551139', 4, '2025-02-25 09:55:59.551139', NULL, 5, 6, 2, 1, '654321', '456 Avenue, City');
-INSERT INTO public.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City');
+INSERT INTO public.order_table VALUES (2, '2025-02-22 09:55:59.551139', 4, '2025-02-25 09:55:59.551139', NULL, 5, 6, 2, 1, '654321', '456 Avenue, City', 0.00);
+INSERT INTO public.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', 1180.00);
+INSERT INTO public.order_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', 1500.00);
+INSERT INTO public.order_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', 1472.00);
 
 
 --
 -- Data for Name: product_price_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.product_price_table VALUES (2, 2, 100.00, 5, 18.00);
 
 
 --
@@ -3121,6 +3905,17 @@ INSERT INTO public.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025
 -- Data for Name: type_of_insurance; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+
+
+--
+-- Data for Name: units_table; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.units_table VALUES (1, 'kg');
+INSERT INTO public.units_table VALUES (2, 'liter');
+INSERT INTO public.units_table VALUES (3, 'tonnes');
+INSERT INTO public.units_table VALUES (4, 'pieces');
+INSERT INTO public.units_table VALUES (5, 'grams');
 
 
 --
@@ -3206,6 +4001,13 @@ SELECT pg_catalog.setval('public.business_table_bid_seq', 12, true);
 
 
 --
+-- Name: cash_payment_list_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.cash_payment_list_id_seq', 5, true);
+
+
+--
 -- Name: discount_table_dis_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -3231,6 +4033,27 @@ SELECT pg_catalog.setval('public.insurance_provider_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('public.insurance_table_insurance_id_seq', 1, false);
+
+
+--
+-- Name: invoice_daily_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.invoice_daily_seq', 1, false);
+
+
+--
+-- Name: invoice_details_table_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.invoice_details_table_id_seq', 1, true);
+
+
+--
+-- Name: invoice_table_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.invoice_table_id_seq', 3, true);
 
 
 --
@@ -3290,17 +4113,31 @@ SELECT pg_catalog.setval('public.master_violation_table_new_id_seq', 2, true);
 
 
 --
+-- Name: mode_of_payment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.mode_of_payment_id_seq', 3, true);
+
+
+--
+-- Name: mode_of_payments_list_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.mode_of_payments_list_id_seq', 2, true);
+
+
+--
 -- Name: order_history_table_history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.order_history_table_history_id_seq', 2, true);
+SELECT pg_catalog.setval('public.order_history_table_history_id_seq', 11, true);
 
 
 --
 -- Name: order_item_table_product_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.order_item_table_product_order_id_seq', 1, false);
+SELECT pg_catalog.setval('public.order_item_table_product_order_id_seq', 6, true);
 
 
 --
@@ -3321,7 +4158,7 @@ SELECT pg_catalog.setval('public.order_table_order_id_seq', 2, true);
 -- Name: product_price_table_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.product_price_table_id_seq', 1, false);
+SELECT pg_catalog.setval('public.product_price_table_id_seq', 4, true);
 
 
 --
@@ -3343,6 +4180,13 @@ SELECT pg_catalog.setval('public.transporter_table_transporter_id_seq', 1, false
 --
 
 SELECT pg_catalog.setval('public.type_of_insurance_id_seq', 1, false);
+
+
+--
+-- Name: units_table_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.units_table_id_seq', 5, true);
 
 
 --
@@ -3457,6 +4301,22 @@ ALTER TABLE ONLY public.business_table
 
 
 --
+-- Name: cash_payment_list cash_payment_list_payment_type_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cash_payment_list
+    ADD CONSTRAINT cash_payment_list_payment_type_key UNIQUE (payment_type);
+
+
+--
+-- Name: cash_payment_list cash_payment_list_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cash_payment_list
+    ADD CONSTRAINT cash_payment_list_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: discount_table discount_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3494,6 +4354,22 @@ ALTER TABLE ONLY public.insurance_table
 
 ALTER TABLE ONLY public.insurance_table
     ADD CONSTRAINT insurance_table_pkey PRIMARY KEY (insurance_id);
+
+
+--
+-- Name: invoice_details_table invoice_details_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_details_table
+    ADD CONSTRAINT invoice_details_table_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: invoice_table invoice_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_table
+    ADD CONSTRAINT invoice_table_pkey PRIMARY KEY (id);
 
 
 --
@@ -3601,6 +4477,30 @@ ALTER TABLE ONLY public.master_violation_table
 
 
 --
+-- Name: mode_of_payment mode_of_payment_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payment
+    ADD CONSTRAINT mode_of_payment_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mode_of_payments_list mode_of_payments_list_payment_mode_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payments_list
+    ADD CONSTRAINT mode_of_payments_list_payment_mode_key UNIQUE (payment_mode);
+
+
+--
+-- Name: mode_of_payments_list mode_of_payments_list_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payments_list
+    ADD CONSTRAINT mode_of_payments_list_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: order_history_table order_history_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3613,7 +4513,7 @@ ALTER TABLE ONLY public.order_history_table
 --
 
 ALTER TABLE ONLY public.order_item_table
-    ADD CONSTRAINT order_item_table_pkey PRIMARY KEY (product_order_id);
+    ADD CONSTRAINT order_item_table_pkey PRIMARY KEY (order_item_id);
 
 
 --
@@ -3697,11 +4597,35 @@ ALTER TABLE ONLY public.type_of_insurance
 
 
 --
+-- Name: invoice_table unique_invoice_number; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_table
+    ADD CONSTRAINT unique_invoice_number UNIQUE (invoice_number);
+
+
+--
 -- Name: order_status_table unique_order_status_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.order_status_table
     ADD CONSTRAINT unique_order_status_id UNIQUE (order_status_id);
+
+
+--
+-- Name: units_table units_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.units_table
+    ADD CONSTRAINT units_table_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: units_table units_table_unit_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.units_table
+    ADD CONSTRAINT units_table_unit_name_key UNIQUE (unit_name);
 
 
 --
@@ -3785,10 +4709,45 @@ ALTER TABLE ONLY public.warehouse_list
 
 
 --
+-- Name: invoice_table invoice_number_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER invoice_number_trigger BEFORE INSERT ON public.invoice_table FOR EACH ROW EXECUTE FUNCTION public.generate_invoice_number();
+
+
+--
+-- Name: mode_of_payment trg_default_pay_type; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_default_pay_type BEFORE INSERT ON public.mode_of_payment FOR EACH ROW EXECUTE FUNCTION public.set_default_pay_type();
+
+
+--
+-- Name: invoice_table trigger_generate_invoice_number; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trigger_generate_invoice_number BEFORE INSERT ON public.invoice_table FOR EACH ROW EXECUTE FUNCTION public.generate_invoice_number();
+
+
+--
+-- Name: order_item_table trigger_update_amt; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trigger_update_amt BEFORE INSERT OR UPDATE ON public.order_item_table FOR EACH ROW EXECUTE FUNCTION public.update_amt_of_order_item();
+
+
+--
 -- Name: order_table trigger_update_order_history; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
 CREATE TRIGGER trigger_update_order_history BEFORE UPDATE ON public.order_table FOR EACH ROW EXECUTE FUNCTION public.update_order_history();
+
+
+--
+-- Name: order_item_table trigger_update_total_order_amount; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trigger_update_total_order_amount AFTER INSERT OR DELETE OR UPDATE ON public.order_item_table FOR EACH ROW EXECUTE FUNCTION public.update_total_order_amount();
 
 
 --
@@ -3872,6 +4831,22 @@ ALTER TABLE ONLY public.master_mandi_table
 
 
 --
+-- Name: mode_of_payment fk_mode; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payment
+    ADD CONSTRAINT fk_mode FOREIGN KEY (pay_mode) REFERENCES public.mode_of_payments_list(id);
+
+
+--
+-- Name: order_item_table fk_order_item_status; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_item_table
+    ADD CONSTRAINT fk_order_item_status FOREIGN KEY (order_item_status) REFERENCES public.order_status_table(order_status_id);
+
+
+--
 -- Name: order_table fk_order_status; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3920,6 +4895,22 @@ ALTER TABLE ONLY public.insurance_table
 
 
 --
+-- Name: mode_of_payment fk_type; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mode_of_payment
+    ADD CONSTRAINT fk_type FOREIGN KEY (pay_type) REFERENCES public.cash_payment_list(id);
+
+
+--
+-- Name: order_item_table fk_units; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_item_table
+    ADD CONSTRAINT fk_units FOREIGN KEY (unit_id) REFERENCES public.units_table(id);
+
+
+--
 -- Name: user_bank_details fk_user; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -3965,6 +4956,46 @@ ALTER TABLE ONLY public.insurance_table
 
 ALTER TABLE ONLY public.insurance_table
     ADD CONSTRAINT insurance_table_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.master_vehicle_table(vehicle_id) ON DELETE CASCADE;
+
+
+--
+-- Name: invoice_details_table invoice_details_table_invoice_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_details_table
+    ADD CONSTRAINT invoice_details_table_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES public.invoice_table(id) ON DELETE CASCADE;
+
+
+--
+-- Name: invoice_details_table invoice_details_table_order_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_details_table
+    ADD CONSTRAINT invoice_details_table_order_item_id_fkey FOREIGN KEY (order_item_id) REFERENCES public.order_item_table(order_item_id) ON DELETE CASCADE;
+
+
+--
+-- Name: invoice_table invoice_table_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_table
+    ADD CONSTRAINT invoice_table_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.order_table(order_id) ON DELETE CASCADE;
+
+
+--
+-- Name: invoice_table invoice_table_pay_mode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_table
+    ADD CONSTRAINT invoice_table_pay_mode_fkey FOREIGN KEY (pay_mode) REFERENCES public.mode_of_payments_list(id);
+
+
+--
+-- Name: invoice_table invoice_table_pay_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_table
+    ADD CONSTRAINT invoice_table_pay_type_fkey FOREIGN KEY (pay_type) REFERENCES public.cash_payment_list(id);
 
 
 --
