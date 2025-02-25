@@ -18,10 +18,10 @@ func GetOrderDetails(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	ordersMap := make(map[int]map[string]interface{}) // Orders storage
-	productsMap := make(map[int][]map[string]interface{}) // Products storage
+	ordersMap := make(map[int]map[string]interface{}) 
+	productsMap := make(map[int][]map[string]interface{}) 
 
-	var orders []map[string]interface{} // Final list of orders
+	var orders []map[string]interface{} 
 
 	for rows.Next() {
 		var orderID, retailerID, wholesellerID, unitID, orderItemID int
@@ -44,7 +44,6 @@ func GetOrderDetails(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
-		// Ensure each order_id is unique
 		if _, exists := ordersMap[orderID]; !exists {
 			ordersMap[orderID] = map[string]interface{}{
 				"order_id":           orderID,
@@ -60,11 +59,9 @@ func GetOrderDetails(c *fiber.Ctx) error {
 				"address":            address,
 				"total_order_amount": totalOrderAmount,
 			}
-			// Initialize empty products array
 			productsMap[orderID] = []map[string]interface{}{}
 		}
 
-		// Ensure product is added to the correct order_id
 		if orderItemID != 0 && orderID > 0 {
 			product := map[string]interface{}{
 				"order_item_id":         orderItemID,
@@ -77,13 +74,10 @@ func GetOrderDetails(c *fiber.Ctx) error {
 				"actual_delivery_date":   formatNullTime(actualDeliveryDate),
 				"order_item_status_name": formatNullString(orderItemStatus),
 			}
-
-			// Append product to correct order's product list
 			productsMap[orderID] = append(productsMap[orderID], product)
 		}
 	}
 
-	// Merge orders with their products
 	for orderID, order := range ordersMap {
 		order["products"] = productsMap[orderID]
 		orders = append(orders, order)
@@ -92,7 +86,6 @@ func GetOrderDetails(c *fiber.Ctx) error {
 	return c.JSON(orders)
 }
 
-// Helper functions for nullable SQL fields
 func formatNullTime(nt sql.NullTime) string {
 	if nt.Valid {
 		return nt.Time.Format(time.RFC3339)
