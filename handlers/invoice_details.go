@@ -9,6 +9,43 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
+type Invoice struct {
+	ID                  int       `json:"id"`
+	InvoiceNumber       string    `json:"invoice_number"`
+	OrderID             int       `json:"order_id"`
+	TotalAmount         float64   `json:"total_amount"`
+	RetailerID          int       `json:"retailer_id"`
+	RetailerName        string    `json:"retailer_name"`
+	RetailerEmail       string    `json:"retailer_email"`
+	RetailerPhone       string    `json:"retailer_phone"`
+	RetailerAddress     string    `json:"retailer_address"`
+	RetailerLocationID  int       `json:"retailer_location_id"`
+	RetailerStateID     int       `json:"retailer_state_id"`
+	WholesellerID       int       `json:"wholeseller_id"`
+	WholesellerName     string    `json:"wholeseller_name"`
+	WholesellerEmail    string    `json:"wholeseller_email"`
+	WholesellerPhone    string    `json:"wholeseller_phone"`
+	WholesellerAddress  string    `json:"wholeseller_address"`
+	WholesellerLocationID int     `json:"wholeseller_location_id"`
+	WholesellerStateID  int       `json:"wholeseller_state_id"`
+	DiscountAmount      float64   `json:"discount_amount"`
+	InvoiceDate         string    `json:"invoice_date"`
+	DueDate             string    `json:"due_date"`
+	PayMode             int       `json:"pay_mode"`
+	PayModeName         string    `json:"pay_mode_name"`
+	PayType             int       `json:"pay_type"`
+	PayTypeName         string    `json:"pay_type_name"`
+	FinalAmount         float64   `json:"final_amount"`
+	StatusName          string    `json:"status_name"`
+	Products            []Product `json:"products"`
+}
+
+type Product struct {
+	OrderItemID int    `json:"order_item_id"`
+	ProductID   int    `json:"product_id"`
+	ProductName string `json:"product_name"`
+}
+
 func GetInvoiceDetails(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_invoice_details_with_business_info();")
 	if err != nil {
@@ -17,25 +54,22 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	invoicesMap := make(map[int]map[string]interface{})
-	productsMap := make(map[int][]map[string]interface{})
-	var invoices []map[string]interface{}
+	var invoices []Invoice
 
 	for rows.Next() {
-		var id, orderID, retailerID, retailerLocationID, retailerStateID, wholesellerID, wholesellerLocationID, wholesellerStateID, payMode, payType, orderItemID, productID int
-		var retailerStatus int
-		var totalAmount, discountAmount, finalAmount float64
-		var invoiceNumber, retailerName, retailerEmail, retailerPhone, retailerAddress string
-		var wholesellerName, wholesellerEmail, wholesellerPhone, wholesellerAddress, payModeName, payTypeName, productName string
-		var retailerStatusName, statusName string
+		var invoice Invoice
+		var product Product
 		var invoiceDate, dueDate time.Time
 
 		err := rows.Scan(
-			&id, &invoiceNumber, &orderID, &retailerID, &retailerName, &retailerEmail, &retailerPhone, &retailerAddress,
-			&retailerLocationID, &retailerStateID, &wholesellerID, &wholesellerName, &wholesellerEmail, &wholesellerPhone,
-			&wholesellerAddress, &wholesellerLocationID, &wholesellerStateID, &totalAmount, &discountAmount, &invoiceDate,
-			&dueDate, &payMode, &payModeName, &payType, &payTypeName, &finalAmount, &orderItemID, &productID, &productName,
-			&retailerStatus, &retailerStatusName, &statusName, // 🆕 Newly added columns
+			&invoice.ID, &invoice.InvoiceNumber, &invoice.OrderID, &invoice.RetailerID, &invoice.RetailerName,
+			&invoice.RetailerEmail, &invoice.RetailerPhone, &invoice.RetailerAddress, &invoice.RetailerLocationID,
+			&invoice.RetailerStateID, &invoice.WholesellerID, &invoice.WholesellerName, &invoice.WholesellerEmail,
+			&invoice.WholesellerPhone, &invoice.WholesellerAddress, &invoice.WholesellerLocationID,
+			&invoice.WholesellerStateID, &invoice.TotalAmount, &invoice.DiscountAmount, &invoiceDate,
+			&dueDate, &invoice.PayMode, &invoice.PayModeName, &invoice.PayType, &invoice.PayTypeName,
+			&invoice.FinalAmount, &product.OrderItemID, &product.ProductID, &product.ProductName,
+			 &invoice.StatusName,
 		)
 
 		if err != nil {
@@ -43,56 +77,21 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
-		if _, exists := invoicesMap[id]; !exists {
-			invoicesMap[id] = map[string]interface{}{
-				"id":                   id,
-				"invoice_number":       invoiceNumber,
-				"order_id":             orderID,
-				"retailer_id":          retailerID,
-				"retailer_name":        retailerName,
-				"retailer_email":       retailerEmail,
-				"retailer_phone":       retailerPhone,
-				"retailer_address":     retailerAddress,
-				"retailer_location_id": retailerLocationID,
-				"retailer_state_id":    retailerStateID,
-				"wholeseller_id":       wholesellerID,
-				"wholeseller_name":     wholesellerName,
-				"wholeseller_email":    wholesellerEmail,
-				"wholeseller_phone":    wholesellerPhone,
-				"wholeseller_address":  wholesellerAddress,
-				"wholeseller_location_id": wholesellerLocationID,
-				"wholeseller_state_id":    wholesellerStateID,
-				"total_amount":         totalAmount,
-				"discount_amount":      discountAmount,
-				"invoice_date":         invoiceDate.Format(time.RFC3339),
-				"due_date":             dueDate.Format("2006-01-02"),
-				"pay_mode":             payMode,
-				"pay_mode_name":        payModeName,
-				"pay_type":             payType,
-				"pay_type_name":        payTypeName,
-				"final_amount":         finalAmount,
+		invoice.InvoiceDate = invoiceDate.Format(time.RFC3339)
+		invoice.DueDate = dueDate.Format("2006-01-02")
 
-				// 🆕 Newly added fields:
-				"retailer_status":      retailerStatus,
-				"retailer_status_name": retailerStatusName,
-				"status_name":          statusName,
+		found := false
+		for i := range invoices {
+			if invoices[i].ID == invoice.ID {
+				invoices[i].Products = append(invoices[i].Products, product)
+				found = true
+				break
 			}
-			productsMap[id] = []map[string]interface{}{}
 		}
-
-		if orderItemID != 0 {
-			product := map[string]interface{}{
-				"order_item_id": orderItemID,
-				"product_id":    productID,
-				"product_name":  productName,
-			}
-			productsMap[id] = append(productsMap[id], product)
+		if !found {
+			invoice.Products = []Product{product}
+			invoices = append(invoices, invoice)
 		}
-	}
-
-	for id, invoice := range invoicesMap {
-		invoice["products"] = productsMap[id]
-		invoices = append(invoices, invoice)
 	}
 
 	return c.JSON(invoices)
