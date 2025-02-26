@@ -31,7 +31,6 @@ func GetOrderDetails(c *fiber.Ctx) error {
 		var totalOrderAmount, quantity float64
 		var amtOfOrderItem sql.NullFloat64
 		var orderItemStatus sql.NullString
-
 		err := rows.Scan(
 			&orderID, &orderItemID, &dateOfOrder, &expectedDeliveryDate, &actualDeliveryDate, 
 			&orderStatus, &retailerID, &retailerName, &wholesellerID, &wholesellerName, 
@@ -43,7 +42,6 @@ func GetOrderDetails(c *fiber.Ctx) error {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
-
 		if _, exists := ordersMap[orderID]; !exists {
 			ordersMap[orderID] = map[string]interface{}{
 				"order_id":               orderID,
@@ -63,7 +61,6 @@ func GetOrderDetails(c *fiber.Ctx) error {
 			}
 			productsMap[orderID] = []map[string]interface{}{}
 		}
-
 		if orderItemID != 0 {
 			product := map[string]interface{}{
 				"order_item_id":         orderItemID,
@@ -78,29 +75,24 @@ func GetOrderDetails(c *fiber.Ctx) error {
 			productsMap[orderID] = append(productsMap[orderID], product)
 		}
 	}
-
 	for orderID, order := range ordersMap {
 		order["products"] = productsMap[orderID]
 		orders = append(orders, order)
 	}
-
 	return c.JSON(orders)
 }
-
 func formatNullTime(nt sql.NullTime) string {
 	if nt.Valid {
 		return nt.Time.Format(time.RFC3339)
 	}
 	return ""
 }
-
 func formatNullString(ns sql.NullString) string {
 	if ns.Valid {
 		return ns.String
 	}
 	return ""
 }
-
 func formatNullFloat64(nf sql.NullFloat64) float64 {
 	if nf.Valid {
 		return nf.Float64
@@ -110,7 +102,6 @@ func formatNullFloat64(nf sql.NullFloat64) float64 {
 
 
 // package handlers
-
 // import (
 // 	"context"
 // 	"database/sql"
