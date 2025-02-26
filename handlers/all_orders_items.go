@@ -17,11 +17,9 @@ func GetOrderDetails(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch order details"})
 	}
 	defer rows.Close()
-
 	ordersMap := make(map[int]map[string]interface{}) 
 	productsMap := make(map[int][]map[string]interface{}) 
 	var orders []map[string]interface{}
-
 	for rows.Next() {
 		var orderID, orderItemID, retailerID, wholesellerID, unitID int
 		var productID int64
