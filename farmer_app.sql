@@ -17,6 +17,19 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: acceptance_status; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.acceptance_status AS ENUM (
+    'pending',
+    'accepted',
+    'rejected'
+);
+
+
+ALTER TYPE public.acceptance_status OWNER TO postgres;
+
+--
 -- Name: add_business(integer, character varying, character varying, integer, text, text, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -501,25 +514,50 @@ ALTER FUNCTION public.get_invoice_details() OWNER TO postgres;
 -- Name: get_invoice_details_with_business_info(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_invoice_details_with_business_info() RETURNS TABLE(id integer, invoice_number character varying, order_id bigint, retailer_id bigint, retailer_name character varying, retailer_email character varying, retailer_phone text, retailer_address text, retailer_location_id integer, retailer_state_id integer, wholeseller_id bigint, wholeseller_name character varying, wholeseller_email character varying, wholeseller_phone text, wholeseller_address text, wholeseller_location_id integer, wholeseller_state_id integer, total_amount numeric, discount_amount numeric, invoice_date timestamp without time zone, due_date date, pay_mode integer, pay_mode_name character varying, pay_type integer, pay_type_name character varying, final_amount numeric, order_item_id bigint, product_id bigint, product_name character varying)
+CREATE FUNCTION public.get_invoice_details_with_business_info() RETURNS TABLE(id integer, invoice_number text, order_id bigint, retailer_id bigint, retailer_name text, retailer_email text, retailer_phone text, retailer_address text, retailer_location_id integer, retailer_state_id integer, wholeseller_id bigint, wholeseller_name text, wholeseller_email text, wholeseller_phone text, wholeseller_address text, wholeseller_location_id integer, wholeseller_state_id integer, total_amount numeric, discount_amount numeric, invoice_date date, due_date date, pay_mode integer, pay_mode_name text, pay_type integer, pay_type_name text, final_amount numeric, order_item_id bigint, product_id bigint, product_name text, retailer_status text, wholeseller_state_name text, retailer_state_name text, wholeseller_location_name text, retailer_location_name text)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
-        i.id, i.invoice_number, i.order_id, 
-        b_retailer.bid AS retailer_id, b_retailer.b_name AS retailer_name, 
-        b_retailer.b_email AS retailer_email, b_retailer.b_phone_num AS retailer_phone, 
-        b_retailer.b_address AS retailer_address, b_retailer.b_location_id, b_retailer.b_state_id,
-        b_wholeseller.bid AS wholeseller_id, b_wholeseller.b_name AS wholeseller_name, 
-        b_wholeseller.b_email AS wholeseller_email, b_wholeseller.b_phone_num AS wholeseller_phone, 
-        b_wholeseller.b_address AS wholeseller_address, b_wholeseller.b_location_id, b_wholeseller.b_state_id,
-        i.total_amount, i.discount_amount, i.invoice_date, i.due_date,
-        m.id AS pay_mode, m.payment_mode AS pay_mode_name, 
-        c.id AS pay_type, c.payment_type AS pay_type_name,
+    SELECT
+        i.id, 
+        i.invoice_number::TEXT,  
+        i.order_id,
+        b_retailer.bid AS retailer_id, 
+        b_retailer.b_name::TEXT AS retailer_name,  -- ? Explicit cast
+        b_retailer.b_email::TEXT AS retailer_email,
+        b_retailer.b_phone_num::TEXT AS retailer_phone,
+        b_retailer.b_address::TEXT AS retailer_address, 
+        b_retailer.b_location_id,
+        b_retailer.b_state_id,
+
+        b_wholeseller.bid AS wholeseller_id, 
+        b_wholeseller.b_name::TEXT AS wholeseller_name,
+        b_wholeseller.b_email::TEXT AS wholeseller_email,
+        b_wholeseller.b_phone_num::TEXT AS wholeseller_phone,
+        b_wholeseller.b_address::TEXT AS wholeseller_address, 
+        b_wholeseller.b_location_id,
+        b_wholeseller.b_state_id,
+
+        i.total_amount, 
+        i.discount_amount, 
+        i.invoice_date::DATE,  
+        i.due_date::DATE,  
+        m.id AS pay_mode, 
+        m.payment_mode::TEXT AS pay_mode_name,
+        c.id AS pay_type, 
+        c.payment_type::TEXT AS pay_type_name,
         i.final_amount,
-        oi.order_item_id, 
-        p.product_id, p.product_name
+        oi.order_item_id,
+        p.product_id, 
+        p.product_name::TEXT,
+        idt.retailer_status::TEXT,
+
+        ms_wholeseller.state::TEXT AS wholeseller_state_name,
+        ms_retailer.state::TEXT AS retailer_state_name,
+        ml_wholeseller.location::TEXT AS wholeseller_location_name,
+        ml_retailer.location::TEXT AS retailer_location_name
+
     FROM invoice_table i
     JOIN order_table o ON i.order_id = o.order_id
     JOIN business_table b_retailer ON o.retailer_id = b_retailer.bid
@@ -527,7 +565,17 @@ BEGIN
     JOIN mode_of_payments_list m ON i.pay_mode = m.id
     JOIN cash_payment_list c ON i.pay_type = c.id
     JOIN order_item_table oi ON o.order_id = oi.order_id
-    JOIN master_product p ON oi.product_id = p.product_id;
+    JOIN master_product p ON oi.product_id = p.product_id
+    JOIN invoice_details_table idt ON i.id = idt.invoice_id
+    LEFT JOIN retailer_status rst ON idt.retailer_status = rst.id
+
+    -- Join to get state names
+    LEFT JOIN master_states ms_wholeseller ON b_wholeseller.b_state_id = ms_wholeseller.id
+    LEFT JOIN master_states ms_retailer ON b_retailer.b_state_id = ms_retailer.id
+
+    -- Join to get location names
+    LEFT JOIN master_location ml_wholeseller ON b_wholeseller.b_location_id = ml_wholeseller.id
+    LEFT JOIN master_location ml_retailer ON b_retailer.b_location_id = ml_retailer.id;
 END;
 $$;
 
@@ -2221,7 +2269,7 @@ CREATE TABLE public.invoice_details_table (
     invoice_id bigint,
     order_item_id bigint,
     quantity numeric(10,2) NOT NULL,
-    retailer_accepting integer DEFAULT 0
+    retailer_status integer DEFAULT 0
 );
 
 
@@ -2887,6 +2935,77 @@ ALTER SEQUENCE public.product_price_table_id_seq OWNED BY public.product_price_t
 
 
 --
+-- Name: retailer_rating_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.retailer_rating_table (
+    id integer NOT NULL,
+    order_id integer NOT NULL,
+    creditworthiness_rating numeric(3,2),
+    payment_disputes integer DEFAULT 0,
+    order_frequency numeric(3,2),
+    order_cancellation_rate numeric(3,2),
+    urgent_order_requests numeric(3,2) DEFAULT 0,
+    seasonal_dependency boolean DEFAULT false,
+    communication_rating numeric(3,2),
+    professionalism_rating numeric(3,2),
+    negotiation_behavior_rating numeric(3,2),
+    return_frequency numeric(3,2),
+    return_validity_rating numeric(3,2),
+    complaint_handling_rating numeric(3,2),
+    overall_rating numeric(3,2) GENERATED ALWAYS AS (((((((creditworthiness_rating + order_frequency) + communication_rating) + professionalism_rating) + return_validity_rating) + complaint_handling_rating) / (6)::numeric)) STORED,
+    comments text,
+    rated_on timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT retailer_rating_table_communication_rating_check CHECK (((communication_rating >= (1)::numeric) AND (communication_rating <= (5)::numeric))),
+    CONSTRAINT retailer_rating_table_complaint_handling_rating_check CHECK (((complaint_handling_rating >= (1)::numeric) AND (complaint_handling_rating <= (5)::numeric))),
+    CONSTRAINT retailer_rating_table_creditworthiness_rating_check CHECK (((creditworthiness_rating >= (1)::numeric) AND (creditworthiness_rating <= (5)::numeric))),
+    CONSTRAINT retailer_rating_table_negotiation_behavior_rating_check CHECK (((negotiation_behavior_rating >= (1)::numeric) AND (negotiation_behavior_rating <= (5)::numeric))),
+    CONSTRAINT retailer_rating_table_order_cancellation_rate_check CHECK (((order_cancellation_rate >= (0)::numeric) AND (order_cancellation_rate <= (100)::numeric))),
+    CONSTRAINT retailer_rating_table_order_frequency_check CHECK ((order_frequency >= (0)::numeric)),
+    CONSTRAINT retailer_rating_table_professionalism_rating_check CHECK (((professionalism_rating >= (1)::numeric) AND (professionalism_rating <= (5)::numeric))),
+    CONSTRAINT retailer_rating_table_return_frequency_check CHECK ((return_frequency >= (0)::numeric)),
+    CONSTRAINT retailer_rating_table_return_validity_rating_check CHECK (((return_validity_rating >= (1)::numeric) AND (return_validity_rating <= (5)::numeric))),
+    CONSTRAINT retailer_rating_table_urgent_order_requests_check CHECK ((urgent_order_requests >= (0)::numeric))
+);
+
+
+ALTER TABLE public.retailer_rating_table OWNER TO postgres;
+
+--
+-- Name: retailer_rating_table_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.retailer_rating_table_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.retailer_rating_table_id_seq OWNER TO postgres;
+
+--
+-- Name: retailer_rating_table_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.retailer_rating_table_id_seq OWNED BY public.retailer_rating_table.id;
+
+
+--
+-- Name: retailer_status; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.retailer_status (
+    id integer NOT NULL,
+    status_name character varying(20)
+);
+
+
+ALTER TABLE public.retailer_status OWNER TO postgres;
+
+--
 -- Name: stock_table; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3410,6 +3529,64 @@ ALTER SEQUENCE public.warehouse_list_warehouse_id_seq OWNED BY public.warehouse_
 
 
 --
+-- Name: wholeseller_rating_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.wholeseller_rating_table (
+    id integer NOT NULL,
+    order_id integer NOT NULL,
+    product_quality_rating numeric(3,2),
+    product_authenticity boolean DEFAULT true,
+    consistency_in_quality numeric(3,2),
+    product_variety_rating numeric(3,2),
+    stock_availability_rating numeric(3,2),
+    new_product_introduction boolean DEFAULT false,
+    order_processing_speed numeric(3,2),
+    delivery_time_adherence numeric(3,2),
+    urgent_order_handling numeric(3,2),
+    order_fulfillment_accuracy numeric(3,2),
+    packaging_quality_rating numeric(3,2),
+    eco_friendly_packaging boolean DEFAULT false,
+    storage_conditions_rating numeric(3,2),
+    pricing_fairness_rating numeric(3,2),
+    hidden_charges boolean DEFAULT false,
+    discount_offers boolean DEFAULT false,
+    flexible_payment_terms boolean DEFAULT false,
+    responsiveness_rating numeric(3,2),
+    complaint_resolution_rating numeric(3,2),
+    return_refund_policy_rating numeric(3,2),
+    replacement_handling_rating numeric(3,2),
+    overall_rating numeric(3,2) GENERATED ALWAYS AS (((((((((product_quality_rating + consistency_in_quality) + order_processing_speed) + delivery_time_adherence) + packaging_quality_rating) + pricing_fairness_rating) + responsiveness_rating) + complaint_resolution_rating) / (8)::numeric)) STORED,
+    comments text,
+    rated_on timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.wholeseller_rating_table OWNER TO postgres;
+
+--
+-- Name: wholesaler_rating_table_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.wholesaler_rating_table_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.wholesaler_rating_table_id_seq OWNER TO postgres;
+
+--
+-- Name: wholesaler_rating_table_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.wholesaler_rating_table_id_seq OWNED BY public.wholeseller_rating_table.id;
+
+
+--
 -- Name: business_table bid; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -3578,6 +3755,13 @@ ALTER TABLE ONLY public.product_price_table ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: retailer_rating_table id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.retailer_rating_table ALTER COLUMN id SET DEFAULT nextval('public.retailer_rating_table_id_seq'::regclass);
+
+
+--
 -- Name: stock_table stock_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -3666,6 +3850,13 @@ ALTER TABLE ONLY public.vehicle_model ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.warehouse_list ALTER COLUMN warehouse_id SET DEFAULT nextval('public.warehouse_list_warehouse_id_seq'::regclass);
+
+
+--
+-- Name: wholeseller_rating_table id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.wholeseller_rating_table ALTER COLUMN id SET DEFAULT nextval('public.wholesaler_rating_table_id_seq'::regclass);
 
 
 --
@@ -3890,6 +4081,22 @@ INSERT INTO public.product_price_table VALUES (2, 2, 100.00, 5, 18.00);
 
 
 --
+-- Data for Name: retailer_rating_table; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+
+
+--
+-- Data for Name: retailer_status; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.retailer_status VALUES (0, 'initiated');
+INSERT INTO public.retailer_status VALUES (1, 'Accepting');
+INSERT INTO public.retailer_status VALUES (2, 'Rejecting');
+INSERT INTO public.retailer_status VALUES (3, 'negotiation');
+
+
+--
 -- Data for Name: stock_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -3982,6 +4189,12 @@ INSERT INTO public.vehicle_model VALUES (3, 'Mustang');
 
 --
 -- Data for Name: warehouse_list; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+
+
+--
+-- Data for Name: wholeseller_rating_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 
@@ -4162,6 +4375,13 @@ SELECT pg_catalog.setval('public.product_price_table_id_seq', 4, true);
 
 
 --
+-- Name: retailer_rating_table_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.retailer_rating_table_id_seq', 1, false);
+
+
+--
 -- Name: stock_table_stock_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -4250,6 +4470,13 @@ SELECT pg_catalog.setval('public.vehicle_model_id_seq', 3, true);
 --
 
 SELECT pg_catalog.setval('public.warehouse_list_warehouse_id_seq', 1, false);
+
+
+--
+-- Name: wholesaler_rating_table_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.wholesaler_rating_table_id_seq', 1, false);
 
 
 --
@@ -4541,6 +4768,22 @@ ALTER TABLE ONLY public.product_price_table
 
 
 --
+-- Name: retailer_rating_table retailer_rating_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.retailer_rating_table
+    ADD CONSTRAINT retailer_rating_table_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: retailer_status retailer_status_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.retailer_status
+    ADD CONSTRAINT retailer_status_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: stock_table stock_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4709,6 +4952,14 @@ ALTER TABLE ONLY public.warehouse_list
 
 
 --
+-- Name: wholeseller_rating_table wholesaler_rating_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.wholeseller_rating_table
+    ADD CONSTRAINT wholesaler_rating_table_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: invoice_table invoice_number_trigger; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -4839,6 +5090,22 @@ ALTER TABLE ONLY public.mode_of_payment
 
 
 --
+-- Name: wholeseller_rating_table fk_order; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.wholeseller_rating_table
+    ADD CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES public.order_table(order_id) ON DELETE CASCADE;
+
+
+--
+-- Name: retailer_rating_table fk_order; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.retailer_rating_table
+    ADD CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES public.order_table(order_id) ON DELETE CASCADE;
+
+
+--
 -- Name: order_item_table fk_order_item_status; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -4884,6 +5151,14 @@ ALTER TABLE ONLY public.user_table
 
 ALTER TABLE ONLY public.master_mandi_table
     ADD CONSTRAINT fk_state FOREIGN KEY (mandi_state) REFERENCES public.master_states(id);
+
+
+--
+-- Name: invoice_details_table fk_status; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.invoice_details_table
+    ADD CONSTRAINT fk_status FOREIGN KEY (retailer_status) REFERENCES public.retailer_status(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
