@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-
 	"log"
 	"time"
 
@@ -24,9 +23,11 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 
 	for rows.Next() {
 		var id, orderID, retailerID, retailerLocationID, retailerStateID, wholesellerID, wholesellerLocationID, wholesellerStateID, payMode, payType, orderItemID, productID int
+		var retailerStatus int
 		var totalAmount, discountAmount, finalAmount float64
 		var invoiceNumber, retailerName, retailerEmail, retailerPhone, retailerAddress string
 		var wholesellerName, wholesellerEmail, wholesellerPhone, wholesellerAddress, payModeName, payTypeName, productName string
+		var retailerStatusName, statusName string
 		var invoiceDate, dueDate time.Time
 
 		err := rows.Scan(
@@ -34,6 +35,7 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 			&retailerLocationID, &retailerStateID, &wholesellerID, &wholesellerName, &wholesellerEmail, &wholesellerPhone,
 			&wholesellerAddress, &wholesellerLocationID, &wholesellerStateID, &totalAmount, &discountAmount, &invoiceDate,
 			&dueDate, &payMode, &payModeName, &payType, &payTypeName, &finalAmount, &orderItemID, &productID, &productName,
+			&retailerStatus, &retailerStatusName, &statusName, // 🆕 Newly added columns
 		)
 
 		if err != nil {
@@ -69,6 +71,11 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 				"pay_type":             payType,
 				"pay_type_name":        payTypeName,
 				"final_amount":         finalAmount,
+
+				// 🆕 Newly added fields:
+				"retailer_status":      retailerStatus,
+				"retailer_status_name": retailerStatusName,
+				"status_name":          statusName,
 			}
 			productsMap[id] = []map[string]interface{}{}
 		}
