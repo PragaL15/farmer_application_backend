@@ -8,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-
 type Invoice struct {
 	ID                    int       `json:"id"`
 	InvoiceNumber         string    `json:"invoice_number"`
@@ -43,13 +42,11 @@ type Invoice struct {
 	StatusName            string    `json:"status_name"`
 	Products              []Product `json:"products"`
 }
-
 type Product struct {
 	OrderItemID int    `json:"order_item_id"`
 	ProductID   int    `json:"product_id"`
 	ProductName string `json:"product_name"`
 }
-
 func GetInvoiceDetails(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_invoice_details_with_business_info();")
 	if err != nil {
@@ -57,14 +54,11 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch invoice details"})
 	}
 	defer rows.Close()
-
 	var invoices []Invoice
-
 	for rows.Next() {
 		var invoice Invoice
 		var product Product
 		var invoiceDate, dueDate time.Time
-
 		err := rows.Scan(
 			&invoice.ID, &invoice.InvoiceNumber, &invoice.OrderID, 
 			&invoice.RetailerID, &invoice.RetailerName, &invoice.RetailerEmail, 
@@ -83,10 +77,8 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
-
 		invoice.InvoiceDate = invoiceDate.Format(time.RFC3339)
 		invoice.DueDate = dueDate.Format("2006-01-02")
-
 		found := false
 		for i := range invoices {
 			if invoices[i].ID == invoice.ID {
