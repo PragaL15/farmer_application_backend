@@ -79,7 +79,6 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 			&invoice.StatusName, &invoice.WholesellerStateName, &invoice.RetailerStateName, 
 			&invoice.WholesellerLocationName, &invoice.RetailerLocationName,
 		)
-
 		if err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
@@ -101,6 +100,5 @@ func GetInvoiceDetails(c *fiber.Ctx) error {
 			invoices = append(invoices, invoice)
 		}
 	}
-
 	return c.JSON(invoices)
 }
