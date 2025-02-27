@@ -7,10 +7,15 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv" 
+
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/PragaL15/go_newBackend/handlers"
+	"github.com/PragaL15/go_newBackend/routes"
+	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
+
+	// routes "github.com/PragaL15/go_newBackend/routes"
+	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
 )
 
 func createLogger() (*log.Logger, *os.File) {
@@ -42,71 +47,71 @@ func main() {
 	app := fiber.New()
 
 	//get API's
-	app.Get("/getUsers", handlers.GetAllUsers)
-	app.Get("/getCategories", handlers.GetCategories)
-	app.Get("/getDrivers", handlers.GetDrivers)
-	app.Get("/getLocations", handlers.GetLocations)
-	app.Get("/getMandis", handlers.GetMandi)
-	app.Get("/getProducts", handlers.GetProducts) 
-	app.Get("/getStates", handlers.GetStates)
-	app.Get("/getVehicles", handlers.GetVehicles)
-	app.Get("/getViolations", handlers.GetViolations)  
-	app.Get("/getBusinesses", handlers.GetBusinesses)  
+	app.Get("/getUsers", Masterhandlers.GetAllUsers)
+	app.Get("/getCategories", Masterhandlers.GetCategories)
+	app.Get("/getDrivers",Masterhandlers.GetDrivers)
+	app.Get("/getLocations", Masterhandlers.GetLocations)
+	app.Get("/getMandis", Masterhandlers.GetMandi)
+	app.Get("/getProducts", Masterhandlers.GetProducts) 
+	app.Get("/getStates", Masterhandlers.GetStates)
+	app.Get("/getVehicles", Masterhandlers.GetVehicles)
+	app.Get("/getViolations", Masterhandlers.GetViolations)  
+	app.Get("/getBusinesses", Masterhandlers.GetBusinesses)  
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
-	app.Get("/getOrderStatus", handlers.GetOrderStatuses)
+	app.Get("/getOrderStatus", Masterhandlers.GetOrderStatuses)
 	app.Get("/getBusinessStatus", handlers.GetBusinessTypes)
 //app.Get("/getOrders", handlers.GetOrders)
 	app.Get("/getModeOfPayments", handlers.GetModeOfPayments)
-	app.Get("/getListPaymentMethod", handlers.GetListPaymentMethods)
+	app.Get("/getListPaymentMethod", Masterhandlers.GetListPaymentMethods)
 	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
 	app.Get("/getOrderHistoryDetails", handlers. GetOrderHistory)
 	app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
 
 	//posting API's
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
-	app.Post("/categoryDetails",handlers.InsertCategory)
-	app.Post("/driverDetails",handlers.InsertDriver)
-	app.Post("/locationDetails",handlers.InsertLocation)
-	app.Post("/mandiDetails",handlers.InsertMasterMandi)
-	app.Post("/productDetails",handlers.InsertMasterProduct)
-	app.Post("/stateDetails",handlers.InsertMasterState)
-	app.Post("/vehicleDetails",handlers.InsertMasterVehicle)
-	app.Post("/violationDetails",handlers.InsertMasterViolation)
-	app.Post("/userTableDetails",handlers.InsertUser)
-	app.Post("/businessDetails",handlers.InsertBusiness)
+	app.Post("/categoryDetails",Masterhandlers.InsertCategory)
+	app.Post("/driverDetails",Masterhandlers.InsertDriver)
+	app.Post("/locationDetails",Masterhandlers.InsertLocation)
+	app.Post("/mandiDetails",Masterhandlers.InsertMasterMandi)
+	app.Post("/productDetails",Masterhandlers.InsertMasterProduct)
+	app.Post("/stateDetails",Masterhandlers.InsertMasterState)
+	app.Post("/vehicleDetails",Masterhandlers.InsertMasterVehicle)
+	app.Post("/violationDetails",Masterhandlers.InsertMasterViolation)
+	app.Post("/userTableDetails",Masterhandlers.InsertUser)
+	app.Post("/businessDetails",Masterhandlers.InsertBusiness)
 
-	app.Post("/orderStatusDetails",handlers.InsertOrderStatus)
+	app.Post("/orderStatusDetails",Masterhandlers.InsertOrderStatus)
 	app.Post("/ordersDetails",handlers.InsertOrder)
 
 	//Updating API's
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
-	app.Put("/categoryUpdate", handlers.UpdateCategory)
-	app.Put("/driverUpdate", handlers.UpdateDriver)
-	app.Put("/locationUpdate", handlers.UpdateLocation)
-	app.Put("/mandiUpdate", handlers.UpdateMasterMandi)
-	app.Put("/productUpdate", handlers.UpdateMasterProduct)
-	app.Put("/statesUpdate", handlers.UpdateMasterState)
-	app.Put("/vehicleUpdate", handlers.UpdateMasterVehicle)
-	app.Put("/violationUpdate", handlers.UpdateMasterViolation)
-	app.Put("/usertableUpdate", handlers.UpdateUser)
-	app.Put("/businessUpdate", handlers.UpdateBusiness)
+	app.Put("/categoryUpdate", Masterhandlers.UpdateCategory)
+	app.Put("/driverUpdate", Masterhandlers.UpdateDriver)
+	app.Put("/locationUpdate", Masterhandlers.UpdateLocation)
+	app.Put("/mandiUpdate", Masterhandlers.UpdateMasterMandi)
+	app.Put("/productUpdate",Masterhandlers.UpdateMasterProduct)
+	app.Put("/statesUpdate", Masterhandlers.UpdateMasterState)
+	app.Put("/vehicleUpdate", Masterhandlers.UpdateMasterVehicle)
+	app.Put("/violationUpdate", Masterhandlers.UpdateMasterViolation)
+	app.Put("/usertableUpdate", Masterhandlers.UpdateUser)
+	app.Put("/businessUpdate", Masterhandlers.UpdateBusiness)
 
-	app.Put("/orderStatusUpdate", handlers.UpdateOrderStatus)
+	app.Put("/orderStatusUpdate", Masterhandlers.UpdateOrderStatus)
 	app.Put("/ordersUpdate", handlers.UpdateOrder)
 
 
 	//Deleting API's
-	app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
-	app.Delete("/categoryDelete/:id", handlers.DeleteCategory)
-	app.Delete("/driverDelete/:id", handlers.DeleteDriver)
-	app.Delete("/locationDelete/:id", handlers.DeleteLocation)
-	app.Delete("/mandiDelete/:id", handlers.DeleteMasterMandi)
-	app.Delete("/productDelete/:id", handlers.DeleteMasterProduct)
-	app.Delete("/stateDelete/:id", handlers.DeleteMasterState)
-	app.Delete("/vehicleDelete/:id", handlers.DeleteMasterVehicle)
-	app.Delete("/violationDelete/:id", handlers.DeleteMasterViolation)
-	app.Delete("/usertableDelete/:id", handlers.DeleteUser)
-	app.Delete("/businessDelete/:id", handlers.DeleteBusiness)
+	// app.Delete("/user-bank-details/:id", handlers.DeleteUserBankDetail)
+	// app.Delete("/categoryDelete/:id", handlers.DeleteCategory)
+	// app.Delete("/driverDelete/:id", handlers.DeleteDriver)
+	// app.Delete("/locationDelete/:id", handlers.DeleteLocation)
+	// app.Delete("/mandiDelete/:id", handlers.DeleteMasterMandi)
+	// app.Delete("/productDelete/:id", handlers.DeleteMasterProduct)
+	// app.Delete("/stateDelete/:id", handlers.DeleteMasterState)
+	// app.Delete("/vehicleDelete/:id", handlers.DeleteMasterVehicle)
+	// app.Delete("/violationDelete/:id", handlers.DeleteMasterViolation)
+	// app.Delete("/usertableDelete/:id", handlers.DeleteUser)
+	// app.Delete("/businessDelete/:id", handlers.DeleteBusiness)
 
 	go func() {
 		logger.Printf("Server is running on port %s", port)
