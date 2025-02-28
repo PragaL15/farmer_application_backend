@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,13 +37,10 @@ func MockGetOrderStatuses(c *fiber.Ctx) error {
 func TestGetOrderStatuses(t *testing.T) {
 	app := fiber.New()
 	app.Get("/order-statuses", MockGetOrderStatuses)
-
 	req := httptest.NewRequest(http.MethodGet, "/order-statuses", nil)
 	resp, err := app.Test(req)
-
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
 	var result []OrderStatus
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NoError(t, err)
