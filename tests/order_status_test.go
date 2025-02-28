@@ -14,7 +14,6 @@ type OrderStatus struct {
 	OrderStatusID int    `json:"order_status_id"`
 	OrderStatus   string `json:"order_status"`
 }
-
 var mockOrderStatuses = []OrderStatus{
 	{1, "Processing"},
 	{2, "Confirmed"},
@@ -24,16 +23,13 @@ var mockOrderStatuses = []OrderStatus{
 	{6, "Cancellation"},
 	{7, "Returned"},
 }
-
 func mockQuery(ctx context.Context, query string) ([]OrderStatus, error) {
 	return mockOrderStatuses, nil
 }
-
 func MockGetOrderStatuses(c *fiber.Ctx) error {
 	results, _ := mockQuery(context.Background(), "SELECT * FROM order_status_table;")
 	return c.JSON(results)
 }
-
 func TestGetOrderStatuses(t *testing.T) {
 	app := fiber.New()
 	app.Get("/order-statuses", MockGetOrderStatuses)
