@@ -44,10 +44,8 @@ func TestGetOrderStatuses(t *testing.T) {
 	var result []OrderStatus
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	assert.NoError(t, err)
-
 	assert.NotEmpty(t, result)
 	assert.Len(t, result, 7)
-
 	expectedStatuses := []string{"Processing", "Confirmed", "Payment", "Out for Delivery", "Successful", "Cancellation", "Returned"}
 	for i, status := range expectedStatuses {
 		assert.Equal(t, status, result[i].OrderStatus)
