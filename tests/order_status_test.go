@@ -2,58 +2,62 @@ package tests
 
 import (
 	"context"
-	"database/sql"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 )
 
 type OrderStatus struct {
-	OrderStatusID int
-	OrderStatus   string
+	OrderStatusID int    `json:"order_status_id"`
+	OrderStatus   string `json:"order_status"`
+}
+var mockOrderStatuse = []OrderStatus{
+	{1, "Processing"},
+	{2, "Confirmed"},
+	{3, "Payment"},
+	{4, "Out for Delivery"},
+	{5, "Successful"},
+	{6, "Cancellation"},
+	{7, "Returned"},
 }
 
-func fetchOrderStatusesFromDB(ctx context.Context, db *sql.DB) ([]OrderStatus, error) {
-	query := "SELECT order_status_id, order_status FROM order_status_table"
-	rows, err := db.QueryContext(ctx, query)
+func mockQuerys(ctx context.Context, query string) ([]OrderStatus, error) {
+
+	return mockOrderStatuse, nil
+}
+
+func MockGetOrderStatuse(c *fiber.Ctx) error {
+	results, err := mockQuery(context.Background(), "SELECT * FROM order_status_table;")
 	if err != nil {
-		return nil, err
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch order statuses"})
 	}
-	defer rows.Close()
-
-	var orderStatuses []OrderStatus
-	for rows.Next() {
-		var os OrderStatus
-		if err := rows.Scan(&os.OrderStatusID, &os.OrderStatus); err != nil {
-			return nil, err
-		}
-		orderStatuses = append(orderStatuses, os)
-	}
-	return orderStatuses, nil
+	return c.JSON(results)
 }
-func TestGetOrderStatuses(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
 
-	rows := sqlmock.NewRows([]string{"order_status_id", "order_status"}).
-		AddRow(1, "Processing").
-		AddRow(2, "Confirmed").
-		AddRow(3, "Payment").
-		AddRow(4, "Out for Delivery").
-		AddRow(5, "Successful").
-		AddRow(6, "Cancellation").
-		AddRow(7, "Returned")
+func TestGetOrderStatuse(t *testing.T) {
 
-	mock.ExpectQuery(`SELECT order_status_id, order_status FROM order_status_table`).
-		WillReturnRows(rows)
+	app := fiber.New()
+	app.Get("/order-statuses", MockGetOrderStatuses)
+	req := httptest.NewRequest(http.MethodGet, "/order-statuses", nil)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err, "Expected no error from app.Test()")
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200 OK")
 
-	orderStatuses, err := fetchOrderStatusesFromDB(context.Background(), db)
-	assert.NoError(t, err)
-	assert.Len(t, orderStatuses, 7)
+	var result []OrderStatus
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	assert.NoError(t, err, "Expected no error while decoding JSON response")
 
-	assert.Equal(t, "Processing", orderStatuses[0].OrderStatus)
-	assert.Equal(t, "Confirmed", orderStatuses[1].OrderStatus)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	assert.NotEmpty(t, result, "Expected non-empty response")
+
+	assert.Len(t, result, len(mockOrderStatuses), "Expected response length to match mock data")
+
+	expectedStatuses := []string{"Processing", "Confirmed", "Payment", "Out for Delivery", "Successful", "Cancellation", "Returned"}
+	for i, status := range expectedStatuses {
+		assert.Equal(t, status, result[i].OrderStatus, "Expected order status to match")
+	}
 }
