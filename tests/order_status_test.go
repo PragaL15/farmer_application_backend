@@ -1,63 +1,69 @@
 package tests
 
 import (
-	"context"
+	
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
+ "github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+
+
+	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+	"github.com/pashagolub/pgxmock"
 )
 
 type OrderStatus struct {
-	OrderStatusID int    `json:"order_status_id"`
-	OrderStatus   string `json:"order_status"`
-}
-var mockOrderStatuse = []OrderStatus{
-	{1, "Processing"},
-	{2, "Confirmed"},
-	{3, "Payment"},
-	{4, "Out for Delivery"},
-	{5, "Successful"},
-	{6, "Cancellation"},
-	{7, "Returned"},
+	OrderID     int    `json:"order_id"`
+	OrderStatus string `json:"order_status"`
 }
 
-func mockQuerys(ctx context.Context, query string) ([]OrderStatus, error) {
-
-	return mockOrderStatuse, nil
-}
-
-func MockGetOrderStatuse(c *fiber.Ctx) error {
-	results, err := mockQuery(context.Background(), "SELECT * FROM order_status_table;")
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch order statuses"})
-	}
-	return c.JSON(results)
-}
-
-func TestGetOrderStatuse(t *testing.T) {
-
+func TestGetOrderStatuses(t *testing.T) {
 	app := fiber.New()
-	app.Get("/order-statuses", MockGetOrderStatuses)
+	app.Get("/order-statuses", Masterhandlers.GetOrderStatuses)
+
+	// ✅ Create a new pgxmock pool
+	mockDB, err := pgxmock.NewPool()
+	assert.NoError(t, err)
+
+	// ✅ Assign mockDB to db.Pool
+	db.Pool = &db.PgxDB{Pool: mockDB}
+
+	// ✅ Mock database query response
+	rows := mockDB.NewRows([]string{"order_id", "order_status"}).
+		AddRow(1, "Processing").
+		AddRow(2, "Confirmed").
+		AddRow(3, "Payment").
+		AddRow(4, "Out for Delivery").
+		AddRow(5, "Successful").
+		AddRow(6, "Cancellation").
+		AddRow(7, "Returned")
+
+	mockDB.ExpectQuery(`SELECT \* FROM sp_get_order_status\(\)`).WillReturnRows(rows)
+
+	// ✅ Create a test request
 	req := httptest.NewRequest(http.MethodGet, "/order-statuses", nil)
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req)
-	assert.NoError(t, err, "Expected no error from app.Test()")
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP status 200 OK")
 
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// ✅ Decode response
 	var result []OrderStatus
 	err = json.NewDecoder(resp.Body).Decode(&result)
-	assert.NoError(t, err, "Expected no error while decoding JSON response")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result)
+	assert.Len(t, result, 7)
 
-	assert.NotEmpty(t, result, "Expected non-empty response")
-
-	assert.Len(t, result, len(mockOrderStatuses), "Expected response length to match mock data")
-
+	// ✅ Check if returned order statuses match expected values
 	expectedStatuses := []string{"Processing", "Confirmed", "Payment", "Out for Delivery", "Successful", "Cancellation", "Returned"}
 	for i, status := range expectedStatuses {
-		assert.Equal(t, status, result[i].OrderStatus, "Expected order status to match")
+		assert.Equal(t, status, result[i].OrderStatus)
 	}
+
+	// ✅ Ensure all expectations were met
+	assert.NoError(t, mockDB.ExpectationsWereMet())
 }
