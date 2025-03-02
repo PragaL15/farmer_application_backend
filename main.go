@@ -20,7 +20,6 @@ func createLogger() (*log.Logger, *os.File) {
 	if err := os.MkdirAll("logs", os.ModePerm); err != nil {
 		log.Fatalf("Error creating logs directory: %v", err)
 	}
-
 	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatalf("Error opening log file: %v", err)
