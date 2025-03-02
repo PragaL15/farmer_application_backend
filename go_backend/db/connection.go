@@ -12,7 +12,6 @@ import (
 	"github.com/pashagolub/pgxmock"
 )
 
-// ✅ Define a database interface for real & mock DB
 type Database interface {
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
@@ -20,12 +19,10 @@ type Database interface {
 	Close()
 }
 
-// ✅ Struct for real database connection
 type PgxDB struct {
 	Pool *pgxpool.Pool
 }
 
-// ✅ Implementing `Database` interface for `PgxDB`
 func (db *PgxDB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
 	return db.Pool.Query(ctx, sql, args...)
 }
@@ -42,12 +39,10 @@ func (db *PgxDB) Close() {
 	db.Pool.Close()
 }
 
-// ✅ Struct for mock database (used in tests)
 type MockDB struct {
 	Mock pgxmock.PgxPoolIface
 }
 
-// ✅ Implementing `Database` interface for `MockDB`
 func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
 	return m.Mock.Query(ctx, sql, args...)
 }
@@ -57,24 +52,21 @@ func (m *MockDB) Exec(ctx context.Context, sql string, args ...interface{}) (pgc
 }
 
 func (m *MockDB) Ping(ctx context.Context) error {
-	return nil // Mock ping always succeeds
+	return nil 
 }
 
 func (m *MockDB) Close() {
 	m.Mock.Close()
 }
 
-// ✅ Global variable for database pool (real or mock)
 var Pool Database
 
-// ✅ Load environment variables
 func LoadEnv() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: No .env file found.")
 	}
 }
 
-// ✅ Connect to the real database
 func ConnectDB() {
 	LoadEnv()
 
