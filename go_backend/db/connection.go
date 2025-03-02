@@ -104,7 +104,6 @@ func ConnectDB() {
 	log.Println("Database connection established.")
 }
 
-// ✅ Close the database connection
 func CloseDB() {
 	if Pool != nil {
 		Pool.Close()
