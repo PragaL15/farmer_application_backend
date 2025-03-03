@@ -39,10 +39,10 @@ func InsertMasterProduct(c *fiber.Ctx) error {
 }
 func UpdateMasterProduct(c *fiber.Ctx) error {
 	type Request struct {
-		ProductID    int    `json:"product_id" validate:"required,min=1"`
-		CategoryID   int    `json:"category_id" validate:"required,min=1"`
+		ProductID    int32    `json:"product_id" validate:"required,min=1"`
+		CategoryID   int32    `json:"category_id" validate:"required,min=1"`
 		ProductName  string `json:"product_name" validate:"required,max=100"`
-		Status       int    `json:"status" validate:"required"`
+		Status       int32   `json:"status" validate:"required"`
 	}
 
 	var req Request
