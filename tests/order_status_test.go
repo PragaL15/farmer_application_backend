@@ -115,12 +115,9 @@ func TestGetOrderStatuses_InvalidResponse(t *testing.T) {
 
 	rows := mockDB.NewRows([]string{"wrong_column"}).AddRow("InvalidData")
 	mockDB.ExpectQuery(`SELECT \* FROM sp_get_order_status\(\)`).WillReturnRows(rows)
-
 	req := httptest.NewRequest(http.MethodGet, "/order-statuses", nil)
 	req.Header.Set("Content-Type", "application/json")
-
 	resp, err := app.Test(req)
 	assert.NoError(t, err, "Request to API failed")
-
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, "Expected HTTP 500 due to bad JSON format")
 }
