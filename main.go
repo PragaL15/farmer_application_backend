@@ -16,7 +16,6 @@ import (
 func createLogger() (*log.Logger, *os.File) {
 	currentDate := time.Now().Format("2006-01-02")
 	logFileName := fmt.Sprintf("logs/%s.log", currentDate)
-
 	if err := os.MkdirAll("logs", os.ModePerm); err != nil {
 		log.Fatalf("Error creating logs directory: %v", err)
 	}
@@ -27,14 +26,12 @@ func createLogger() (*log.Logger, *os.File) {
 	logger := log.New(logFile, "SERVER: ", log.Ldate|log.Ltime|log.Lshortfile)
 	return logger, logFile
 }
-
 func main() {
 	_ = godotenv.Load()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
 	}
-
 	logger, logFile := createLogger()
 	defer logFile.Close()
 	logger.Println("Server is starting...")
@@ -48,7 +45,6 @@ func main() {
 			logger.Fatalf("Server error: %v", err)
 		}
 	}()
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
