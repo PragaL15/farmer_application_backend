@@ -42,7 +42,6 @@ func TestGetOrderStatuses_Success(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/order-statuses", nil)
 	req.Header.Set("Content-Type", "application/json")
-
 	resp, err := app.Test(req)
 	assert.NoError(t, err, "Request to API failed")
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200 OK")
