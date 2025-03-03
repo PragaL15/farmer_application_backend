@@ -24,7 +24,6 @@ func createLogger() (*log.Logger, *os.File) {
 	if err != nil {
 		log.Fatalf("Error opening log file: %v", err)
 	}
-
 	logger := log.New(logFile, "SERVER: ", log.Ldate|log.Ltime|log.Lshortfile)
 	return logger, logFile
 }
