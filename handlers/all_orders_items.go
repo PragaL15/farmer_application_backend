@@ -11,10 +11,10 @@ import (
 )
 
 type OrderDetails struct {
+	DateOfOrder          string           `json:"date_of_order"`          
+	ExpectedDeliveryDate string           `json:"expected_delivery_date"` 
+	ActualDeliveryDate   string           `json:"actual_delivery_date"`
 	OrderID          int               `json:"order_id"`
-	DateOfOrder      string            `json:"date_of_order"`
-	ExpectedDelivery string            `json:"expected_delivery_date"`
-	ActualDelivery   string            `json:"actual_delivery_date"`
 	OrderStatus      string            `json:"order_status_name"`
 	RetailerID       int               `json:"retailer_id"`
 	RetailerName     string            `json:"retailer_name"`
@@ -74,9 +74,9 @@ func GetOrderDetails(c *fiber.Ctx) error {
 		if _, exists := ordersMap[orderID]; !exists {
 			ordersMap[orderID] = &OrderDetails{
 				OrderID:          orderID,
-				DateOfOrder:      dateOfOrder.Format(time.RFC3339),
-				ExpectedDelivery: formatNullTime(expectedDeliveryDate),
-				ActualDelivery:   formatNullTime(actualDeliveryDate),
+				DateOfOrder:          dateOfOrder.Format(time.RFC3339),  // ✅ Directly format time.Time
+        ExpectedDeliveryDate: formatNullTime(expectedDeliveryDate), // ✅ Corrected function call
+        ActualDeliveryDate:   formatNullTime(actualDeliveryDate), 				
 				OrderStatus:      formatNullString(orderStatus),
 				RetailerID:       retailerID,
 				RetailerName:     formatNullString(retailerName),
@@ -114,18 +114,24 @@ func GetOrderDetails(c *fiber.Ctx) error {
 	return c.JSON(orders)
 }
 
-func formatNullTime(nt sql.NullTime) string {
-	if nt.Valid {
-		return nt.Time.Format(time.RFC3339)
-	}
-	return ""
-}
 
 func formatNullString(ns sql.NullString) string {
 	if ns.Valid {
 		return ns.String
 	}
 	return ""
+}
+// Handles non-null time.Time values
+func formatTime(t time.Time) string {
+	return t.Format(time.RFC3339) // "2006-01-02T15:04:05Z07:00"
+}
+
+// Handles sql.NullTime safely
+func formatNullTime(nt sql.NullTime) string {
+	if nt.Valid {
+		return nt.Time.Format(time.RFC3339)
+	}
+	return "" // Return empty string if NULL
 }
 
 func formatNullFloat64(nf sql.NullFloat64) float64 {
