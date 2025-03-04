@@ -42,7 +42,7 @@ func TestGetInvoiceDetails(t *testing.T) {
 		"Pending", "Wholesaler State", "Retailer State", "Wholesaler Location", "Retailer Location",
 	)
 
-	mockPool.ExpectQuery(`SELECT \\* FROM get_invoice_details_with_business_info\\(\\)`).WillReturnRows(rows)
+	mockPool.ExpectQuery(`(?i)SELECT\s+\*\s+FROM\s+get_invoice_details_with_business_info\s*\(\);?`).WillReturnRows(rows)
 
 	app.Get("/invoice", handlers.GetInvoiceDetails)
 
@@ -59,6 +59,6 @@ func TestGetInvoiceDetails(t *testing.T) {
 	assert.Equal(t, "INV-1001", response[0].InvoiceNumber)
 	assert.Len(t, response[0].Products, 1)
 	assert.Equal(t, "Product X", response[0].Products[0].ProductName)
-
 	assert.NoError(t, mockPool.ExpectationsWereMet())
+
 }
