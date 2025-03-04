@@ -21,7 +21,6 @@ func setupApp() *fiber.App {
 	return app
 }
 
-
 func TestGetOrders_Success(t *testing.T) {
 	app := setupApp()
 	mockDB, err := pgxmock.NewPool()

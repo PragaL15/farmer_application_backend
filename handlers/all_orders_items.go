@@ -74,8 +74,8 @@ func GetOrderDetails(c *fiber.Ctx) error {
 		if _, exists := ordersMap[orderID]; !exists {
 			ordersMap[orderID] = &OrderDetails{
 				OrderID:          orderID,
-				DateOfOrder:          dateOfOrder.Format(time.RFC3339),  // ✅ Directly format time.Time
-        ExpectedDeliveryDate: formatNullTime(expectedDeliveryDate), // ✅ Corrected function call
+				DateOfOrder:          dateOfOrder.Format(time.RFC3339), 
+        ExpectedDeliveryDate: formatNullTime(expectedDeliveryDate), 
         ActualDeliveryDate:   formatNullTime(actualDeliveryDate), 				
 				OrderStatus:      formatNullString(orderStatus),
 				RetailerID:       retailerID,
