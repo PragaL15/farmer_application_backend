@@ -15,7 +15,7 @@ import (
 func InsertCategory(c *fiber.Ctx) error {
 	type Request struct {
 		CategoryName string `json:"category_name" validate:"required,max=255"`
-		SuperCatID   null.Int   `json:"super_cat_id"`
+		SuperCatID   null.Int  `json:"super_cat_id"`
 		Col1         string `json:"col1"`
 		Col2         string `json:"col2"`
 		Remarks      string `json:"remarks"`
@@ -86,6 +86,7 @@ func DeleteCategory(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"message": "Category deleted successfully"})
 }
+
 
 func GetCategories(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_categories();")
