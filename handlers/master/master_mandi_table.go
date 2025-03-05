@@ -111,33 +111,33 @@ func GetMandi(c *fiber.Ctx) error {
 	var mandis []map[string]interface{}
 
 	for rows.Next() {
-		var mandiID, mandiCity, mandiState *int
-		var mandiLocation, mandiNumber, mandiIncharge, mandiInchargeNum, mandiPincode, mandiAddress, remarks *string
-		
+    var mandiID, mandiCity, mandiState int
+    var mandiLocation, mandiNumber, mandiIncharge, mandiInchargeNum, mandiPincode, mandiAddress, remarks string
 
-		if err := rows.Scan(
-			&mandiID, &mandiLocation, &mandiNumber, &mandiIncharge, &mandiInchargeNum,
-			&mandiPincode, &mandiAddress, &remarks, &mandiCity, &mandiState,
-		); err != nil {
-			log.Printf("Error scanning row: %v", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
-		}
+    if err := rows.Scan(
+        &mandiID, &mandiLocation, &mandiNumber, &mandiIncharge, &mandiInchargeNum,
+        &mandiPincode, &mandiAddress, &remarks, &mandiCity, &mandiState,
+    ); err != nil {
+        log.Printf("Error scanning row: %v", err)
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+    }
 
-		mandi := map[string]interface{}{
-			"mandi_id":           mandiID,
-			"mandi_location":     mandiLocation,
-			"mandi_number":       mandiNumber,
-			"mandi_incharge":     mandiIncharge,
-			"mandi_incharge_num": mandiInchargeNum,
-			"mandi_pincode":      mandiPincode,
-			"mandi_address":      mandiAddress,
-			"remarks":            remarks,
-			"mandi_city":         mandiCity,
-			"mandi_state":        mandiState,
-		}
+    mandi := map[string]interface{}{
+        "mandi_id":           mandiID,
+        "mandi_location":     mandiLocation,
+        "mandi_number":       mandiNumber,
+        "mandi_incharge":     mandiIncharge,
+        "mandi_incharge_num": mandiInchargeNum,
+        "mandi_pincode":      mandiPincode,
+        "mandi_address":      mandiAddress,
+        "remarks":            remarks,
+        "mandi_city":         mandiCity,
+        "mandi_state":        mandiState,
+    }
 
-		mandis = append(mandis, mandi)
-	}
+    mandis = append(mandis, mandi)
+}
+
 
 	return c.JSON(mandis)
 }
