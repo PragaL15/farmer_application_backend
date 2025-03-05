@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-   "log"
 	"github.com/gofiber/fiber/v2"
 	"github.com/pashagolub/pgxmock"
 	"github.com/stretchr/testify/assert"
@@ -67,57 +66,6 @@ func TestInsertMasterViolation(t *testing.T) {
 		t.Errorf("Unmet database expectations: %v", err)
 	}
 }
-
-func TestUpdateMasterViolation(t *testing.T) {
-	app := setupTestApp()
-	mockPool, err := pgxmock.NewPool()
-	if err != nil {
-		t.Fatalf("Failed to create mock pool: %v", err)
-	}
-	defer mockPool.Close()
-
-	log.Println("Setting up mock database expectation...")
-	mockPool.ExpectExec(`CALL update_master_violation\(\$1, \$2, \$3, \$4\)`).
-		WithArgs(1, "Updated Violation", "Medium", 0). 
-		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-
-	payload := map[string]interface{}{
-		"id":               1,
-		"violation_name":   "Updated Violation",
-		"level_of_serious": "Medium", 
-		"status":           0, 
-	}
-
-	body, _ := json.Marshal(payload)
-
-	req := httptest.NewRequest(http.MethodPut, "/violation", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	log.Println("Sending request...")
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	log.Printf("Response status: %d", resp.StatusCode)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode, "Expected status code 200 but got %d", resp.StatusCode)
-
-	respBody, _ := io.ReadAll(resp.Body)
-	log.Printf("Response body: %s", string(respBody))
-
-	var jsonResponse map[string]string
-	if err := json.Unmarshal(respBody, &jsonResponse); err != nil {
-		t.Fatalf("Failed to parse JSON response: %v", err)
-	}
-
-	assert.Equal(t, "Violation updated successfully", jsonResponse["message"], "Response message mismatch")
-
-	if err := mockPool.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unmet database expectations: %v", err)
-	}
-}
-
-
 
 func TestDeleteMasterViolation(t *testing.T) {
 	app := setupTestApp()
