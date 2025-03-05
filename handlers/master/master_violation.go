@@ -87,8 +87,8 @@ func GetViolations(c *fiber.Ctx) error {
 	defer rows.Close()
 	var violations []map[string]interface{}
 	for rows.Next() {
-		var id, status *int
-		var violationName, levelOfSerious *string
+		var id, status int
+		var violationName, levelOfSerious string
 		if err := rows.Scan(&id, &violationName, &levelOfSerious, &status); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
