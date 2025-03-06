@@ -108,7 +108,6 @@ func GetOrderDetails(c *fiber.Ctx) error {
 	for _, order := range ordersMap {
 		orders = append(orders, *order)
 	}
-
 	return c.JSON(orders)
 }
 
@@ -122,14 +121,12 @@ func formatNullString(ns sql.NullString) string {
 func formatTime(t time.Time) string {
 	return t.Format(time.RFC3339)
 }
-
 func formatNullTime(nt sql.NullTime) string {
 	if nt.Valid {
 		return nt.Time.Format(time.RFC3339)
 	}
 	return "" 
 }
-
 func formatNullFloat64(nf sql.NullFloat64) float64 {
 	if nf.Valid {
 		return nf.Float64
