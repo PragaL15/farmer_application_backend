@@ -27,6 +27,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
 	app.Get("/getOrderHistoryDetails", handlers.GetOrderHistory)
 	app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
+	app.Get("/getDailyPriceDetails", handlers.GetDailyPriceUpdates)
 
 	// POST Routes
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
@@ -57,4 +58,5 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/businessUpdate", Masterhandlers.UpdateBusiness)
 	app.Put("/orderStatusUpdate", Masterhandlers.UpdateOrderStatus)
 	app.Put("/ordersUpdate", handlers.UpdateOrder)
+	app.Put("/dailyPriceUpdate", handlers.UpdateDailyPrice)
 }

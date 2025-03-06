@@ -31,7 +31,6 @@ func TestInsertDriver(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 }
 
-
 func TestDeleteDriver(t *testing.T) {
 	mockDB, err := pgxmock.NewPool()
 	assert.NoError(t, err)
