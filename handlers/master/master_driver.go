@@ -13,21 +13,21 @@ import (
 func InsertDriver(c *fiber.Ctx) error {
 	type Request struct {
 		DriverName       string  `json:"driver_name" validate:"required,max=255"`
-		DriverAge        *int    `json:"driver_age"`
+		DriverAge        int    `json:"driver_age"`
 		DriverLicense    string  `json:"driver_license" validate:"required,max=50"`
 		DriverNumber     string  `json:"driver_number" validate:"required,max=15"`
-		DriverAddress    *string `json:"driver_address"`
-		DriverStatus     *string `json:"driver_status"`
-		DateOfJoining    *string `json:"date_of_joining"`
-		ExperienceYears  *int    `json:"experience_years"`
-		VehicleID        *int    `json:"vehicle_id"`
+		DriverAddress    string `json:"driver_address"`
+		DriverStatus     string `json:"driver_status"`
+		DateOfJoining    string `json:"date_of_joining"`
+		ExperienceYears  int    `json:"experience_years"`
+		VehicleID        int    `json:"vehicle_id"`
 		LicenseExpiry    string  `json:"license_expiry_date" validate:"required"`
-		EmergencyContact *string `json:"emergency_contact"`
-		AssignedRouteID  *int    `json:"assigned_route_id"`
-		Col1             *string `json:"col1"`
-		Col2             *string `json:"col2"`
-		DOB              *string `json:"d_o_b"`
-		Violation        *int    `json:"violation"`
+		EmergencyContact string `json:"emergency_contact"`
+		AssignedRouteID  int    `json:"assigned_route_id"`
+		Col1             string `json:"col1"`
+		Col2             string `json:"col2"`
+		DOB              string `json:"d_o_b"`
+		Violation        int    `json:"violation"`
 	}
 
 	var req Request
@@ -57,22 +57,22 @@ func InsertDriver(c *fiber.Ctx) error {
 func UpdateDriver(c *fiber.Ctx) error {
 	type Request struct {
 		DriverID         int     `json:"driver_id" validate:"required,min=1"`
-		DriverName       *string `json:"driver_name"`
-		DriverAge        *int    `json:"driver_age"`
-		DriverLicense    *string `json:"driver_license"`
-		DriverNumber     *string `json:"driver_number"`
-		DriverAddress    *string `json:"driver_address"`
-		DriverStatus     *string `json:"driver_status"`
-		DateOfJoining    *string `json:"date_of_joining"`
-		ExperienceYears  *int    `json:"experience_years"`
-		VehicleID        *int    `json:"vehicle_id"`
-		LicenseExpiry    *string `json:"license_expiry_date"`
-		EmergencyContact *string `json:"emergency_contact"`
-		AssignedRouteID  *int    `json:"assigned_route_id"`
-		Col1             *string `json:"col1"`
-		Col2             *string `json:"col2"`
-		DOB              *string `json:"d_o_b"`
-		Violation        *int    `json:"violation"`
+		DriverName       string `json:"driver_name"`
+		DriverAge        int    `json:"driver_age"`
+		DriverLicense    string `json:"driver_license"`
+		DriverNumber     string `json:"driver_number"`
+		DriverAddress    string `json:"driver_address"`
+		DriverStatus     string `json:"driver_status"`
+		DateOfJoining    string `json:"date_of_joining"`
+		ExperienceYears  int    `json:"experience_years"`
+		VehicleID        int    `json:"vehicle_id"`
+		LicenseExpiry    string `json:"license_expiry_date"`
+		EmergencyContact string `json:"emergency_contact"`
+		AssignedRouteID  int    `json:"assigned_route_id"`
+		Col1             string `json:"col1"`
+		Col2             string `json:"col2"`
+		DOB              string `json:"d_o_b"`
+		Violation        int    `json:"violation"`
 	}
 
 	var req Request
@@ -122,58 +122,59 @@ func DeleteDriver(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Driver deleted successfully"})
 }
 
-
 func GetDrivers(c *fiber.Ctx) error {
+	type Driver struct {
+		DriverID         int        `json:"driver_id"`
+		DriverName       string    `json:"driver_name"`
+		DriverAge        int        `json:"driver_age"`
+		DriverLicense    string    `json:"driver_license"`
+		DriverNumber     string    `json:"driver_number"`
+		DriverAddress    string    `json:"driver_address"`
+		DriverStatus     string    `json:"driver_status"`
+		DateOfJoining    *string    `json:"date_of_joining"`
+		ExperienceYears  int        `json:"experience_years"`
+		LicenseExpiry    *string    `json:"license_expiry_date"`
+		EmergencyContact string    `json:"emergency_contact"`
+		AssignedRouteID  int        `json:"assigned_route_id"`
+		DOB              *string    `json:"d_o_b"`
+	}
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_all_drivers()")
 	if err != nil {
 		log.Printf("Failed to fetch drivers: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch drivers"})
 	}
 	defer rows.Close()
-	var drivers []map[string]interface{}
+
+	var drivers []Driver
+
 	for rows.Next() {
-		var (
-			driverID, driverAge, experienceYears, assignedRouteID int
-			driverName, driverLicense, driverNumber, driverAddress, driverStatus, emergencyContact *string
-			dateOfJoining, licenseExpiryDate, d_o_b *time.Time
+		var driver Driver
+		var dateOfJoining, licenseExpiry, d_o_b *time.Time
+
+		err := rows.Scan(
+			&driver.DriverID, &driver.DriverName, &driver.DriverAge, &driver.DriverLicense,
+			&driver.DriverNumber, &driver.DriverAddress, &driver.DriverStatus, &dateOfJoining,
+			&driver.ExperienceYears, &licenseExpiry, &driver.EmergencyContact, &driver.AssignedRouteID, &d_o_b,
 		)
-		if err := rows.Scan(
-			&driverID, &driverName, &driverAge, &driverLicense, &driverNumber,
-			&driverAddress, &driverStatus, &dateOfJoining, &experienceYears,
-			&licenseExpiryDate, &emergencyContact, &assignedRouteID, &d_o_b,
-		); err != nil {
+		if err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
-		driver := map[string]interface{}{
-			"driver_id":           driverID,
-			"driver_name":         driverName,
-			"driver_age":          driverAge,
-			"driver_license":      driverLicense,
-			"driver_number":       driverNumber,
-			"driver_address":      driverAddress,
-			"driver_status":       driverStatus,
-			"date_of_joining":     formatDate(dateOfJoining),
-			"experience_years":    experienceYears,
-			"license_expiry_date": formatDate(licenseExpiryDate),
-			"emergency_contact":   emergencyContact,
-			"assigned_route_id":   assignedRouteID,
-			"d_o_b":               formatDate(d_o_b),
-		}
+
+		driver.DateOfJoining = formatDate(dateOfJoining)
+		driver.LicenseExpiry = formatDate(licenseExpiry)
+		driver.DOB = formatDate(d_o_b)
+
 		drivers = append(drivers, driver)
 	}
+
 	return c.JSON(drivers)
 }
 
-func formatDate(t *time.Time) interface{} {
+func formatDate(t *time.Time) *string {
 	if t == nil {
 		return nil
 	}
-	return t.Format("2006-01-02")
+	formatted := t.Format("2006-01-02")
+	return &formatted
 }
-
-
-
-
-
-
