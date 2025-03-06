@@ -455,6 +455,37 @@ $$;
 ALTER FUNCTION public.get_categories() OWNER TO postgres;
 
 --
+-- Name: get_daily_price_update(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_daily_price_update() RETURNS TABLE(product_id integer, product_name character varying, price character varying, status integer, unit_id integer, unit_name character varying, wholeseller_id integer, wholeseller_name character varying, b_mandi_id integer, mandi_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        dpu.product_id,
+        mp.product_name,
+        dpu.price,
+        dpu.status,
+        dpu.unit_id,
+        ut.unit_name,
+        dpu.wholeseller_id,
+        bt.b_name AS wholeseller_name,
+        bt.b_mandi_id,
+        mmt.mandi_name
+    FROM daily_price_update dpu
+    JOIN master_product mp ON dpu.product_id = mp.product_id
+    JOIN units_table ut ON dpu.unit_id = ut.id
+    JOIN business_table bt ON dpu.wholeseller_id = bt.bid
+    LEFT JOIN master_mandi_table mmt ON bt.b_mandi_id = mmt.mandi_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_daily_price_update() OWNER TO postgres;
+
+--
 -- Name: get_driver_violations(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1324,25 +1355,25 @@ ALTER FUNCTION public.sp_get_order_status() OWNER TO postgres;
 -- Name: sp_get_orders(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.sp_get_orders() RETURNS TABLE(order_id integer, date_of_order timestamp without time zone, order_status integer, order_status_name character varying, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, retailer_name character varying, wholeseller_id integer, wholeseller_name character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, pincode character varying, address text)
+CREATE FUNCTION public.sp_get_orders() RETURNS TABLE(order_id bigint, date_of_order timestamp without time zone, order_status integer, order_status_name text, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id bigint, retailer_name text, wholeseller_id bigint, wholeseller_name text, location_id integer, location_name text, state_id integer, state_name text, pincode text, address text)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY 
     SELECT
-        o.order_id,
+        o.order_id::BIGINT,  -- Explicit casting
         o.date_of_order,
         o.order_status,
         os.order_status AS order_status_name,
         o.expected_delivery_date,
         o.actual_delivery_date,
-        o.retailer_id,
+        o.retailer_id::BIGINT,  -- Explicit casting
         r.b_name AS retailer_name,
-        o.wholeseller_id,
+        o.wholeseller_id::BIGINT,  -- Explicit casting
         w.b_name AS wholeseller_name,
-        o.location_id,
+        o.location_id::INT,  -- Explicit casting
         ml.location AS location_name,
-        o.state_id,
+        o.state_id::INT,  -- Explicit casting
         ms.state AS state_name,
         o.pincode,
         o.address
@@ -2080,7 +2111,9 @@ ALTER SEQUENCE public.cash_payment_list_id_seq OWNED BY public.cash_payment_list
 CREATE TABLE public.daily_price_update (
     product_id integer,
     price character varying(50),
-    status integer
+    status integer,
+    unit_id integer,
+    wholeseller_id integer
 );
 
 
@@ -2482,6 +2515,7 @@ CREATE TABLE public.master_mandi_table (
     remarks text,
     mandi_city integer,
     mandi_state integer,
+    mandi_name character varying(255),
     CONSTRAINT master_mandi_table_updated_at CHECK ((updated_at >= created_at))
 );
 
@@ -3892,9 +3926,9 @@ INSERT INTO public.cash_payment_list VALUES (5, 'Credit/Pay after delivery');
 -- Data for Name: daily_price_update; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.daily_price_update VALUES (1, '100.50', 1);
-INSERT INTO public.daily_price_update VALUES (2, '250.00', 1);
-INSERT INTO public.daily_price_update VALUES (3, '75.75', 0);
+INSERT INTO public.daily_price_update VALUES (1, '100.50', 1, 1, 5);
+INSERT INTO public.daily_price_update VALUES (2, '250.00', 1, 2, 6);
+INSERT INTO public.daily_price_update VALUES (3, '75.75', 0, 3, 12);
 
 
 --
@@ -3968,7 +4002,7 @@ INSERT INTO public.master_location VALUES (2, 'coimbatore');
 -- Data for Name: master_mandi_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.master_mandi_table VALUES (2, 'Location 1', 'M123', 'John Doe', '9876543210', '123456', 'Address 1', '2025-02-07 12:01:02.04624', '2025-02-07 12:01:02.04624', 'Remarks', 1, 1);
+INSERT INTO public.master_mandi_table VALUES (2, 'Location 1', 'M123', 'John Doe', '9876543210', '123456', 'Address 1', '2025-02-07 12:01:02.04624', '2025-02-07 12:01:02.04624', 'Remarks', 1, 1, NULL);
 
 
 --
@@ -5082,6 +5116,14 @@ ALTER TABLE ONLY public.master_mandi_table
 
 
 --
+-- Name: business_table fk_mandi_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.business_table
+    ADD CONSTRAINT fk_mandi_id FOREIGN KEY (b_mandi_id) REFERENCES public.master_mandi_table(mandi_id);
+
+
+--
 -- Name: mode_of_payment fk_mode; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5175,6 +5217,14 @@ ALTER TABLE ONLY public.insurance_table
 
 ALTER TABLE ONLY public.mode_of_payment
     ADD CONSTRAINT fk_type FOREIGN KEY (pay_type) REFERENCES public.cash_payment_list(id);
+
+
+--
+-- Name: daily_price_update fk_unit; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.daily_price_update
+    ADD CONSTRAINT fk_unit FOREIGN KEY (unit_id) REFERENCES public.units_table(id);
 
 
 --

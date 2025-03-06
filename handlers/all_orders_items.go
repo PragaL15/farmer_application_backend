@@ -121,17 +121,15 @@ func formatNullString(ns sql.NullString) string {
 	}
 	return ""
 }
-// Handles non-null time.Time values
 func formatTime(t time.Time) string {
-	return t.Format(time.RFC3339) // "2006-01-02T15:04:05Z07:00"
+	return t.Format(time.RFC3339)
 }
 
-// Handles sql.NullTime safely
 func formatNullTime(nt sql.NullTime) string {
 	if nt.Valid {
 		return nt.Time.Format(time.RFC3339)
 	}
-	return "" // Return empty string if NULL
+	return "" 
 }
 
 func formatNullFloat64(nf sql.NullFloat64) float64 {
