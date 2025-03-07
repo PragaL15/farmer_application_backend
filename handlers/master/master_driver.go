@@ -95,7 +95,6 @@ func UpdateDriver(c *fiber.Ctx) error {
 		log.Printf("Failed to update driver: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update driver"})
 	}
-
 	return c.JSON(fiber.Map{"message": "Driver updated successfully"})
 }
 
@@ -104,21 +103,17 @@ func DeleteDriver(c *fiber.Ctx) error {
 	if id == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Driver ID is required"})
 	}
-
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 	}
-
 	_, err = db.Pool.Exec(context.Background(), `
 		CALL delete_driver($1);
 	`, idInt)
-
 	if err != nil {
 		log.Printf("Failed to delete driver: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete driver"})
 	}
-
 	return c.JSON(fiber.Map{"message": "Driver deleted successfully"})
 }
 
@@ -167,7 +162,6 @@ func GetDrivers(c *fiber.Ctx) error {
 
 		drivers = append(drivers, driver)
 	}
-
 	return c.JSON(drivers)
 }
 
