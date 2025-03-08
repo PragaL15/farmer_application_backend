@@ -7,7 +7,7 @@ import (
 )
 
 type OrderStatus struct {
-	OrderID     int       `json:"order_status_id"`
+	OrderID     int       `json:"order_id"`
 	OrderStatus string    `json:"order_status"`
 }
 
@@ -35,14 +35,13 @@ func GetOrderStatuses(c *fiber.Ctx) error {
 
 func InsertOrderStatus(c *fiber.Ctx) error {
 	type Request struct {
-		OrderID     int    `json:"order_status_id"`
 		OrderStatus string `json:"order_status"`
 	}
 	var req Request
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
-	_, err := db.Pool.Exec(context.Background(), "SELECT insert_order_status($1, $2)", req.OrderID, req.OrderStatus)
+	_, err := db.Pool.Exec(context.Background(), "SELECT insert_order_status($1)", req.OrderStatus)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -51,7 +50,7 @@ func InsertOrderStatus(c *fiber.Ctx) error {
 
 func UpdateOrderStatus(c *fiber.Ctx) error {
 	type Request struct {
-		OrderID     int    `json:"order_status_id"`
+		OrderID     int    `json:"order_id"`
 		OrderStatus string `json:"order_status"`
 	}
 	var req Request
