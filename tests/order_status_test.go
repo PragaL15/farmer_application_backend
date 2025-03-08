@@ -110,9 +110,7 @@
 
 // 	mockDB, err := pgxmock.NewPool()
 // 	assert.NoError(t, err, "Failed to create mock DB")
-
 // 	db.Pool = &db.MockDB{Mock: mockDB}
-
 // 	rows := mockDB.NewRows([]string{"wrong_column"}).AddRow("InvalidData")
 // 	mockDB.ExpectQuery(`SELECT \* FROM sp_get_order_status\(\)`).WillReturnRows(rows)
 // 	req := httptest.NewRequest(http.MethodGet, "/order-statuses", nil)
@@ -121,3 +119,4 @@
 // 	assert.NoError(t, err, "Request to API failed")
 // 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, "Expected HTTP 500 due to bad JSON format")
 // }
+

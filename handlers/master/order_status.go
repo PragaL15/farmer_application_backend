@@ -7,7 +7,7 @@ import (
 )
 
 type OrderStatus struct {
-	OrderID     int       `json:"order_id"`
+	OrderID     int       `json:"order_status_id"`
 	OrderStatus string    `json:"order_status"`
 }
 
@@ -35,7 +35,7 @@ func GetOrderStatuses(c *fiber.Ctx) error {
 
 func InsertOrderStatus(c *fiber.Ctx) error {
 	type Request struct {
-		OrderID     int    `json:"order_id"`
+		OrderID     int    `json:"order_status_id"`
 		OrderStatus string `json:"order_status"`
 	}
 	var req Request
@@ -51,7 +51,7 @@ func InsertOrderStatus(c *fiber.Ctx) error {
 
 func UpdateOrderStatus(c *fiber.Ctx) error {
 	type Request struct {
-		OrderID     int    `json:"order_id"`
+		OrderID     int    `json:"order_status_id"`
 		OrderStatus string `json:"order_status"`
 	}
 	var req Request
