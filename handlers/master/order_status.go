@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-
 type OrderStatus struct {
 	OrderID     int       `json:"order_id"`
 	OrderStatus string    `json:"order_status"`
