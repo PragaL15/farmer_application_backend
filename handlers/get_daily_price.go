@@ -68,7 +68,6 @@ type UpdatePriceRequest struct {
 	WholesellerID int     `json:"wholeseller_id"`
 }
 
-// PUT Handler to update daily price updates
 func UpdateDailyPrice(c *fiber.Ctx) error {
 	var req UpdatePriceRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -88,7 +87,6 @@ func UpdateDailyPrice(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Update successful"})
 }
 
-// Utility functions to handle NULL values safely
 func formatNullStrings(ns sql.NullString) string {
 	if ns.Valid {
 		return ns.String
