@@ -48,7 +48,6 @@ func GetDailyPriceUpdates(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
-		// Handle NULL values safely
 		update.ProductName = formatNullString(productName)
 		update.Price = formatNullFloat64(price)
 		update.UnitName = formatNullString(unitName)
