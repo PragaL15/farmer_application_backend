@@ -10,7 +10,6 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
-// Struct for daily price updates
 type DailyPriceUpdate struct {
 	ProductID      int     `json:"product_id"`
 	ProductName    string  `json:"product_name"`
@@ -24,7 +23,6 @@ type DailyPriceUpdate struct {
 	MandiName      string  `json:"mandi_name"`
 }
 
-// GET Handler to fetch daily price updates
 func GetDailyPriceUpdates(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_daily_price_update()")
 	if err != nil {
