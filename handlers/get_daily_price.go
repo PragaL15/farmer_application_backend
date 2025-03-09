@@ -60,7 +60,6 @@ func GetDailyPriceUpdates(c *fiber.Ctx) error {
 	return c.JSON(updates)
 }
 
-// Struct for handling update requests
 type UpdatePriceRequest struct {
 	ProductID     int     `json:"product_id"`
 	Price         float64 `json:"price"`
