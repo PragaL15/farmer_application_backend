@@ -24,12 +24,10 @@ func InsertUserBankDetail(c *fiber.Ctx) error {
     if err := c.BodyParser(&req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
     }
-
     validate := validator.New()
     if err := validate.Struct(req); err != nil {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
     }
-
     _, err := db.Pool.Exec(context.Background(), `
         SELECT manage_user_bank_details(
             'INSERT',
@@ -38,7 +36,6 @@ func InsertUserBankDetail(c *fiber.Ctx) error {
             $9
         );
     `, req.UserID, req.CardNumber, req.UpiID, req.IFSCCode, req.AccountNumber, req.AccountHolderName, req.BankName, req.BranchName, req.Status)
-
     if err != nil {
         log.Printf("Failed to insert user bank detail: %v", err)
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert user bank detail"})
