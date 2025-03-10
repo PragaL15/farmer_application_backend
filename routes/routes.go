@@ -21,6 +21,9 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
 	app.Get("/getOrderStatus", Masterhandlers.GetOrderStatuses)
 	app.Get("/getBusinessStatus", handlers.GetBusinessTypes)
+
+	app.Get("/products/:id", Masterhandlers.GetProductByID)
+
 	// app.Get("/getOrders", handlers.GetOrders)
 	app.Get("/getModeOfPayments", handlers.GetModeOfPayments)
 	app.Get("/getListPaymentMethod", Masterhandlers.GetListPaymentMethods)
