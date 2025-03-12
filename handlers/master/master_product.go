@@ -88,7 +88,7 @@ func DeleteMasterProduct(c *fiber.Ctx) error {
 
 // Get all master products
 func GetProducts(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_master_products()")
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_products()")
 	if err != nil {
 		log.Printf("Failed to fetch product records: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch products"})
