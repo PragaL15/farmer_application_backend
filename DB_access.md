@@ -13,3 +13,22 @@
 ---
 
 ## retailers 
+
+| Table Name                  | `retailer` (View & Place Orders) |
+|-----------------------------|--------------------------------|
+| `master_category_table`     | ✅ `SELECT` |
+| `master_product`            | ✅ `SELECT` |
+| `daily_price_update`        | ✅ `SELECT` |
+| `order_table`               | ✅ `INSERT, SELECT` |
+| `order_item_table`          | ✅ `INSERT, SELECT` |
+| `master_states`             | ✅ `SELECT` |
+| `master_location`           | ✅ `SELECT` |
+| `business_table`            | ✅ `SELECT` |
+| `cash_payment_list`         | ✅ `SELECT` |
+| `business_type_table`       | ✅ `SELECT` |
+| `mode_of_payments_list`     | ✅ `SELECT` |
+| `stock_table`               | ✅ `SELECT` |
+| `invoice_table`             | ✅ `SELECT` |
+| `invoice_details_table`     | ✅ `SELECT` |
+
+
