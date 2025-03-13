@@ -31,4 +31,3 @@
 | `invoice_table`             | ✅ `SELECT` |
 | `invoice_details_table`     | ✅ `SELECT` |
 
-
