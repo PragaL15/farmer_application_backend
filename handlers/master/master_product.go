@@ -152,7 +152,7 @@ func GetProductByID(c *fiber.Ctx) error {
 	var productName, categoryName, imagePath, regionalName1, regionalName2, regionalName3, regionalName4 *string
 
 	err = db.Pool.QueryRow(context.Background(),
-		`SELECT * FROM admin_schema.get_master_product_by_id($1)`, idInt).
+		`SELECT * FROM get_master_product_by_id($1)`, idInt).
 		Scan(&productID, &categoryID, &categoryName, &productName, &status, &imagePath, &regionalName1, &regionalName2, &regionalName3, &regionalName4)
 
 	if err != nil {

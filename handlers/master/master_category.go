@@ -120,3 +120,38 @@ func GetCategories(c *fiber.Ctx) error {
 	}
 	return c.JSON(categories)
 }
+func GetCategoryByID(c *fiber.Ctx) error {
+	categoryID := c.Params("category_id")
+	
+	if categoryID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Category ID is required"})
+	}
+
+	row := db.Pool.QueryRow(context.Background(), "SELECT * FROM get_category_by_id($1);", categoryID)
+
+	type Category struct {
+			CategoryID   int    `json:"category_id"`
+			CategoryName string `json:"category_name"`
+			SuperCatID   int    `json:"super_cat_id"`
+			Remarks      string `json:"remarks"`
+	}
+
+	var category Category
+	var superCatID sql.NullInt32
+	var remarks sql.NullString
+
+	err := row.Scan(&category.CategoryID, &category.CategoryName, &superCatID, &remarks)
+	if err != nil {
+			log.Printf("Failed to fetch category: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch category"})
+	}
+
+	category.SuperCatID = int(superCatID.Int32)
+	if remarks.Valid {
+			category.Remarks = remarks.String
+	} else {
+			category.Remarks = "No remarks"
+	}
+
+	return c.JSON(category)
+}
