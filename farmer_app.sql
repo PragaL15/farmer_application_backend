@@ -8,13 +8,40 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'WIN1252';
+SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
 SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: admin_schema; Type: SCHEMA; Schema: -; Owner: admin
+--
+
+CREATE SCHEMA admin_schema;
+
+
+ALTER SCHEMA admin_schema OWNER TO admin;
+
+--
+-- Name: business_schema; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA business_schema;
+
+
+ALTER SCHEMA business_schema OWNER TO postgres;
+
+--
+-- Name: users_schema; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA users_schema;
+
+
+ALTER SCHEMA users_schema OWNER TO postgres;
 
 --
 -- Name: acceptance_status; Type: TYPE; Schema: public; Owner: postgres
@@ -188,6 +215,21 @@ $$;
 
 
 ALTER PROCEDURE public.delete_master_product(IN p_product_id integer) OWNER TO postgres;
+
+--
+-- Name: delete_master_product(bigint); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.delete_master_product(IN p_product_id bigint)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    DELETE FROM master_product WHERE product_id = p_product_id;
+END;
+$$;
+
+
+ALTER PROCEDURE public.delete_master_product(IN p_product_id bigint) OWNER TO postgres;
 
 --
 -- Name: delete_master_state(integer); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -455,6 +497,28 @@ $$;
 ALTER FUNCTION public.get_categories() OWNER TO postgres;
 
 --
+-- Name: get_category_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_category_by_id(p_category_id integer) RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        mc.category_id, 
+        mc.category_name, 
+        mc.super_cat_id, 
+        COALESCE(mc.remarks, 'No remarks') 
+    FROM master_category_table mc
+    WHERE mc.category_id = p_category_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_category_by_id(p_category_id integer) OWNER TO postgres;
+
+--
 -- Name: get_daily_price_update(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -718,22 +782,56 @@ $$;
 ALTER FUNCTION public.get_master_mandis() OWNER TO postgres;
 
 --
--- Name: get_master_products(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_master_product_by_id(bigint); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_master_products() RETURNS TABLE(product_id integer, category_id integer, category_name character varying, product_name character varying, status integer)
+CREATE FUNCTION public.get_master_product_by_id(p_product_id bigint) RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, status integer, image_path character varying, regional_name1 character varying, regional_name2 character varying, regional_name3 character varying, regional_name4 character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY
+    RETURN QUERY 
     SELECT 
-        p.product_id, 
-        p.category_id, 
-        c.category_name,
-        p.product_name, 
-        p.status
-    FROM master_product p
-    LEFT JOIN master_category_table c ON p.category_id = c.category_id;
+        mp.product_id, 
+        mp.category_id, 
+        mc.category_name, 
+        mp.product_name, 
+        mp.status, 
+        mp.image_path,
+        mp.regional_name1,
+        mp.regional_name2,
+        mp.regional_name3,
+        mp.regional_name4
+    FROM master_product mp
+    LEFT JOIN master_category_table mc ON mp.category_id = mc.category_id
+    WHERE mp.product_id = p_product_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_master_product_by_id(p_product_id bigint) OWNER TO postgres;
+
+--
+-- Name: get_master_products(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_master_products() RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, status integer, image_path character varying, regional_name1 character varying, regional_name2 character varying, regional_name3 character varying, regional_name4 character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        mp.product_id, 
+        mp.category_id, 
+        mc.category_name, 
+        mp.product_name, 
+        mp.status, 
+        mp.image_path,
+        mp.regional_name1,
+        mp.regional_name2,
+        mp.regional_name3,
+        mp.regional_name4
+    FROM master_product mp
+    LEFT JOIN master_category_table mc ON mp.category_id = mc.category_id;
 END;
 $$;
 
@@ -1161,6 +1259,27 @@ $$;
 ALTER PROCEDURE public.insert_master_product(IN p_category_id integer, IN p_product_name character varying, IN p_status integer) OWNER TO postgres;
 
 --
+-- Name: insert_master_product(integer, character varying, integer, character varying, character varying, character varying, character varying, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.insert_master_product(IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying DEFAULT NULL::character varying, IN p_regional_name1 character varying DEFAULT NULL::character varying, IN p_regional_name2 character varying DEFAULT NULL::character varying, IN p_regional_name3 character varying DEFAULT NULL::character varying, IN p_regional_name4 character varying DEFAULT NULL::character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO master_product (
+        category_id, product_name, status, image_path, 
+        regional_name1, regional_name2, regional_name3, regional_name4
+    ) VALUES (
+        p_category_id, p_product_name, p_status, p_image_path, 
+        p_regional_name1, p_regional_name2, p_regional_name3, p_regional_name4
+    );
+END;
+$$;
+
+
+ALTER PROCEDURE public.insert_master_product(IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying, IN p_regional_name1 character varying, IN p_regional_name2 character varying, IN p_regional_name3 character varying, IN p_regional_name4 character varying) OWNER TO postgres;
+
+--
 -- Name: insert_master_state(character varying); Type: PROCEDURE; Schema: public; Owner: postgres
 --
 
@@ -1215,6 +1334,42 @@ $$;
 
 
 ALTER PROCEDURE public.insert_master_violation(IN p_violation_name text, IN p_level_of_serious text, IN p_status integer) OWNER TO postgres;
+
+--
+-- Name: insert_order_status(text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_order_status(status_name text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_status_id INTEGER;
+BEGIN
+    INSERT INTO order_status_table (order_status)
+    VALUES (status_name)
+    RETURNING order_status_id INTO new_status_id;
+
+    RETURN new_status_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.insert_order_status(status_name text) OWNER TO postgres;
+
+--
+-- Name: insert_order_status(integer, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_order_status(order_id integer, order_status text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO order_status_table (order_status_id, order_status) VALUES (order_status_id, order_status); 
+END;
+$$;
+
+
+ALTER FUNCTION public.insert_order_status(order_id integer, order_status text) OWNER TO postgres;
 
 --
 -- Name: insert_user(integer, character varying, character varying, character varying, text, character varying, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1744,6 +1899,30 @@ $$;
 
 
 ALTER PROCEDURE public.update_master_product(IN p_product_id integer, IN p_category_id integer, IN p_product_name character varying, IN p_status integer) OWNER TO postgres;
+
+--
+-- Name: update_master_product(bigint, integer, character varying, integer, character varying, character varying, character varying, character varying, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.update_master_product(IN p_product_id bigint, IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying DEFAULT NULL::character varying, IN p_regional_name1 character varying DEFAULT NULL::character varying, IN p_regional_name2 character varying DEFAULT NULL::character varying, IN p_regional_name3 character varying DEFAULT NULL::character varying, IN p_regional_name4 character varying DEFAULT NULL::character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE master_product
+    SET category_id = p_category_id,
+        product_name = p_product_name,
+        status = p_status,
+        image_path = p_image_path,
+        regional_name1 = p_regional_name1,
+        regional_name2 = p_regional_name2,
+        regional_name3 = p_regional_name3,
+        regional_name4 = p_regional_name4
+    WHERE product_id = p_product_id;
+END;
+$$;
+
+
+ALTER PROCEDURE public.update_master_product(IN p_product_id bigint, IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying, IN p_regional_name1 character varying, IN p_regional_name2 character varying, IN p_regional_name3 character varying, IN p_regional_name4 character varying) OWNER TO postgres;
 
 --
 -- Name: update_master_state(integer, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -2380,12 +2559,10 @@ CREATE TABLE public.master_category_table (
     category_id integer NOT NULL,
     category_name character varying(255) NOT NULL,
     super_cat_id integer,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    img_path text,
     col1 text,
     col2 text,
-    remarks text,
-    CONSTRAINT master_category_table_updated_at CHECK ((updated_at >= created_at))
+    remarks text
 );
 
 
@@ -2551,18 +2728,23 @@ ALTER SEQUENCE public.master_mandi_table_mandi_id_seq OWNED BY public.master_man
 CREATE TABLE public.master_product (
     product_id bigint NOT NULL,
     category_id integer,
-    product_name character varying(100),
-    status integer DEFAULT 0
+    product_name character varying(255),
+    status integer,
+    image_path character varying(255),
+    regional_name1 character varying(255) COLLATE pg_catalog."en-US-x-icu",
+    regional_name2 character varying(255) COLLATE pg_catalog."en-US-x-icu",
+    regional_name3 character varying(255) COLLATE pg_catalog."en-US-x-icu",
+    regional_name4 character varying(255) COLLATE pg_catalog."en-US-x-icu"
 );
 
 
 ALTER TABLE public.master_product OWNER TO postgres;
 
 --
--- Name: master_product_product_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: master_product_utf8_product_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.master_product_product_id_seq
+CREATE SEQUENCE public.master_product_utf8_product_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -2571,13 +2753,13 @@ CREATE SEQUENCE public.master_product_product_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.master_product_product_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.master_product_utf8_product_id_seq OWNER TO postgres;
 
 --
--- Name: master_product_product_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: master_product_utf8_product_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.master_product_product_id_seq OWNED BY public.master_product.product_id;
+ALTER SEQUENCE public.master_product_utf8_product_id_seq OWNED BY public.master_product.product_id;
 
 
 --
@@ -2966,6 +3148,44 @@ ALTER SEQUENCE public.product_price_table_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.product_price_table_id_seq OWNED BY public.product_price_table.id;
+
+
+--
+-- Name: product_reviews; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.product_reviews (
+    review_id integer NOT NULL,
+    product_id integer NOT NULL,
+    user_id integer NOT NULL,
+    rating integer,
+    review_text text,
+    CONSTRAINT product_reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
+);
+
+
+ALTER TABLE public.product_reviews OWNER TO postgres;
+
+--
+-- Name: product_reviews_review_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.product_reviews_review_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.product_reviews_review_id_seq OWNER TO postgres;
+
+--
+-- Name: product_reviews_review_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.product_reviews_review_id_seq OWNED BY public.product_reviews.review_id;
 
 
 --
@@ -3715,7 +3935,7 @@ ALTER TABLE ONLY public.master_mandi_table ALTER COLUMN mandi_id SET DEFAULT nex
 -- Name: master_product product_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.master_product ALTER COLUMN product_id SET DEFAULT nextval('public.master_product_product_id_seq'::regclass);
+ALTER TABLE ONLY public.master_product ALTER COLUMN product_id SET DEFAULT nextval('public.master_product_utf8_product_id_seq'::regclass);
 
 
 --
@@ -3786,6 +4006,13 @@ ALTER TABLE ONLY public.order_table ALTER COLUMN order_id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.product_price_table ALTER COLUMN id SET DEFAULT nextval('public.product_price_table_id_seq'::regclass);
+
+
+--
+-- Name: product_reviews review_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_reviews ALTER COLUMN review_id SET DEFAULT nextval('public.product_reviews_review_id_seq'::regclass);
 
 
 --
@@ -3977,10 +4204,13 @@ INSERT INTO public.invoice_table VALUES (3, 'INV-20250225-00003', 3, 1500.00, 10
 -- Data for Name: master_category_table; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.master_category_table VALUES (5, 'Roots', 2, '2025-01-01 14:23:15.363233', '2025-01-01 14:23:15.363233', 'Extra data for clothing', 'Additional info', 'Pending verification');
-INSERT INTO public.master_category_table VALUES (6, 'Vegetables', 3, '2025-01-01 14:23:15.363233', '2025-01-01 14:23:15.363233', 'Extra data for furniture', 'Additional info', 'Verified');
-INSERT INTO public.master_category_table VALUES (8, 'Fruits', 4, '2025-02-10 19:43:12.712312', '2025-02-10 19:43:12.712312', 'Extra info 1', 'Extra info 2', 'extra info 3');
-INSERT INTO public.master_category_table VALUES (4, 'Leafy', 0, '2025-01-01 14:23:15.363233', '2025-01-01 14:23:15.363233', 'Extra data for electronics', 'Additional info', 'No remarks');
+INSERT INTO public.master_category_table VALUES (5, 'Roots', 2, NULL, NULL, NULL, NULL);
+INSERT INTO public.master_category_table VALUES (6, 'Vegetables', 3, NULL, NULL, NULL, NULL);
+INSERT INTO public.master_category_table VALUES (8, 'Fruits', 4, NULL, NULL, NULL, NULL);
+INSERT INTO public.master_category_table VALUES (4, 'Leafy', 0, NULL, NULL, NULL, NULL);
+INSERT INTO public.master_category_table VALUES (9, 'Organic', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO public.master_category_table VALUES (10, 'Organic Vegetables', 9, NULL, NULL, NULL, NULL);
+INSERT INTO public.master_category_table VALUES (11, 'Organic Fruits', 9, NULL, NULL, NULL, NULL);
 
 
 --
@@ -4009,9 +4239,9 @@ INSERT INTO public.master_mandi_table VALUES (2, 'Location 1', 'M123', 'John Doe
 -- Data for Name: master_product; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.master_product VALUES (1, 4, 'New Product', 1);
-INSERT INTO public.master_product VALUES (2, 5, 'product 2', 1);
-INSERT INTO public.master_product VALUES (3, 6, 'product 2', 1);
+INSERT INTO public.master_product VALUES (1, 4, 'New Product', 1, NULL, 'नया उत्पाद', 'புதிய தயாரிப்பு', 'కొత్త ఉత్పత్తి', NULL);
+INSERT INTO public.master_product VALUES (2, 5, 'product 2', 1, NULL, 'उत्पाद 2', 'தயாரிப்பு 2', 'ఉత్పత్తి 2', NULL);
+INSERT INTO public.master_product VALUES (3, 6, 'product 2', 1, NULL, 'उत्पाद 3', 'தயாரிப்பு 3', 'ఉత్పత్తి 3', NULL);
 
 
 --
@@ -4095,6 +4325,8 @@ INSERT INTO public.order_status_table VALUES (4, 'Out for Delivery');
 INSERT INTO public.order_status_table VALUES (5, 'Successful');
 INSERT INTO public.order_status_table VALUES (6, 'Cancellation');
 INSERT INTO public.order_status_table VALUES (7, 'Returned');
+INSERT INTO public.order_status_table VALUES (8, 'Processing');
+INSERT INTO public.order_status_table VALUES (9, 'return');
 
 
 --
@@ -4112,6 +4344,15 @@ INSERT INTO public.order_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 
 --
 
 INSERT INTO public.product_price_table VALUES (2, 2, 100.00, 5, 18.00);
+
+
+--
+-- Data for Name: product_reviews; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+INSERT INTO public.product_reviews VALUES (1, 1, 5, 5, 'Excellent product! Very high quality.');
+INSERT INTO public.product_reviews VALUES (2, 2, 6, 4, 'Good value for money, but delivery was slow.');
+INSERT INTO public.product_reviews VALUES (3, 1, 12, 3, 'Average product, could be better.');
 
 
 --
@@ -4244,7 +4485,7 @@ SELECT pg_catalog.setval('public.business_table_b_typeid_seq', 3, true);
 -- Name: business_table_bid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.business_table_bid_seq', 12, true);
+SELECT pg_catalog.setval('public.business_table_bid_seq', 13, true);
 
 
 --
@@ -4307,7 +4548,7 @@ SELECT pg_catalog.setval('public.invoice_table_id_seq', 3, true);
 -- Name: master_category_table_category_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.master_category_table_category_id_seq', 8, true);
+SELECT pg_catalog.setval('public.master_category_table_category_id_seq', 11, true);
 
 
 --
@@ -4332,10 +4573,10 @@ SELECT pg_catalog.setval('public.master_mandi_table_mandi_id_seq', 2, true);
 
 
 --
--- Name: master_product_product_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: master_product_utf8_product_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.master_product_product_id_seq', 1, true);
+SELECT pg_catalog.setval('public.master_product_utf8_product_id_seq', 1, false);
 
 
 --
@@ -4391,7 +4632,7 @@ SELECT pg_catalog.setval('public.order_item_table_product_order_id_seq', 6, true
 -- Name: order_status_table_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.order_status_table_order_id_seq', 7, true);
+SELECT pg_catalog.setval('public.order_status_table_order_id_seq', 9, true);
 
 
 --
@@ -4406,6 +4647,13 @@ SELECT pg_catalog.setval('public.order_table_order_id_seq', 2, true);
 --
 
 SELECT pg_catalog.setval('public.product_price_table_id_seq', 4, true);
+
+
+--
+-- Name: product_reviews_review_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.product_reviews_review_id_seq', 3, true);
 
 
 --
@@ -4698,11 +4946,11 @@ ALTER TABLE ONLY public.master_mandi_table
 
 
 --
--- Name: master_product master_product_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: master_product master_product_utf8_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.master_product
-    ADD CONSTRAINT master_product_pkey PRIMARY KEY (product_id);
+    ADD CONSTRAINT master_product_utf8_pkey PRIMARY KEY (product_id);
 
 
 --
@@ -4799,6 +5047,14 @@ ALTER TABLE ONLY public.order_table
 
 ALTER TABLE ONLY public.product_price_table
     ADD CONSTRAINT product_price_table_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_reviews product_reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_reviews
+    ADD CONSTRAINT product_reviews_pkey PRIMARY KEY (review_id);
 
 
 --
@@ -5096,7 +5352,7 @@ ALTER TABLE ONLY public.master_vehicle_table
 --
 
 ALTER TABLE ONLY public.daily_price_update
-    ADD CONSTRAINT fk_category FOREIGN KEY (product_id) REFERENCES public.master_product(product_id);
+    ADD CONSTRAINT fk_category FOREIGN KEY (product_id) REFERENCES public.master_product(product_id) ON DELETE CASCADE;
 
 
 --
@@ -5324,14 +5580,6 @@ ALTER TABLE ONLY public.invoice_table
 
 
 --
--- Name: master_product master_product_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.master_product
-    ADD CONSTRAINT master_product_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.master_category_table(category_id) ON DELETE CASCADE;
-
-
---
 -- Name: order_item_table order_item_table_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5380,6 +5628,22 @@ ALTER TABLE ONLY public.product_price_table
 
 
 --
+-- Name: product_reviews product_reviews_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_reviews
+    ADD CONSTRAINT product_reviews_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.master_product(product_id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_reviews product_reviews_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_reviews
+    ADD CONSTRAINT product_reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.business_table(bid) ON DELETE CASCADE;
+
+
+--
 -- Name: stock_table stock_table_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5401,6 +5665,211 @@ ALTER TABLE ONLY public.stock_table
 
 ALTER TABLE ONLY public.user_table
     ADD CONSTRAINT user_table_user_type_id_fkey FOREIGN KEY (user_type_id) REFERENCES public.user_type_table(user_type_id) ON DELETE SET NULL;
+
+
+--
+-- Name: SCHEMA business_schema; Type: ACL; Schema: -; Owner: postgres
+--
+
+GRANT ALL ON SCHEMA business_schema TO admin;
+GRANT ALL ON SCHEMA business_schema TO business;
+
+
+--
+-- Name: SCHEMA users_schema; Type: ACL; Schema: -; Owner: postgres
+--
+
+GRANT ALL ON SCHEMA users_schema TO admin;
+GRANT ALL ON SCHEMA users_schema TO users;
+
+
+--
+-- Name: TABLE business_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.business_table TO admin;
+GRANT SELECT ON TABLE public.business_table TO retailer;
+
+
+--
+-- Name: TABLE business_type_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.business_type_table TO admin;
+GRANT SELECT ON TABLE public.business_type_table TO retailer;
+
+
+--
+-- Name: TABLE cash_payment_list; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.cash_payment_list TO admin;
+GRANT SELECT ON TABLE public.cash_payment_list TO retailer;
+
+
+--
+-- Name: TABLE daily_price_update; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.daily_price_update TO retailer;
+GRANT ALL ON TABLE public.daily_price_update TO wholeseller_admin;
+
+
+--
+-- Name: TABLE invoice_details_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.invoice_details_table TO wholeseller_user;
+GRANT SELECT ON TABLE public.invoice_details_table TO retailer;
+
+
+--
+-- Name: TABLE invoice_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.invoice_table TO admin;
+GRANT SELECT,INSERT,UPDATE ON TABLE public.invoice_table TO wholeseller_user;
+GRANT SELECT ON TABLE public.invoice_table TO retailer;
+
+
+--
+-- Name: TABLE master_category_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_category_table TO admin;
+GRANT SELECT ON TABLE public.master_category_table TO retailer;
+
+
+--
+-- Name: TABLE master_driver_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_driver_table TO admin;
+
+
+--
+-- Name: TABLE master_location; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_location TO admin;
+GRANT SELECT ON TABLE public.master_location TO retailer;
+
+
+--
+-- Name: TABLE master_mandi_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_mandi_table TO admin;
+GRANT ALL ON TABLE public.master_mandi_table TO wholeseller_admin;
+
+
+--
+-- Name: TABLE master_states; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_states TO admin;
+GRANT SELECT ON TABLE public.master_states TO retailer;
+
+
+--
+-- Name: TABLE master_vehicle_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_vehicle_table TO admin;
+
+
+--
+-- Name: TABLE master_violation_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.master_violation_table TO admin;
+
+
+--
+-- Name: TABLE mode_of_payments_list; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.mode_of_payments_list TO admin;
+GRANT SELECT ON TABLE public.mode_of_payments_list TO retailer;
+
+
+--
+-- Name: TABLE order_item_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.order_item_table TO retailer;
+GRANT SELECT ON TABLE public.order_item_table TO wholeseller_user;
+
+
+--
+-- Name: TABLE order_status_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.order_status_table TO admin;
+
+
+--
+-- Name: TABLE order_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT ON TABLE public.order_table TO retailer;
+GRANT SELECT ON TABLE public.order_table TO wholeseller_user;
+
+
+--
+-- Name: TABLE stock_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.stock_table TO retailer;
+
+
+--
+-- Name: TABLE units_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.units_table TO admin;
+
+
+--
+-- Name: TABLE user_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.user_table TO admin;
+
+
+--
+-- Name: TABLE user_type_table; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.user_type_table TO admin;
+
+
+--
+-- Name: TABLE users; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.users TO admin;
+
+
+--
+-- Name: TABLE warehouse_list; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE public.warehouse_list TO admin;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: admin_schema; Owner: admin
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE admin IN SCHEMA admin_schema GRANT ALL ON TABLES TO admin;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: admin_schema; Owner: postgres
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA admin_schema GRANT ALL ON TABLES TO admin;
 
 
 --
