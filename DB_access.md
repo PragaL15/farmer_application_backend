@@ -20,7 +20,7 @@
 | `master_product`            | ✅ `SELECT` |
 | `daily_price_update`        | ✅ `SELECT` |
 | `order_table`               | ✅ `INSERT, SELECT` |
-| `order_item_table`          | ✅ `INSERT, SELECT` |
+| `order_item_table`          | ✅ `INSERT, SELECT`,`UPDATE` |
 | `master_states`             | ✅ `SELECT` |
 | `master_location`           | ✅ `SELECT` |
 | `business_table`            | ✅ `SELECT` |
