@@ -25,6 +25,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/products/:id", Masterhandlers.GetProductByID)
   app.Get("/categories/:category_id", Masterhandlers.GetCategoryByID)
   app.Get("/allOrderDetails/:id", handlers.GetOrderDetailsByOrderID)
+  app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
+
   
 	// app.Get("/getOrders", handlers.GetOrders)
 	app.Get("/getModeOfPayments", handlers.GetModeOfPayments)

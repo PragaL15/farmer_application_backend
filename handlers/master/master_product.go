@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
-
+"database/sql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
@@ -174,4 +174,91 @@ func GetProductByID(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(product)
+}
+func GetProductsByCategoryID(c *fiber.Ctx) error {
+	categoryID := c.Params("category_id")
+	if categoryID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Category ID is required"})
+	}
+
+	categoryIDInt, err := strconv.Atoi(categoryID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid Category ID format"})
+	}
+
+	// Query to fetch products based on category_id
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT 
+			mp.product_id, 
+			mp.category_id, 
+			mc.category_name, 
+			mp.product_name, 
+			mp.status, 
+			mp.image_path, 
+			mp.regional_name1, 
+			mp.regional_name2, 
+			mp.regional_name3, 
+			mp.regional_name4
+		FROM master_product mp
+		JOIN master_category_table mc ON mp.category_id = mc.category_id
+		WHERE mp.category_id = $1`, categoryIDInt)
+
+	if err != nil {
+		log.Printf("Failed to fetch products: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch products"})
+	}
+	defer rows.Close()
+
+	// Store the fetched products
+	var products []map[string]interface{}
+
+	for rows.Next() {
+		var productID, categoryID sql.NullInt64
+		var productName, categoryName, imagePath, regionalName1, regionalName2, regionalName3, regionalName4 sql.NullString
+		var status sql.NullInt64
+
+		err := rows.Scan(&productID, &categoryID, &categoryName, &productName, &status, &imagePath, &regionalName1, &regionalName2, &regionalName3, &regionalName4)
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			continue
+		}
+
+		product := map[string]interface{}{
+			"product_id":     nullIntToInterface(productID),
+			"category_id":    nullIntToInterface(categoryID),
+			"category_name":  nullStringToInterface(categoryName),
+			"product_name":   nullStringToInterface(productName),
+			"status":         nullIntToInterface(status),
+			"image_path":     nullStringToInterface(imagePath),
+			"regional_name1": nullStringToInterface(regionalName1),
+			"regional_name2": nullStringToInterface(regionalName2),
+			"regional_name3": nullStringToInterface(regionalName3),
+			"regional_name4": nullStringToInterface(regionalName4),
+		}
+
+		products = append(products, product)
+	}
+
+	// If no products found, return a message
+	if len(products) == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "No products found for this category"})
+	}
+
+	// Return the product list
+	return c.JSON(products)
+}
+
+// Utility functions for handling NULL values
+func nullIntToInterface(value sql.NullInt64) interface{} {
+	if value.Valid {
+		return value.Int64
+	}
+	return nil
+}
+
+func nullStringToInterface(value sql.NullString) interface{} {
+	if value.Valid {
+		return value.String
+	}
+	return nil
 }
