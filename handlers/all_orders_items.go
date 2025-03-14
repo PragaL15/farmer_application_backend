@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strconv"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v4"
 )
 
 type OrderDetails struct {
@@ -86,6 +88,96 @@ func GetOrderDetails(c *fiber.Ctx) error {
 				Address:         formatNullString(address),
 				TotalOrderAmount: totalOrderAmount,
 				Products:         []ProductDetails{},
+			}
+		}
+
+		if orderItemID != 0 {
+			product := ProductDetails{
+				OrderItemID:     orderItemID,
+				ProductID:       productID,
+				ProductName:     formatNullString(productName),
+				Quantity:        quantity,
+				UnitID:          unitID,
+				UnitName:        formatNullString(unitName),
+				AmtOfOrderItem:  formatNullFloat64(amtOfOrderItem),
+				OrderItemStatus: formatNullString(orderItemStatus),
+			}
+			ordersMap[orderID].Products = append(ordersMap[orderID].Products, product)
+		}
+	}
+
+	var orders []OrderDetails
+	for _, order := range ordersMap {
+		orders = append(orders, *order)
+	}
+	return c.JSON(orders)
+}
+
+func GetOrderDetailsByOrderID(c *fiber.Ctx) error {
+	orderIDParam := c.Params("id") 
+
+	var orderID *int64 
+	if orderIDParam != "" { 
+		parsedID, err := strconv.ParseInt(orderIDParam, 10, 64)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid order ID"})
+		}
+		orderID = &parsedID 
+	}
+
+	var rows pgx.Rows
+	var err error
+	if orderID == nil {
+		rows, err = db.Pool.Query(context.Background(), "SELECT * FROM get_order_details(NULL)")
+	} else {
+		rows, err = db.Pool.Query(context.Background(), "SELECT * FROM get_order_details($1)", *orderID)
+	}
+
+	if err != nil {
+		log.Printf("Failed to fetch order details: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch order details"})
+	}
+	defer rows.Close()
+
+	ordersMap := make(map[int]*OrderDetails)
+	for rows.Next() {
+		var orderID, orderItemID, retailerID, wholesellerID, unitID int
+		var productID int64
+		var dateOfOrder time.Time
+		var expectedDeliveryDate, actualDeliveryDate sql.NullTime
+		var orderStatus, retailerName, wholesellerName, locationName, stateName, productName, unitName, address sql.NullString
+		var totalOrderAmount, quantity float64
+		var amtOfOrderItem sql.NullFloat64
+		var orderItemStatus sql.NullString
+
+		err := rows.Scan(
+			&orderID, &orderItemID, &dateOfOrder, &expectedDeliveryDate, &actualDeliveryDate,
+			&orderStatus, &retailerID, &retailerName, &wholesellerID, &wholesellerName,
+			&locationName, &stateName, &address, &totalOrderAmount,
+			&productID, &productName, &quantity, &unitID, &unitName,
+			&amtOfOrderItem, &orderItemStatus,
+		)
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		}
+
+		if _, exists := ordersMap[orderID]; !exists {
+			ordersMap[orderID] = &OrderDetails{
+				OrderID:             orderID,
+				DateOfOrder:         dateOfOrder.Format(time.RFC3339),
+				ExpectedDeliveryDate: formatNullTime(expectedDeliveryDate),
+				ActualDeliveryDate:   formatNullTime(actualDeliveryDate),
+				OrderStatus:         formatNullString(orderStatus),
+				RetailerID:          retailerID,
+				RetailerName:        formatNullString(retailerName),
+				WholesellerID:       wholesellerID,
+				WholesellerName:     formatNullString(wholesellerName),
+				LocationName:        formatNullString(locationName),
+				StateName:           formatNullString(stateName),
+				Address:             formatNullString(address),
+				TotalOrderAmount:    totalOrderAmount,
+				Products:            []ProductDetails{},
 			}
 		}
 
