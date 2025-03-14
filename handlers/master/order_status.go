@@ -2,6 +2,8 @@ package Masterhandlers
 
 import (
 	"context"
+	"strconv"
+	"github.com/jackc/pgx/v4"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
@@ -61,4 +63,26 @@ func UpdateOrderStatus(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"message": "Order status updated successfully"})
+}
+
+func GetOrderStatusByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
+	}
+
+	var orderStatus string
+	err = db.Pool.QueryRow(context.Background(), "SELECT get_order_status_by_id($1)", idInt).Scan(&orderStatus)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Order status not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"order_id":     idInt,
+		"order_status": orderStatus,
+	})
 }

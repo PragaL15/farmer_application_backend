@@ -3,7 +3,8 @@ package Masterhandlers
 import (
 	"context"
 	"log"
-
+"strconv"
+"github.com/jackc/pgx/v4"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
@@ -86,4 +87,27 @@ func GetListPaymentMethods(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(payments)
+}
+
+
+func GetPaymentTypeByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
+	}
+
+	var paymentType string
+	err = db.Pool.QueryRow(context.Background(), "SELECT get_payment_type_by_id($1)", idInt).Scan(&paymentType)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Payment type not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":            idInt,
+		"payment_type": paymentType,
+	})
 }
