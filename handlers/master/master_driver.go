@@ -172,3 +172,44 @@ func formatDate(t *time.Time) *string {
 	formatted := t.Format("2006-01-02")
 	return &formatted
 }
+
+func GetDriverByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
+	}
+
+	var driver struct {
+		DriverID int 
+		DriverName       string
+		DriverAge        *int
+		DriverLicense    string
+		DriverNumber     string
+		DriverAddress    *string
+		DriverStatus     *string
+		DateOfJoining    *time.Time
+		ExperienceYears  *int
+		LicenseExpiry    time.Time
+		EmergencyContact *string
+		AssignedRouteID  *int
+		CreatedAt        time.Time
+		UpdatedAt        time.Time
+		DOB              *time.Time
+		Col1             *string
+		Col2             *string
+	}
+
+	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM get_driver_by_id($1)", idInt).Scan(
+		&driver.DriverID,&driver.DriverName, &driver.DriverAge, &driver.DriverLicense, &driver.DriverNumber,
+		&driver.DriverAddress, &driver.DriverStatus, &driver.DateOfJoining, &driver.ExperienceYears,
+		&driver.LicenseExpiry, &driver.EmergencyContact, &driver.AssignedRouteID, &driver.CreatedAt,
+		&driver.UpdatedAt, &driver.DOB, &driver.Col1, &driver.Col2,
+	)
+	if err != nil {
+		
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(driver)
+}
