@@ -20,21 +20,30 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinesses", Masterhandlers.GetBusinesses)
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
 	app.Get("/getOrderStatus", Masterhandlers.GetOrderStatuses)
-	app.Get("/getBusinessStatus", handlers.GetBusinessTypes)
-
-	app.Get("/products/:id", Masterhandlers.GetProductByID)
-  app.Get("/categories/:category_id", Masterhandlers.GetCategoryByID)
-  app.Get("/allOrderDetails/:id", handlers.GetOrderDetailsByOrderID)
-  app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
-
-  
-	// app.Get("/getOrders", handlers.GetOrders)
+	app.Get("/getBusinessTypes", Masterhandlers.GetBusinessTypes)
 	app.Get("/getModeOfPayments", handlers.GetModeOfPayments)
 	app.Get("/getListPaymentMethod", Masterhandlers.GetListPaymentMethods)
 	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
 	app.Get("/getOrderHistoryDetails", handlers.GetOrderHistory)
 	app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
 	app.Get("/getDailyPriceDetails", handlers.GetDailyPriceUpdates)
+	app.Get("/getPaymentMode", handlers.GetPaymentModes)
+
+
+	app.Get("/products/:id", Masterhandlers.GetProductByID)
+  app.Get("/categories/:category_id", Masterhandlers.GetCategoryByID)
+  app.Get("/allOrderDetails/:id", handlers.GetOrderDetailsByOrderID)
+  app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
+  app.Get("/getPaymentModeById/:id", handlers.GetPaymentModeByID)
+  app.Get("/getOrderStatusById/:id", Masterhandlers.GetOrderStatusByID)
+  app.Get("/getPaymentTypeById/:id", Masterhandlers.GetPaymentTypeByID)
+  app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
+  app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
+
+
+  
+	// app.Get("/getOrders", handlers.GetOrders)
+
 
 	// POST Routes
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
@@ -50,6 +59,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/businessDetails", Masterhandlers.InsertBusiness)
 	app.Post("/orderStatusDetails", Masterhandlers.InsertOrderStatus)
 	app.Post("/ordersDetails", handlers.InsertOrder)
+	app.Post("/paymentModes", handlers.InsertPaymentMode)
+	app.Post("/businessTypeDetails", Masterhandlers.InsertBusinessType)
 
 	// PUT Routes (Updating)
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
@@ -66,4 +77,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/orderStatusUpdate", Masterhandlers.UpdateOrderStatus)
 	app.Put("/ordersUpdate", handlers.UpdateOrder)
 	app.Put("/dailyPriceUpdate", handlers.UpdateDailyPrice)
+	app.Put("/paymentModeUpdate", handlers.UpdatePaymentMode)
+	app.Put("/businessTypeUpdate", Masterhandlers.UpdateBusinessType)
 }
