@@ -61,7 +61,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/ordersDetails", handlers.InsertOrder)
 	app.Post("/paymentModes", handlers.InsertPaymentMode)
 	app.Post("/businessTypeDetails", Masterhandlers.InsertBusinessType)
-	app.Post("/listListPaymentsDetails", Masterhandlers.InsertListPaymentMethod)
+	app.Post("/listPaymentsDetails", Masterhandlers.InsertListPaymentMethod)
 
 	// PUT Routes (Updating)
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
