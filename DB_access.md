@@ -1,33 +1,22 @@
-## wholeseller_admin , wholeseller_user
+### Roles and Permissions in PostgreSQL
 
+#### **wholeseller_user Permissions**
 
-| Table Name              | `wholeseller_admin` (Update Prices) | `wholeseller_user` (Manage Orders & Invoices) |
-|-------------------------|---------------------------------|------------------------------------|
-| `daily_price_update`    | ✅ `INSERT, UPDATE` | ❌ No Access |
-| `master_mandi_table`    | ✅ `SELECT, UPDATE` | ❌ No Access |
-| `invoice_details_table` | ✅ `SELECT, INSERT` | ✅ `SELECT, INSERT, UPDATE` |
-| `invoice_table`         | ✅ `SELECT, INSERT` | ✅ `SELECT, INSERT, UPDATE` |
-| `order_table`           | ❌ No Access | ✅ `SELECT` |
-| `order_item_table`      | ❌ No Access | ✅ `SELECT` |
+| Table Name              | Privileges         |
+|-------------------------|--------------------|
+| invoice_details_table   | INSERT, SELECT, UPDATE |
+| order_item_table        | SELECT |
+| invoice_table           | INSERT, SELECT, UPDATE |
+| order_table             | SELECT |
 
----
+#### **wholeseller_admin Permissions**
 
-## retailers 
+| Table Name              | Privileges         |
+|-------------------------|--------------------|
+| daily_price_update      | INSERT, SELECT, UPDATE, REFERENCES, TRIGGER |
+| master_mandi_table      | INSERT, SELECT, UPDATE, REFERENCES |
+| invoice_details_table   | INSERT, SELECT, UPDATE, TRIGGER |
+| business_table          | INSERT |
+| invoice_table           | INSERT, SELECT, UPDATE, TRIGGER |
 
-| Table Name                  | `retailer` (View & Place Orders) |
-|-----------------------------|--------------------------------|
-| `master_category_table`     | ✅ `SELECT` |
-| `master_product`            | ✅ `SELECT` |
-| `daily_price_update`        | ✅ `SELECT` |
-| `order_table`               | ✅ `INSERT, SELECT` |
-| `order_item_table`          | ✅ `INSERT, SELECT`,`UPDATE` |
-| `master_states`             | ✅ `SELECT` |
-| `master_location`           | ✅ `SELECT` |
-| `business_table`            | ✅ `SELECT` |
-| `cash_payment_list`         | ✅ `SELECT` |
-| `business_type_table`       | ✅ `SELECT` |
-| `mode_of_payments_list`     | ✅ `SELECT` |
-| `stock_table`               | ✅ `SELECT` |
-| `invoice_table`             | ✅ `SELECT` |
-| `invoice_details_table`     | ✅ `SELECT` |
 
