@@ -69,6 +69,8 @@ func InsertBusinessType(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"message": "Business type inserted successfully"})
 }
+
+
 func UpdateBusinessType(c *fiber.Ctx) error {
 	type Request struct {
 		BTypeID   int    `json:"b_typeid"`
