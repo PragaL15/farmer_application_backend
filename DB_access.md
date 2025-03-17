@@ -1,43 +1,69 @@
-### Roles and Permissions in PostgreSQL
+## Roles and Permissions in PostgreSQL
 
-#### **wholeseller_user Permissions**
+### **wholeseller_user Permissions**
 
-| Table Name              | Privileges         |
-|-------------------------|--------------------|
-| invoice_details_table   | INSERT, SELECT, UPDATE |
-| order_item_table        | SELECT |
-| invoice_table           | INSERT, SELECT, UPDATE |
-| order_table             | SELECT |
+| Table Name              | Schema           | Privileges                     |
+|-------------------------|-----------------|--------------------------------|
+| invoice_details_table   | business_schema | INSERT, SELECT, UPDATE        |
+| invoice_table          | business_schema | INSERT, SELECT, UPDATE        |
+| order_table            | business_schema | SELECT                         |
+| order_item_table       | business_schema | SELECT                         |
 
-#### **wholeseller_admin Permissions**
+---
 
-| Table Name              | Privileges         |
-|-------------------------|--------------------|
-| daily_price_update      | INSERT, SELECT, UPDATE, REFERENCES, TRIGGER |
-| master_mandi_table      | INSERT, SELECT, UPDATE, REFERENCES |
-| invoice_details_table   | INSERT, SELECT, UPDATE |
-| business_table          | INSERT |
-| invoice_table           | INSERT, SELECT, UPDATE |
-| order_item_table        |SELECT|
-| order_table             |SELECT|
+### **wholeseller_admin Permissions**
 
-#### **Retailer Permissions**
+##### admin_schema
 
-| Grantee  | Privilege Type | Table Name                |
-|----------|---------------|---------------------------|
-| retailer | SELECT        | master_category_table     |
-| retailer | SELECT        | daily_price_update        |
-| retailer | SELECT , UPDATE      | invoice_details_table     |
-| retailer | SELECT        | stock_table               |
-| retailer | SELECT        | master_product            |
-| retailer | SELECT        | business_table            |
-| retailer | SELECT , INSERT       | order_table               |
-| retailer | INSERT,SELECT, UPDATE        | order_item_table          |
-| retailer | SELECT        | cash_payment_list         |
-| retailer | SELECT        | mode_of_payments_list     |
-| retailer | SELECT        | invoice_table             |
+| Table Name          | Privileges           |
+|---------------------|---------------------|
+| master_mandi_table | INSERT, SELECT, UPDATE, REFERENCES |
+| business_table     | INSERT              |
 
-#### **admin Permissions**
+##### business_schema
+
+| Table Name               | Privileges                                |
+|--------------------------|------------------------------------------|
+| daily_price_update       | INSERT, SELECT, UPDATE, DELETE, REFERENCES, TRIGGER |
+| invoice_details_table    | INSERT, SELECT, UPDATE, DELETE, TRIGGER  |
+| order_history_table      | INSERT, SELECT, UPDATE, DELETE          |
+| stock_table              | INSERT, SELECT, UPDATE, DELETE          |
+| invoice_table            | INSERT, SELECT, UPDATE, DELETE, TRIGGER  |
+| order_table              | INSERT, SELECT, UPDATE, DELETE          |
+| warehouse_list           | INSERT, SELECT, UPDATE, DELETE          |
+| order_item_table         | INSERT, SELECT, UPDATE, DELETE          |
+
+
+---
+
+### **Retailer Permissions**
+
+##### admin_schema
+
+| Table Name              | Schema           | Privileges              |
+|-------------------------|-----------------|-------------------------|
+| master_category_table   | admin_schema    | SELECT                  |
+| master_product         | admin_schema    | SELECT                  |
+| business_table         | admin_schema    | SELECT                  |
+| cash_payment_list      | admin_schema    | SELECT                  |
+| mode_of_payments_list  | admin_schema    | SELECT                  |
+|---------------------------------------------------------------------|
+
+##### business_schema
+
+| Table Name              | Schema           | Privileges              |
+|-------------------------|-----------------|-------------------------|
+| daily_price_update      | business_schema | SELECT                  |
+| invoice_details_table   | business_schema | SELECT                  |
+| stock_table            | business_schema | SELECT                  |
+| invoice_table         | business_schema | SELECT                  |
+| order_table            | business_schema | INSERT, SELECT          |
+| order_item_table       | business_schema | INSERT, SELECT, UPDATE  |
+|---------------------------------------------------------------------|
+
+---
+
+### **Admin Permissions**
 
 | Table Name              | Privileges                                    |
 |-------------------------|----------------------------------------------|

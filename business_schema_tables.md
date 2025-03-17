@@ -165,14 +165,9 @@
 - **`date_of_order`** (`timestamp`): Defaults to `CURRENT_TIMESTAMP`.  
 - **`user_id`** (`integer`): References the user who manages the stock.  
 - **`warehouse_id`** (`integer`): References the warehouse where stock is stored.  
-- **`status`** (`boolean`): Stock status (`true` by default).  
-- **`updatedat`** (`timestamp`): Last update timestamp (`CURRENT_TIMESTAMP`).  
-- **`createdat`** (`timestamp`): Creation timestamp (`CURRENT_TIMESTAMP`).  
+- **`status`** (`boolean`): Stock status (`true` by default).   
 - **`carry_fwd`** (`numeric(10,2)`): Stock carried forward (default: `0`).  
 - **`source_id`** (`integer`): Reference to the stock source.  
-- **`col1`** (`text`): Additional column 1 (for notes or metadata).  
-- **`col2`** (`text`): Additional column 2.  
-- **`remarks`** (`text`): Additional remarks.  
 
 #### **Indexes & Constraints**  
 - **Primary Key**:  
@@ -209,3 +204,41 @@
 #### **Relationships**  
 - A **Warehouse** can store multiple **Stocks**, as referenced in `stock_table`.  
 - Each Warehouse is managed by a **User** (though the user relationship is not explicitly defined in this schema).  
+---
+### **Table 9: `business_schema.order_history_table`**  
+
+#### **Columns & Data Types**  
+- **`history_id`** (`integer`): Primary key, auto-incremented.  
+- **`order_id`** (`integer`): ID of the order (mandatory).  
+- **`date_of_order`** (`timestamp`): The date when the order was placed (default: `CURRENT_TIMESTAMP`).  
+- **`order_status`** (`integer`): Status of the order.  
+- **`expected_delivery_date`** (`timestamp`): Expected date of delivery.  
+- **`actual_delivery_date`** (`timestamp`): Actual date of delivery.  
+- **`retailer_id`** (`integer`): ID of the retailer who placed the order.  
+- **`wholeseller_id`** (`integer`): ID of the wholesaler fulfilling the order.  
+- **`location_id`** (`integer`): ID of the location associated with the order.  
+- **`state_id`** (`integer`): ID of the state related to the order.  
+- **`pincode`** (`varchar(10)`): Pincode of the delivery location.  
+- **`address`** (`text`): Delivery address.  
+- **`delivery_completed_date`** (`timestamp`): Timestamp when the order was marked as delivered.  
+
+#### **Indexes & Constraints**  
+- **Primary Key**:  
+  - `order_history_table_pkey` → `history_id`.  
+
+#### **Trigger: `update_order_history`**  
+- **Function:**  
+  The trigger function **`update_order_history`** automatically logs order updates into `order_history_table` whenever an update occurs on `order_table`.  
+
+- **Logic:**  
+  - Captures order updates and stores them in `order_history_table`.  
+  - If `order_status = 6 (Delivered)`, records `CURRENT_TIMESTAMP` in `delivery_completed_date`.
+
+- **Trigger Execution:**  
+  - Trigger executes **before update** on `business_schema.order_table`.  
+
+### Triggers used
+
+1. `update_order_history()` -  The update_order_history trigger function ensures that every change to the order_table is logged in order_history_table, preserving a complete record of order updates. This helps in tracking modifications and monitoring order progress, especially when an order is marked as delivered (status = 6).
+
+2. 
