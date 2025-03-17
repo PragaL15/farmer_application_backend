@@ -15,8 +15,9 @@
 |-------------------------|--------------------|
 | daily_price_update      | INSERT, SELECT, UPDATE, REFERENCES, TRIGGER |
 | master_mandi_table      | INSERT, SELECT, UPDATE, REFERENCES |
-| invoice_details_table   | INSERT, SELECT, UPDATE, TRIGGER |
+| invoice_details_table   | INSERT, SELECT, UPDATE |
 | business_table          | INSERT |
-| invoice_table           | INSERT, SELECT, UPDATE, TRIGGER |
-
+| invoice_table           | INSERT, SELECT, UPDATE |
+| order_item_table        |SELECT|
+| order_table             |SELECT|
 
