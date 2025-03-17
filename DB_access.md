@@ -21,7 +21,6 @@
 | business_table     | INSERT              |
 
 ##### business_schema
-
 | Table Name               | Privileges                                |
 |--------------------------|------------------------------------------|
 | daily_price_update       | INSERT, SELECT, UPDATE, DELETE, REFERENCES, TRIGGER |
