@@ -20,17 +20,18 @@
 | master_mandi_table | INSERT, SELECT, UPDATE, REFERENCES |
 | business_table     | INSERT              |
 
+
 ##### business_schema
 | Table Name               | Privileges                                |
 |--------------------------|------------------------------------------|
-| daily_price_update       | INSERT, SELECT, UPDATE, DELETE, REFERENCES, TRIGGER |
-| invoice_details_table    | INSERT, SELECT, UPDATE, DELETE, TRIGGER  |
-| order_history_table      | INSERT, SELECT, UPDATE, DELETE          |
+| daily_price_update       | INSERT, SELECT, UPDATE, REFERENCES, TRIGGER |
+| invoice_details_table    | INSERT, SELECT, UPDATE, TRIGGER  |
+| order_history_table      | INSERT, SELECT, UPDATE |
 | stock_table              | INSERT, SELECT, UPDATE, DELETE          |
-| invoice_table            | INSERT, SELECT, UPDATE, DELETE, TRIGGER  |
-| order_table              | INSERT, SELECT, UPDATE, DELETE          |
-| warehouse_list           | INSERT, SELECT, UPDATE, DELETE          |
-| order_item_table         | INSERT, SELECT, UPDATE, DELETE          |
+| invoice_table            | INSERT, SELECT, UPDATE, TRIGGER  |
+| order_table              | INSERT, SELECT, UPDATE |
+| warehouse_list           | INSERT, SELECT, UPDATE     |
+| order_item_table         | INSERT, SELECT, UPDATE    |
 
 
 ---
