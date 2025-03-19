@@ -40,11 +40,6 @@ func RegisterRoutes(app *fiber.App) {
   app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
   app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
 
-
-  
-	// app.Get("/getOrders", handlers.GetOrders)
-
-
 	// POST Routes
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
 	app.Post("/categoryDetails", Masterhandlers.InsertCategory)
