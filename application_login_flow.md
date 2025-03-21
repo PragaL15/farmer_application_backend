@@ -92,7 +92,6 @@ Defines what actions each role can perform on the `business_table`.
      - If the user is an **Admin**, they will see all buttons: **Create**, **Edit**, and **Delete**.
 
 ---
-
 ### Step 4: Handle User Actions
 1. When the user tries to do something (like update a record), the system checks the **rulebook** again to see if they’re allowed.
 2. If the user has permission:
