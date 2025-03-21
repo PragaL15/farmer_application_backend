@@ -1,12 +1,4 @@
-Here’s the **Markdown (MD)** file with the requested format. It includes a **permissions table** that clearly shows whether each role has access to certain operations (e.g., `create`, `read`, `update`, `delete`) on the `business_table`. The `business_table` structure is also included for reference.
-
----
-
 # Role-Based Access Control (RBAC) System
-
-This document explains how the **Role-Based Access Control (RBAC)** system works in the application. It ensures that users can only perform actions they are authorized to do, based on their role.
-
----
 
 ## Tables
 
@@ -79,7 +71,7 @@ Defines what actions each role can perform on the `business_table`.
 ### Step 1: User Logs In
 1. The user enters their **username** and **password** (like logging into a game).
 2. The system checks if the username and password are correct by looking at the `business_user_table` (like a list of players).
-3. If the username and password are correct, the system finds the user’s **role** (like their job title) from the `user_table`.
+3. If the username and password are correct, the system finds the user’s **role** (like their job title) from the `users`.
 
 ---
 
