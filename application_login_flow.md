@@ -53,7 +53,30 @@ Stores business-related data and is linked to a role via `role_id`.
 | `b_shop_name`        | `varchar(255)`     | Name of the business shop.           |
 
 ---
+### 2. `business_user_table`
+Stores business user details and maps each user to a role using `role_id`.
 
+| Column        | Type               | Description                          |
+|---------------|--------------------|--------------------------------------|
+| `b_id`        | `integer`          | Unique ID for the business user.     |
+| `user_name`   | `varchar(255)`     | Username for the business user.      |
+| `password`    | `varchar(255)`     | Password for the business user.      |
+| `active_status`| `integer`         | Status of the user (0 = inactive, 1 = active). |
+| `role_id`     | `integer`          | Role ID of the business user.        |
+
+---
+
+### 3. `users`
+Stores normal user details and maps each user to a role using `role_id`.
+
+| Column        | Type               | Description                          |
+|---------------|--------------------|--------------------------------------|
+| `user_id`     | `integer`          | Unique ID for the normal user.       |
+| `username`    | `varchar(255)`     | Username for the normal user.        |
+| `password`    | `varchar(255)`     | Password for the normal user.        |
+| `role_id`     | `integer`          | Role ID of the normal user.          |
+
+---
 ### 4. `permissions_table`
 Defines what actions each role can perform on the `business_table`.
 
@@ -166,3 +189,5 @@ It keeps the app **safe** and **organized** so that everyone can only do what th
 1. Whenever an API is called, the backend checks the user’s role_id and permissions.
 2. If the user has permission, the backend performs the action.
 3. If the user does not have permission, the backend rejects the request and sends an error.
+
+
