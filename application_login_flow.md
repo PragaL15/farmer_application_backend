@@ -27,9 +27,7 @@ Stores user details and maps each user to a role using `role_id`.
 | `state`       | `integer`          | State ID of the user.                |
 | `active_status`| `integer`         | Status of the user (0 = inactive, 1 = active). |
 | `role_id`     | `integer`          | Role ID of the user (default = 5).   |
-
 ---
-
 ### 3. `business_table`
 Stores business-related data and is linked to a role via `role_id`.
 
