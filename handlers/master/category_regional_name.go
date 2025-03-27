@@ -8,15 +8,14 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
-// CategoryRegional struct
-type CategoryRegional struct {
+type CategoryRegionallanguage struct {
 	ID                int64  `json:"category_regional_id"`
 	LanguageID        int64  `json:"language_id"`
 	CategoryID        int64  `json:"category_id"`
 	RegionalName      string `json:"category_regional_name"`
 }
 
-func GetProductCategoryRegionalNames(c *fiber.Ctx) error {
+func GetProductCategoryRegional(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_category_regional_names()")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch category regional names", "details": err.Error()})
@@ -34,7 +33,7 @@ func GetProductCategoryRegionalNames(c *fiber.Ctx) error {
 	return c.JSON(categories)
 }
 
-func GetProductCategoryRegionalNameByID(c *fiber.Ctx) error {
+func GetProductCategoryRegionalByID(c *fiber.Ctx) error {
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
@@ -51,7 +50,7 @@ func GetProductCategoryRegionalNameByID(c *fiber.Ctx) error {
 }
 
 // Create a new category regional name
-func InsertProductCategoryRegionalName(c *fiber.Ctx) error {
+func InsertProductCategoryRegional(c *fiber.Ctx) error {
 	type Request struct {
 		LanguageID   int64  `json:"language_id"`
 		CategoryID   int64  `json:"category_id"`
@@ -70,8 +69,7 @@ func InsertProductCategoryRegionalName(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Category regional name added successfully"})
 }
 
-// Update a category regional name
-func UpdateProductCategoryRegionalName(c *fiber.Ctx) error {
+func UpdateProductCategoryRegional(c *fiber.Ctx) error {
 	type Request struct {
 		ID          int64  `json:"category_regional_id"`
 		LanguageID  int64  `json:"language_id"`
