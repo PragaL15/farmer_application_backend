@@ -2557,6 +2557,7 @@ ALTER FUNCTION public.update_order_history() OWNER TO postgres;
 -- Name: update_order_timestamp(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
+
 CREATE FUNCTION public.update_order_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
