@@ -2,114 +2,79 @@ package Masterhandlers
 
 import (
 	"context"
-	"log"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
-	"github.com/go-playground/validator/v10"
 )
 
-func InsertMasterState(c *fiber.Ctx) error {
-	type Request struct {
-		State string `json:"state" validate:"required,max=50"`
-	}
-
-	var req Request
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
-	}
-
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	_, err := db.Pool.Exec(context.Background(), `
-		CALL insert_master_state($1);
-	`, req.State)
-
-	if err != nil {
-		log.Printf("Failed to insert state: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert state"})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "State added successfully"})
-}
-func UpdateMasterState(c *fiber.Ctx) error {
-	type Request struct {
-		ID    int    `json:"id" validate:"required,min=1"`
-		State string `json:"state" validate:"required,max=50"`
-	}
-
-	var req Request
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
-	}
-
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	_, err := db.Pool.Exec(context.Background(), `
-		CALL update_master_state($1, $2);
-	`, req.ID, req.State)
-
-	if err != nil {
-		log.Printf("Failed to update state: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update state"})
-	}
-
-	return c.JSON(fiber.Map{"message": "State updated successfully"})
-}
-func DeleteMasterState(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if id == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID is required"})
-	}
-
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
-	}
-
-	_, err = db.Pool.Exec(context.Background(), `
-		CALL delete_master_state($1);
-	`, idInt)
-
-	if err != nil {
-		log.Printf("Failed to delete state: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete state"})
-	}
-
-	return c.JSON(fiber.Map{"message": "State deleted successfully"})
+type State struct {
+	ID              int64  `json:"id"`
+	State           string `json:"state"`
+	StateShortNames string `json:"state_shortnames"`
 }
 
-func GetStates(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_states()")
+func GetAllStates(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_states()")
 	if err != nil {
-		log.Printf("Failed to fetch state records: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch states"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch states", "details": err.Error()})
 	}
 	defer rows.Close()
 
-	var states []map[string]interface{}
-
+	var states []State
 	for rows.Next() {
-		var id *int
-		var stateName *string
-
-		if err := rows.Scan(&id, &stateName); err != nil {
-			log.Printf("Error scanning row: %v", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+		var state State
+		if err := rows.Scan(&state.ID, &state.State, &state.StateShortNames); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error scanning state data", "details": err.Error()})
 		}
+		states = append(states, state)
+	}
+	return c.JSON(states)
+}
 
-		states = append(states, map[string]interface{}{
-			"id":    id,
-			"state": stateName,
-		})
+func GetStateByID(c *fiber.Ctx) error {
+	stateID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid state ID format"})
 	}
 
-	return c.JSON(states)
+	var state State
+	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_state_by_id($1)", stateID).
+		Scan(&state.ID, &state.State, &state.StateShortNames)
+
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "State not found"})
+	}
+	return c.JSON(state)
+}
+
+func InsertState(c *fiber.Ctx) error {
+	var state State
+	if err := c.BodyParser(&state); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
+	}
+
+	_, err := db.Pool.Exec(context.Background(), "SELECT admin_schema.insert_state($1, $2)", state.State, state.StateShortNames)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert state", "details": err.Error()})
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "State inserted successfully"})
+}
+
+func UpdateState(c *fiber.Ctx) error {
+	stateID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid state ID format"})
+	}
+
+	var state State
+	if err := c.BodyParser(&state); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
+	}
+
+	_, err = db.Pool.Exec(context.Background(), "SELECT admin_schema.update_state($1, $2, $3)", stateID, state.State, state.StateShortNames)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update state", "details": err.Error()})
+	}
+	return c.JSON(fiber.Map{"message": "State updated successfully"})
 }
