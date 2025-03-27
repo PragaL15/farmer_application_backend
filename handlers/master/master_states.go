@@ -3,11 +3,9 @@ package Masterhandlers
 import (
 	"context"
 	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-
 type State struct {
 	ID              int64  `json:"id"`
 	State           string `json:"state"`
@@ -20,7 +18,6 @@ func GetAllStates(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch states", "details": err.Error()})
 	}
 	defer rows.Close()
-
 	var states []State
 	for rows.Next() {
 		var state State
@@ -37,11 +34,9 @@ func GetStateByID(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid state ID format"})
 	}
-
 	var state State
 	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_state_by_id($1)", stateID).
 		Scan(&state.ID, &state.State, &state.StateShortNames)
-
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "State not found"})
 	}
@@ -53,7 +48,6 @@ func InsertState(c *fiber.Ctx) error {
 	if err := c.BodyParser(&state); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
 	}
-
 	_, err := db.Pool.Exec(context.Background(), "SELECT admin_schema.insert_state($1, $2)", state.State, state.StateShortNames)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert state", "details": err.Error()})
@@ -66,7 +60,6 @@ func UpdateState(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid state ID format"})
 	}
-
 	var state State
 	if err := c.BodyParser(&state); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})

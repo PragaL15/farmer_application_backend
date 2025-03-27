@@ -57,1661 +57,1587 @@ CREATE TYPE public.acceptance_status AS ENUM (
 ALTER TYPE public.acceptance_status OWNER TO postgres;
 
 --
--- Name: assign_role_permissions(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: create_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, integer, character varying, character varying, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.assign_role_permissions() RETURNS trigger
+CREATE FUNCTION admin_schema.create_business_branch(p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_active_status integer DEFAULT 0, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying) RETURNS integer
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    new_branch_id INT;
 BEGIN
-    -- Debugging message to verify role_id
-    RAISE NOTICE 'Assigning default permissions for role_id: %', NEW.role_id;
-
-    -- Insert default permissions for the new role in business_table
-    INSERT INTO admin_schema.permission_table 
-    (role_id, table_name, can_insert, can_update, can_select, can_delete) 
-    VALUES 
-    (NEW.role_id, 'business_table', 0, 0, 1, 0); -- Modify default permissions if needed
-
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION admin_schema.assign_role_permissions() OWNER TO postgres;
-
---
--- Name: prevent_invalid_registration(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
---
-
-CREATE FUNCTION admin_schema.prevent_invalid_registration() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 
-        FROM admin_schema.business_table
-        WHERE role_id IN (2, 4)
-          AND b_location_id = NEW.b_location_id
-          AND b_state_id = NEW.b_state_id
-          AND b_mandi_id = NEW.b_mandi_id
-          AND b_address = NEW.b_address
-          AND b_phone_num = NEW.b_phone_num
-          AND b_email = NEW.b_email
-          AND b_gst_num = NEW.b_gst_num
-          AND b_pan_num = NEW.b_pan_num
-          AND b_registration_num = NEW.b_registration_num
-          AND b_person_name != NEW.b_person_name  -- ✅ Fixed column name
-    ) THEN
-        RAISE EXCEPTION 'Duplicate entry found for role_id 2 or 4 with different b_person_name';
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION admin_schema.prevent_invalid_registration() OWNER TO postgres;
-
---
--- Name: add_business(integer, character varying, character varying, integer, text, text, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.add_business(_b_typeid integer, _b_name character varying, _b_location character varying, _b_mandiid integer DEFAULT NULL::integer, _b_address text DEFAULT NULL::text, _b_comt text DEFAULT NULL::text, _b_email character varying DEFAULT NULL::character varying, _b_gstnum character varying DEFAULT NULL::character varying, _b_pan character varying DEFAULT NULL::character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO business_table (b_typeid, b_name, b_location, b_mandiid, b_address, b_comt, b_email, b_gstnum, b_pan)
-    VALUES (_b_typeid, _b_name, _b_location, _b_mandiid, _b_address, _b_comt, _b_email, _b_gstnum, _b_pan);
-END;
-$$;
-
-
-ALTER FUNCTION public.add_business(_b_typeid integer, _b_name character varying, _b_location character varying, _b_mandiid integer, _b_address text, _b_comt text, _b_email character varying, _b_gstnum character varying, _b_pan character varying) OWNER TO postgres;
-
---
--- Name: add_cash_payment(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.add_cash_payment(payment_name character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO cash_payment_list (payment_type) VALUES (payment_name);
-END;
-$$;
-
-
-ALTER FUNCTION public.add_cash_payment(payment_name character varying) OWNER TO postgres;
-
---
--- Name: add_mode_of_payment(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.add_mode_of_payment(p_payment_mode character varying) RETURNS TABLE(id integer, payment_mode character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO mode_of_payments_list (payment_mode)
-    VALUES (p_payment_mode)
-    RETURNING mode_of_payments_list.id, mode_of_payments_list.payment_mode;
-END;
-$$;
-
-
-ALTER FUNCTION public.add_mode_of_payment(p_payment_mode character varying) OWNER TO postgres;
-
---
--- Name: add_user_bank_details(integer, character, character varying, character, character varying, character varying, character varying, character varying, boolean); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.add_user_bank_details(p_user_id integer, p_card_number character, p_upi_id character varying, p_ifsc_code character, p_account_number character varying, p_account_holder_name character varying, p_bank_name character varying, p_branch_name character varying, p_status boolean DEFAULT true) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO user_bank_details (
-        user_id,
-        card_number,
-        upi_id,
-        ifsc_code,
-        account_number,
-        account_holder_name,
-        bank_name,
-        branch_name,
-        status
+    INSERT INTO admin_schema.business_branch_table (
+        bid, b_shop_name, b_type_id, b_location, b_state, b_mandi_id,
+        b_address, b_email, b_number, b_gst_num, b_pan_num,
+        b_privilege_user, b_established_year, active_status, created_at, updated_at
     ) VALUES (
-        p_user_id,
-        p_card_number,
-        p_upi_id,
-        p_ifsc_code,
-        p_account_number,
-        p_account_holder_name,
-        p_bank_name,
-        p_branch_name,
-        p_status
-    );
+        p_bid, p_b_shop_name, p_b_type_id, p_b_location, p_b_state, p_b_mandi_id,
+        p_b_address, p_b_email, p_b_number, p_b_gst_num, p_b_pan_num,
+        p_b_privilege_user, p_b_established_year, p_active_status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ) RETURNING b_branch_id INTO new_branch_id;
+
+    RETURN new_branch_id;
 END;
 $$;
 
 
-ALTER FUNCTION public.add_user_bank_details(p_user_id integer, p_card_number character, p_upi_id character varying, p_ifsc_code character, p_account_number character varying, p_account_holder_name character varying, p_bank_name character varying, p_branch_name character varying, p_status boolean) OWNER TO postgres;
+ALTER FUNCTION admin_schema.create_business_branch(p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_active_status integer, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying) OWNER TO postgres;
 
 --
--- Name: assign_role_permissions(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: create_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, character varying, character varying, integer, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.assign_role_permissions() RETURNS trigger
+CREATE FUNCTION admin_schema.create_business_branch(p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying, p_active_status integer DEFAULT 0) RETURNS integer
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    new_branch_id INT;
 BEGIN
-    IF NEW.role_id IS NULL THEN
-        RAISE EXCEPTION 'role_id cannot be null';
-    END IF;
-    -- Other logic
-    RETURN NEW;
+    INSERT INTO admin_schema.business_branch_table (
+        bid, b_shop_name, b_type_id, b_location, b_state, b_mandi_id,
+        b_address, b_email, b_number, b_gst_num, b_pan_num,
+        b_privilege_user, b_established_year, active_status
+    ) VALUES (
+        p_bid, p_b_shop_name, p_b_type_id, p_b_location, p_b_state, p_b_mandi_id,
+        p_b_address, p_b_email, p_b_number, p_b_gst_num, p_b_pan_num,
+        p_b_privilege_user, p_b_established_year, p_active_status
+    ) RETURNING b_branch_id INTO new_branch_id;
+
+    RETURN new_branch_id;
 END;
 $$;
 
 
-ALTER FUNCTION public.assign_role_permissions() OWNER TO postgres;
+ALTER FUNCTION admin_schema.create_business_branch(p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) OWNER TO postgres;
 
 --
--- Name: auto_create_business_user(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_all_business_branches(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.auto_create_business_user() RETURNS trigger
+CREATE FUNCTION admin_schema.get_all_business_branches() RETURNS TABLE(b_branch_id integer, bid integer, b_shop_name character varying, b_type_id integer, b_location integer, b_state integer, b_mandi_id integer, b_address character varying, b_email character varying, b_number character varying, b_gst_num character varying, b_pan_num character varying, b_privilege_user integer, b_established_year character varying, active_status integer)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    INSERT INTO admin_schema.business_user_table (b_id, user_name, password, active_status)
-    VALUES (NEW.bid, NEW.b_name, NEW.b_phone_num, 0);
-    RETURN NEW;
+    RETURN QUERY 
+    SELECT 
+        b_branch_id, bid, b_shop_name, b_type_id, b_location, b_state, 
+        b_mandi_id, b_address, b_email, b_number, b_gst_num, 
+        b_pan_num, b_privilege_user, b_established_year, active_status
+    FROM admin_schema.business_branch_table;
 END;
 $$;
 
 
-ALTER FUNCTION public.auto_create_business_user() OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_business_branches() OWNER TO postgres;
 
 --
--- Name: create_user_on_activation(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_all_business_users(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.create_user_on_activation() RETURNS trigger
+CREATE FUNCTION admin_schema.get_all_business_users() RETURNS TABLE(b_id integer, user_name character varying, active_status integer, created_at timestamp without time zone, updated_at timestamp without time zone, is_locked boolean)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    -- Insert into users only if active_status = 1
-    IF NEW.active_status = 1 THEN
-        INSERT INTO admin_schema.users (user_id, username, password)
-        VALUES (NEW.user_id, NEW.name, NEW.mobile_num)
-        ON CONFLICT (user_id) DO NOTHING; -- Prevent duplicate entries
-    END IF;
-    RETURN NEW;
+    RETURN QUERY
+    SELECT b_id, user_name, active_status, created_at, updated_at, is_locked
+    FROM admin_schema.business_user_table;
 END;
 $$;
 
 
-ALTER FUNCTION public.create_user_on_activation() OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_business_users() OWNER TO postgres;
 
 --
--- Name: delete_category(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_businesses(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_category(IN cat_id integer)
+CREATE FUNCTION admin_schema.get_all_businesses() RETURNS TABLE(bid bigint, b_person_name character varying, b_registration_num character varying, b_owner_name character varying, active_status integer, created_at timestamp with time zone, updated_at timestamp with time zone)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM master_category_table WHERE category_id = cat_id;
+    RETURN QUERY
+    SELECT 
+        bid, b_person_name, b_registration_num, b_owner_name, 
+        active_status, created_at, updated_at 
+    FROM admin_schema.business_table;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_category(IN cat_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_businesses() OWNER TO postgres;
 
 --
--- Name: delete_driver(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_cash_payments(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_driver(IN p_driver_id integer)
+CREATE FUNCTION admin_schema.get_all_cash_payments() RETURNS TABLE(id integer, payment_type character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM master_driver_table WHERE driver_id = p_driver_id;
+    RETURN QUERY
+    SELECT id, payment_type FROM admin_schema.cash_payment_list;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_driver(IN p_driver_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_cash_payments() OWNER TO postgres;
 
 --
--- Name: delete_location(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_category_regional_names(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_location(IN p_id integer)
+CREATE FUNCTION admin_schema.get_all_category_regional_names() RETURNS TABLE(category_regional_id integer, language_id integer, category_id integer, category_regional_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM master_location WHERE id = p_id;
+    RETURN QUERY
+    SELECT 
+        crn.category_regional_id, 
+        crn.language_id, 
+        crn.category_id, 
+        crn.category_regional_name
+    FROM admin_schema.category_regional_name AS crn;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_location(IN p_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_category_regional_names() OWNER TO postgres;
 
 --
--- Name: delete_master_mandi(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_cities(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_master_mandi(IN p_mandi_id integer)
+CREATE FUNCTION admin_schema.get_all_cities() RETURNS TABLE(id integer, city_shortnames character varying, city_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM public.master_mandi_table
-    WHERE mandi_id = p_mandi_id;
+    RETURN QUERY 
+    SELECT mc.id, mc.city_shortnames, mc.city_name
+    FROM admin_schema.master_city mc;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_master_mandi(IN p_mandi_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_cities() OWNER TO postgres;
 
 --
--- Name: delete_master_product(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_languages(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_master_product(IN p_product_id integer)
+CREATE FUNCTION admin_schema.get_all_languages() RETURNS TABLE(id integer, language_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM public.master_product
-    WHERE product_id = p_product_id;
+    RETURN QUERY 
+    SELECT ml.id, ml.language_name
+    FROM admin_schema.master_language ml;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_master_product(IN p_product_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_languages() OWNER TO postgres;
 
 --
--- Name: delete_master_product(bigint); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_mandi(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_master_product(IN p_product_id bigint)
+CREATE FUNCTION admin_schema.get_all_mandi() RETURNS TABLE(mandi_id integer, mandi_location character varying, mandi_incharge character varying, mandi_incharge_num character varying, mandi_pincode character varying, mandi_address text, mandi_state integer, mandi_name character varying, mandi_shortnames character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM master_product WHERE product_id = p_product_id;
+    RETURN QUERY SELECT * FROM admin_schema.master_mandi_table;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_master_product(IN p_product_id bigint) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_all_mandi() OWNER TO postgres;
 
 --
--- Name: delete_master_state(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_all_order_statuses(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_master_state(IN p_id integer)
+CREATE FUNCTION admin_schema.get_all_order_statuses() RETURNS TABLE(order_status_id integer, order_status character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM public.master_states
+    RETURN QUERY 
+    SELECT order_status_id, order_status FROM admin_schema.order_status_table ORDER BY order_status_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_order_statuses() OWNER TO postgres;
+
+--
+-- Name: get_all_payment_modes(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_payment_modes() RETURNS TABLE(id integer, payment_mode character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY SELECT id, payment_mode FROM admin_schema.mode_of_payments_list ORDER BY id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_payment_modes() OWNER TO postgres;
+
+--
+-- Name: get_all_product_categories(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_product_categories() RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, img_path text, active_status integer, category_regional_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        mpct.category_id, 
+        mpct.category_name, 
+        mpct.super_cat_id, 
+        mpct.img_path, 
+        mpct.active_status, 
+        mpct.category_regional_id
+    FROM admin_schema.master_product_category_table AS mpct;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_product_categories() OWNER TO postgres;
+
+--
+-- Name: get_all_product_regional_names(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_product_regional_names() RETURNS TABLE(product_regional_id integer, language_id integer, product_id integer, product_name character varying, product_regional_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT prn.product_regional_id, prn.language_id, prn.product_id, 
+           p.product_name, prn.product_regional_name
+    FROM admin_schema.product_regional_name prn
+    JOIN admin_schema.master_product p ON prn.product_id = p.product_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_product_regional_names() OWNER TO postgres;
+
+--
+-- Name: get_all_products(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_products() RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        p.product_id,
+        p.category_id,
+        c.category_name,
+        p.product_name,
+        p.image_path,
+        p.active_status,
+        p.product_regional_id,
+        prn.product_regional_name
+    FROM admin_schema.master_product p
+    LEFT JOIN admin_schema.master_product_category_table c 
+        ON p.category_id = c.category_id
+    LEFT JOIN admin_schema.product_regional_name prn 
+        ON p.product_regional_id = prn.product_regional_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_products() OWNER TO postgres;
+
+--
+-- Name: get_all_states(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_states() RETURNS TABLE(state_id integer, state character varying, state_shortnames character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT master_states.id, master_states.state, master_states.state_shortnames 
+    FROM admin_schema.master_states;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_states() OWNER TO postgres;
+
+--
+-- Name: get_all_units(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_units() RETURNS TABLE(id integer, unit_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT id, unit_name FROM admin_schema.units_table ORDER BY id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_units() OWNER TO postgres;
+
+--
+-- Name: get_all_users(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_users() RETURNS TABLE(user_id integer, name text, mobile_num text, email text, address text, pincode text, location integer, state integer, active_status integer, role_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT u.user_id, u.name::TEXT, u.mobile_num::TEXT, u.email::TEXT, u.address::TEXT, u.pincode::TEXT, 
+           u.location, u.state, u.active_status, u.role_id
+    FROM admin_schema.user_table u
+    ORDER BY u.user_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_users() OWNER TO postgres;
+
+--
+-- Name: get_all_vehicles(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_vehicles() RETURNS TABLE(vehicle_id integer, vehicle_name character varying, vehicle_registration_no character varying, vehicle_manufacture_year character varying, vehicle_warranty character varying, vehicle_make_name character varying, vehicle_model_name character varying, vehicle_engine_type_name character varying, vehicle_purchase_date date, vehicle_color character varying, created_at timestamp without time zone, updated_at timestamp without time zone)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        v.vehicle_id,
+        v.vehicle_name,
+        v.vehicle_registration_no,
+        v.vehicle_manufacture_year,
+        v.vehicle_warranty,
+        v.vehicle_make_name,
+        v.vehicle_model_name,
+        v.vehicle_engine_type_name,
+        v.vehicle_purchase_date,
+        v.vehicle_color,
+        v.created_at,
+        v.updated_at
+    FROM admin_schema.master_vehicle_table v;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_vehicles() OWNER TO postgres;
+
+--
+-- Name: get_business_branch_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_business_branch_by_id(p_b_branch_id integer) RETURNS TABLE(b_branch_id integer, bid integer, b_shop_name character varying, b_type_id integer, b_location integer, b_state integer, b_mandi_id integer, b_address character varying, b_email character varying, b_number character varying, b_gst_num character varying, b_pan_num character varying, b_privilege_user integer, b_established_year character varying, active_status integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        b_branch_id, bid, b_shop_name, b_type_id, b_location, b_state, 
+        b_mandi_id, b_address, b_email, b_number, b_gst_num, 
+        b_pan_num, b_privilege_user, b_established_year, active_status
+    FROM admin_schema.business_branch_table
+    WHERE b_branch_id = p_b_branch_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_business_branch_by_id(p_b_branch_id integer) OWNER TO postgres;
+
+--
+-- Name: get_business_by_id(bigint); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_business_by_id(p_bid bigint) RETURNS TABLE(bid bigint, b_person_name character varying, b_registration_num character varying, b_owner_name character varying, active_status integer, created_at timestamp with time zone, updated_at timestamp with time zone)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        bid, b_person_name, b_registration_num, b_owner_name, 
+        active_status, created_at, updated_at 
+    FROM admin_schema.business_table
+    WHERE bid = p_bid;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_business_by_id(p_bid bigint) OWNER TO postgres;
+
+--
+-- Name: get_business_category(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_business_category(p_b_category_id integer DEFAULT NULL::integer) RETURNS TABLE(b_category_id integer, b_category_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT bc.b_category_id, bc.b_category_name
+    FROM admin_schema.business_category_table bc
+    WHERE p_b_category_id IS NULL OR bc.b_category_id = p_b_category_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_business_category(p_b_category_id integer) OWNER TO postgres;
+
+--
+-- Name: get_business_user_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_business_user_by_id(p_b_id integer) RETURNS TABLE(b_id integer, user_name character varying, active_status integer, created_at timestamp without time zone, updated_at timestamp without time zone, is_locked boolean)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT b_id, user_name, active_status, created_at, updated_at, is_locked
+    FROM admin_schema.business_user_table
+    WHERE b_id = p_b_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_business_user_by_id(p_b_id integer) OWNER TO postgres;
+
+--
+-- Name: get_cash_payment_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_cash_payment_by_id(p_id integer) RETURNS TABLE(id integer, payment_type character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT id, payment_type
+    FROM admin_schema.cash_payment_list
     WHERE id = p_id;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_master_state(IN p_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_cash_payment_by_id(p_id integer) OWNER TO postgres;
 
 --
--- Name: delete_master_vehicle(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_category_regional_name_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_master_vehicle(IN p_vehicle_id integer)
+CREATE FUNCTION admin_schema.get_category_regional_name_by_id(p_id integer) RETURNS TABLE(category_regional_id integer, language_id integer, category_id integer, category_regional_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM public.master_vehicle_table
-    WHERE vehicle_id = p_vehicle_id;
+    RETURN QUERY
+    SELECT category_regional_id, language_id, category_id, category_regional_name
+    FROM admin_schema.category_regional_name
+    WHERE category_regional_id = p_id;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_master_vehicle(IN p_vehicle_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_category_regional_name_by_id(p_id integer) OWNER TO postgres;
 
 --
--- Name: delete_master_violation(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_city_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_master_violation(IN p_id integer)
+CREATE FUNCTION admin_schema.get_city_by_id(p_id integer) RETURNS TABLE(id integer, city_shortnames character varying, city_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM public.master_violation_table
+    RETURN QUERY 
+    SELECT mc.id, mc.city_shortnames, mc.city_name
+    FROM admin_schema.master_city mc
+    WHERE mc.id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_city_by_id(p_id integer) OWNER TO postgres;
+
+--
+-- Name: get_language_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_language_by_id(p_id integer) RETURNS TABLE(id integer, language_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT ml.id, ml.language_name
+    FROM admin_schema.master_language ml
+    WHERE ml.id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_language_by_id(p_id integer) OWNER TO postgres;
+
+--
+-- Name: get_mandi_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_mandi_by_id(p_mandi_id integer) RETURNS TABLE(mandi_id integer, mandi_location character varying, mandi_incharge character varying, mandi_incharge_num character varying, mandi_pincode character varying, mandi_address text, mandi_state integer, mandi_name character varying, mandi_shortnames character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY SELECT * FROM admin_schema.master_mandi_table WHERE mandi_id = p_mandi_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_mandi_by_id(p_mandi_id integer) OWNER TO postgres;
+
+--
+-- Name: get_order_status_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_order_status_by_id(p_order_status_id integer) RETURNS TABLE(order_status_id integer, order_status character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT order_status_id, order_status 
+    FROM admin_schema.order_status_table 
+    WHERE order_status_id = p_order_status_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_order_status_by_id(p_order_status_id integer) OWNER TO postgres;
+
+--
+-- Name: get_payment_mode_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_payment_mode_by_id(p_id integer) RETURNS TABLE(id integer, payment_mode character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY SELECT id, payment_mode FROM admin_schema.mode_of_payments_list WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_payment_mode_by_id(p_id integer) OWNER TO postgres;
+
+--
+-- Name: get_product_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_product_by_id(p_product_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        p.product_id, 
+        p.category_id, 
+        c.category_name, 
+        p.product_name, 
+        p.image_path, 
+        p.active_status, 
+        p.product_regional_id, 
+        prn.product_regional_name
+    FROM admin_schema.master_product p
+    JOIN admin_schema.master_category c ON p.category_id = c.category_id
+    JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
+    WHERE p.product_id = p_product_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_product_by_id(p_product_id integer) OWNER TO postgres;
+
+--
+-- Name: get_product_category_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_product_category_by_id(p_category_id integer) RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, img_path text, active_status integer, category_regional_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        category_id, category_name, super_cat_id, img_path, active_status, category_regional_id
+    FROM admin_schema.master_product_category_table
+    WHERE category_id = p_category_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_product_category_by_id(p_category_id integer) OWNER TO postgres;
+
+--
+-- Name: get_product_regional_name_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_product_regional_name_by_id(p_product_regional_id integer) RETURNS TABLE(product_regional_id integer, language_id integer, product_id integer, product_name character varying, product_regional_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT prn.product_regional_id, prn.language_id, prn.product_id, 
+           p.product_name, prn.product_regional_name
+    FROM admin_schema.product_regional_name prn
+    JOIN admin_schema.master_product p ON prn.product_id = p.product_id
+    WHERE prn.product_regional_id = p_product_regional_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_product_regional_name_by_id(p_product_regional_id integer) OWNER TO postgres;
+
+--
+-- Name: get_products_by_category(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_products_by_category(p_category_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        p.product_id, 
+        p.category_id, 
+        c.category_name, 
+        p.product_name, 
+        p.image_path, 
+        p.active_status, 
+        p.product_regional_id, 
+        prn.product_regional_name
+    FROM admin_schema.master_product p
+    JOIN admin_schema.master_category c ON p.category_id = c.category_id
+    JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
+    WHERE p.category_id = p_category_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_products_by_category(p_category_id integer) OWNER TO postgres;
+
+--
+-- Name: get_state_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_state_by_id(p_id integer) RETURNS TABLE(id integer, state character varying, state_shortnames character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT id, state, state_shortnames FROM admin_schema.master_states
     WHERE id = p_id;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_master_violation(IN p_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_state_by_id(p_id integer) OWNER TO postgres;
 
 --
--- Name: delete_user(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_unit_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE PROCEDURE public.delete_user(IN p_user_id integer)
+CREATE FUNCTION admin_schema.get_unit_by_id(p_id integer) RETURNS TABLE(id integer, unit_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    DELETE FROM public.user_table
+    RETURN QUERY 
+    SELECT id, unit_name 
+    FROM admin_schema.units_table 
+    WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_unit_by_id(p_id integer) OWNER TO postgres;
+
+--
+-- Name: get_user_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_user_by_id(p_user_id integer) RETURNS TABLE(user_id integer, name character varying, mobile_num character varying, email character varying, address text, pincode character varying, location integer, state integer, active_status integer, role_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT user_id, name, mobile_num, email, address, pincode, location, state, active_status, role_id 
+    FROM admin_schema.user_table 
     WHERE user_id = p_user_id;
 END;
 $$;
 
 
-ALTER PROCEDURE public.delete_user(IN p_user_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_user_by_id(p_user_id integer) OWNER TO postgres;
 
 --
--- Name: enforce_unique_email_phone(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_vehicle_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.enforce_unique_email_phone() RETURNS trigger
+CREATE FUNCTION admin_schema.get_vehicle_by_id(p_vehicle_id integer) RETURNS TABLE(vehicle_id integer, vehicle_name character varying, vehicle_registration_no character varying, vehicle_manufacture_year character varying, vehicle_warranty character varying, vehicle_make_name character varying, vehicle_model_name character varying, vehicle_engine_type_name character varying, vehicle_purchase_date date, vehicle_color character varying, created_at timestamp without time zone, updated_at timestamp without time zone)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF NEW.role_id IN (2, 4) THEN
-        -- Check for duplicate email
-        IF EXISTS (
-            SELECT 1 FROM admin_schema.business_table 
-            WHERE b_email = NEW.b_email 
-            AND role_id IN (2, 4)
-        ) THEN
-            RAISE EXCEPTION 'Email % already exists for role_id 2 or 4', NEW.b_email;
-        END IF;
+    RETURN QUERY 
+    SELECT 
+        v.vehicle_id,
+        v.vehicle_name,
+        v.vehicle_registration_no,
+        v.vehicle_manufacture_year,
+        v.vehicle_warranty,
+        v.vehicle_make_name,
+        v.vehicle_model_name,
+        v.vehicle_engine_type_name,
+        v.vehicle_purchase_date,
+        v.vehicle_color,
+        v.created_at,
+        v.updated_at
+    FROM admin_schema.master_vehicle_table v
+    WHERE v.vehicle_id = p_vehicle_id;
+END;
+$$;
 
-        -- Check for duplicate phone number
-        IF EXISTS (
-            SELECT 1 FROM admin_schema.business_table 
-            WHERE b_phone_num = NEW.b_phone_num 
-            AND role_id IN (2, 4)
-        ) THEN
-            RAISE EXCEPTION 'Phone number % already exists for role_id 2 or 4', NEW.b_phone_num;
-        END IF;
+
+ALTER FUNCTION admin_schema.get_vehicle_by_id(p_vehicle_id integer) OWNER TO postgres;
+
+--
+-- Name: insert_business(character varying, character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_business(p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_bid BIGINT;
+BEGIN
+    INSERT INTO admin_schema.business_table (b_person_name, b_registration_num, b_owner_name, active_status)
+    VALUES (p_b_person_name, p_b_registration_num, p_b_owner_name, p_active_status)
+    RETURNING bid INTO new_bid;
+
+    RETURN new_bid;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_business(p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) OWNER TO postgres;
+
+--
+-- Name: insert_business_category(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_business_category(p_b_category_name character varying) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_b_category_id INT;
+BEGIN
+    INSERT INTO admin_schema.business_category_table (b_category_name)
+    VALUES (p_b_category_name)
+    RETURNING b_category_id INTO new_b_category_id;
+
+    RETURN new_b_category_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_business_category(p_b_category_name character varying) OWNER TO postgres;
+
+--
+-- Name: insert_business_user(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_business_user() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Insert into business_user_table using values from business_branch_table
+    INSERT INTO admin_schema.business_user_table (b_id, user_name, password, active_status)
+    VALUES (NEW.bid, NEW.b_shop_name, NEW.b_number, 1);
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_business_user() OWNER TO postgres;
+
+--
+-- Name: insert_cash_payment(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_cash_payment(p_payment_type character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.cash_payment_list (payment_type)
+    VALUES (p_payment_type)
+    ON CONFLICT (payment_type) DO NOTHING;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_cash_payment(p_payment_type character varying) OWNER TO postgres;
+
+--
+-- Name: insert_category_regional_name(integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_category_regional_name(p_language_id integer, p_category_id integer, p_category_regional_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.category_regional_name (language_id, category_id, category_regional_name)
+    VALUES (p_language_id, p_category_id, p_category_regional_name);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_category_regional_name(p_language_id integer, p_category_id integer, p_category_regional_name character varying) OWNER TO postgres;
+
+--
+-- Name: insert_city(character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_city(p_city_shortnames character varying, p_city_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_city (city_shortnames, city_name)
+    VALUES (p_city_shortnames, p_city_name);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_city(p_city_shortnames character varying, p_city_name character varying) OWNER TO postgres;
+
+--
+-- Name: insert_language(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_language(p_language_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_language (language_name)
+    VALUES (p_language_name);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_language(p_language_name character varying) OWNER TO postgres;
+
+--
+-- Name: insert_mandi(character varying, character varying, character varying, character varying, text, integer, character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_mandi(p_mandi_location character varying, p_mandi_incharge character varying, p_mandi_incharge_num character varying, p_mandi_pincode character varying, p_mandi_address text DEFAULT NULL::text, p_mandi_state integer DEFAULT NULL::integer, p_mandi_name character varying DEFAULT NULL::character varying, p_mandi_shortnames character varying DEFAULT NULL::character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_mandi_table (
+        mandi_location, mandi_incharge, mandi_incharge_num, 
+        mandi_pincode, mandi_address, mandi_state, 
+        mandi_name, mandi_shortnames
+    ) VALUES (
+        p_mandi_location, p_mandi_incharge, p_mandi_incharge_num, 
+        p_mandi_pincode, p_mandi_address, p_mandi_state, 
+        p_mandi_name, p_mandi_shortnames
+    );
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_mandi(p_mandi_location character varying, p_mandi_incharge character varying, p_mandi_incharge_num character varying, p_mandi_pincode character varying, p_mandi_address text, p_mandi_state integer, p_mandi_name character varying, p_mandi_shortnames character varying) OWNER TO postgres;
+
+--
+-- Name: insert_order_status(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_order_status(p_order_status character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.order_status_table (order_status) 
+    VALUES (p_order_status);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_order_status(p_order_status character varying) OWNER TO postgres;
+
+--
+-- Name: insert_payment_mode(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_payment_mode(p_payment_mode character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.mode_of_payments_list (payment_mode) VALUES (p_payment_mode);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_payment_mode(p_payment_mode character varying) OWNER TO postgres;
+
+--
+-- Name: insert_product_category(character varying, integer, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_product_category(p_category_name character varying, p_super_cat_id integer DEFAULT NULL::integer, p_img_path text DEFAULT NULL::text, p_active_status integer DEFAULT 1, p_category_regional_id integer DEFAULT NULL::integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_product_category_table 
+    (category_name, super_cat_id, img_path, active_status, category_regional_id)
+    VALUES (p_category_name, p_super_cat_id, p_img_path, p_active_status, p_category_regional_id);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_product_category(p_category_name character varying, p_super_cat_id integer, p_img_path text, p_active_status integer, p_category_regional_id integer) OWNER TO postgres;
+
+--
+-- Name: insert_product_regional_name(integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_product_regional_name(p_language_id integer, p_product_id integer, p_product_regional_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.product_regional_name (language_id, product_id, product_regional_name)
+    VALUES (p_language_id, p_product_id, p_product_regional_name);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_product_regional_name(p_language_id integer, p_product_id integer, p_product_regional_name character varying) OWNER TO postgres;
+
+--
+-- Name: insert_state(character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_state(p_state character varying, p_state_shortnames character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_states (state, state_shortnames)
+    VALUES (p_state, p_state_shortnames);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_state(p_state character varying, p_state_shortnames character varying) OWNER TO postgres;
+
+--
+-- Name: insert_unit(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_unit(p_unit_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.units_table (unit_name) 
+    VALUES (p_unit_name);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_unit(p_unit_name character varying) OWNER TO postgres;
+
+--
+-- Name: insert_user(character varying, character varying, character varying, text, character varying, integer, integer, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_user(p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_active_status integer DEFAULT 0, p_role_id integer DEFAULT 5) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.user_table (
+        name, mobile_num, email, address, pincode, location, state, active_status, role_id
+    ) VALUES (
+        p_name, p_mobile_num, p_email, p_address, p_pincode, p_location, p_state, p_active_status, p_role_id
+    );
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_user(p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_active_status integer, p_role_id integer) OWNER TO postgres;
+
+--
+-- Name: insert_vehicle(character varying, character varying, character varying, character varying, integer, integer, integer, date, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_vehicle(p_vehicle_name character varying, p_vehicle_registration_no character varying, p_vehicle_manufacture_year character varying, p_vehicle_warranty character varying, p_vehicle_make integer, p_vehicle_model integer, p_vehicle_engine_type integer, p_vehicle_purchase_date date, p_vehicle_color character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_vehicle_table (
+        vehicle_name, vehicle_registration_no, vehicle_manufacture_year,
+        vehicle_warranty, vehicle_make, vehicle_model, vehicle_engine_type,
+        vehicle_purchase_date, vehicle_color, created_at, updated_at
+    ) VALUES (
+        p_vehicle_name, p_vehicle_registration_no, p_vehicle_manufacture_year,
+        p_vehicle_warranty, p_vehicle_make, p_vehicle_model, p_vehicle_engine_type,
+        p_vehicle_purchase_date, p_vehicle_color, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    );
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_vehicle(p_vehicle_name character varying, p_vehicle_registration_no character varying, p_vehicle_manufacture_year character varying, p_vehicle_warranty character varying, p_vehicle_make integer, p_vehicle_model integer, p_vehicle_engine_type integer, p_vehicle_purchase_date date, p_vehicle_color character varying) OWNER TO postgres;
+
+--
+-- Name: update_business(bigint, character varying, character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_business(p_bid bigint, p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.business_table
+    SET b_person_name = p_b_person_name,
+        b_registration_num = p_b_registration_num,
+        b_owner_name = p_b_owner_name,
+        active_status = p_active_status,
+        updated_at = NOW()
+    WHERE bid = p_bid;
+
+    RETURN FOUND;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_business(p_bid bigint, p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) OWNER TO postgres;
+
+--
+-- Name: update_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, integer, character varying, character varying, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_active_status integer DEFAULT 0, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.business_branch_table
+    SET
+        b_shop_name = p_b_shop_name,
+        b_type_id = p_b_type_id,
+        b_location = p_b_location,
+        b_state = p_b_state,
+        b_mandi_id = p_b_mandi_id,
+        b_address = p_b_address,
+        b_email = p_b_email,
+        b_number = p_b_number,
+        b_gst_num = p_b_gst_num,
+        b_pan_num = p_b_pan_num,
+        b_privilege_user = p_b_privilege_user,
+        b_established_year = p_b_established_year,
+        active_status = p_active_status,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE b_branch_id = p_b_branch_id;
+
+    RETURN FOUND;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_active_status integer, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying) OWNER TO postgres;
+
+--
+-- Name: update_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, character varying, character varying, integer, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying, p_active_status integer DEFAULT 0) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.business_branch_table
+    SET
+        b_shop_name = p_b_shop_name,
+        b_type_id = p_b_type_id,
+        b_location = p_b_location,
+        b_state = p_b_state,
+        b_mandi_id = p_b_mandi_id,
+        b_address = p_b_address,
+        b_email = p_b_email,
+        b_number = p_b_number,
+        b_gst_num = p_b_gst_num,
+        b_pan_num = p_b_pan_num,
+        b_privilege_user = p_b_privilege_user,
+        b_established_year = p_b_established_year,
+        active_status = p_active_status,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE b_branch_id = p_b_branch_id;
+
+    IF FOUND THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
     END IF;
-    
-    RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION public.enforce_unique_email_phone() OWNER TO postgres;
+ALTER FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) OWNER TO postgres;
 
 --
--- Name: enforce_uppercase_owner_name(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_business_category(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.enforce_uppercase_owner_name() RETURNS trigger
+CREATE FUNCTION admin_schema.update_business_category(p_b_category_id integer, p_b_category_name character varying) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    NEW.b_owner_name := UPPER(NEW.b_owner_name);
-    RETURN NEW;
+    UPDATE admin_schema.business_category_table
+    SET b_category_name = p_b_category_name
+    WHERE b_category_id = p_b_category_id;
+
+    RETURN FOUND;  -- Returns TRUE if row was updated, FALSE if not
 END;
 $$;
 
 
-ALTER FUNCTION public.enforce_uppercase_owner_name() OWNER TO postgres;
+ALTER FUNCTION admin_schema.update_business_category(p_b_category_id integer, p_b_category_name character varying) OWNER TO postgres;
 
 --
--- Name: generate_invoice_number(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_business_user(integer, character varying, integer, boolean); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.generate_invoice_number() RETURNS trigger
+CREATE FUNCTION admin_schema.update_business_user(p_b_id integer, p_user_name character varying, p_active_status integer, p_is_locked boolean) RETURNS void
     LANGUAGE plpgsql
     AS $$
-DECLARE
-    new_invoice_number TEXT;
 BEGIN
-    -- Generate the invoice number with today's date and a sequential ID
-    new_invoice_number := 'INV-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-' || LPAD(NEW.id::TEXT, 5, '0');
-
-    -- Assign the generated number to invoice_number column
-    NEW.invoice_number := new_invoice_number;
-    
-    RETURN NEW;
+    UPDATE admin_schema.business_user_table
+    SET user_name = p_user_name,
+        active_status = p_active_status,
+        updated_at = CURRENT_TIMESTAMP,
+        is_locked = p_is_locked
+    WHERE b_id = p_b_id;
 END;
 $$;
 
 
-ALTER FUNCTION public.generate_invoice_number() OWNER TO postgres;
+ALTER FUNCTION admin_schema.update_business_user(p_b_id integer, p_user_name character varying, p_active_status integer, p_is_locked boolean) OWNER TO postgres;
 
 --
--- Name: get_all_businesses_func(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_cash_payment(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION public.get_all_businesses_func() RETURNS TABLE(bid integer, b_type_id integer, b_typename character varying, b_name character varying, b_location_id integer, location character varying, b_state_id integer, state_name character varying, b_mandi_id integer, b_address text, b_phone_num text, b_email character varying, b_gst_num character varying, b_pan_num character varying)
+CREATE FUNCTION admin_schema.update_cash_payment(p_id integer, p_payment_type character varying) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY
-    SELECT 
-        b.bid, 
-        b.b_typeid AS b_type_id,   -- ? Ensured column alias matches return type
-        bt.b_typename, 
-        b.b_name, 
-        b.b_location_id, 
-        ml.location, 
-        b.b_state_id, 
-        ms.state AS state_name, 
-        b.b_mandi_id, 
-        b.b_address, 
-        b.b_phone_num,  
-        b.b_email,  
-        b.b_gst_num,  
-        b.b_pan_num  
-    FROM public.business_table b
-    LEFT JOIN public.business_type_table bt ON b.b_typeid = bt.b_typeid
-    LEFT JOIN public.master_states ms ON b.b_state_id = ms.id  
-    LEFT JOIN public.master_location ml ON b.b_location_id = ml.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_all_businesses_func() OWNER TO postgres;
-
---
--- Name: get_all_drivers(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_all_drivers() RETURNS TABLE(driver_id integer, driver_name character varying, driver_age integer, driver_license character varying, driver_number character varying, driver_address character varying, driver_status character varying, date_of_joining date, experience_years integer, license_expiry_date date, emergency_contact character varying, assigned_route_id integer, d_o_b date)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        master_driver_table.driver_id,
-        master_driver_table.driver_name,
-        master_driver_table.driver_age,
-        master_driver_table.driver_license,
-        master_driver_table.driver_number,
-        master_driver_table.driver_address,
-        master_driver_table.driver_status,
-        master_driver_table.date_of_joining,
-        master_driver_table.experience_years,
-        master_driver_table.license_expiry_date,
-        master_driver_table.emergency_contact,
-        master_driver_table.assigned_route_id,
-        master_driver_table.d_o_b
-    FROM master_driver_table;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_all_drivers() OWNER TO postgres;
-
---
--- Name: get_all_users(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_all_users() RETURNS TABLE(user_id integer, user_type_id integer, user_type_name character varying, name character varying, mobile_num character varying, email character varying, address text, pincode character varying, location integer, location_name character varying, state integer, state_name character varying, status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT
-        u.user_id,
-        u.user_type_id,
-        ut.user_type AS user_type_name,
-        u.name,
-        u.mobile_num,
-        u.email,
-        u.address,
-        u.pincode,
-        u.location,
-        ml.location AS location_name,  -- Corrected column name
-        u.state,
-        ms.state AS state_name,  -- Corrected column name
-        u.status
-    FROM user_table u
-    LEFT JOIN master_location ml ON u.location = ml.id
-    LEFT JOIN master_states ms ON u.state = ms.id
-    LEFT JOIN user_type_table ut ON u.user_type_id = ut.user_type_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_all_users() OWNER TO postgres;
-
---
--- Name: get_business_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_business_by_id(business_id integer) RETURNS TABLE(bid integer, b_typeid integer, b_typename text, b_name text, b_location_id integer, location text, b_state_id integer, state_name text, b_mandiid integer, b_address text, b_phone_num character varying, b_email character varying, b_gstnum character varying, b_pan character varying, driver_id integer, driver_name character varying, violation_id integer, violation_name text, entry_date date)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        b.bid, b.b_typeid, bt.b_typename, b.b_name,
-        b.b_location_id, l.location, b.b_state_id, s.state_name,
-        b.b_mandiid, b.b_address, b.b_phone_num, b.b_email,
-        b.b_gstnum, b.b_pan,
-        dv.driver_id, d.driver_name, dv.violation_id, v.violation_name, dv.entry_date
-    FROM business_table b
-    JOIN business_type_table bt ON b.b_typeid = bt.b_typeid  -- ? Fixed column name
-    JOIN location_table l ON b.b_location_id = l.location_id
-    JOIN state_table s ON b.b_state_id = s.state_id
-    LEFT JOIN driver_violation_table dv ON b.bid = dv.driver_id  -- ? Ensure correct join
-    LEFT JOIN master_driver_table d ON dv.driver_id = d.driver_id
-    LEFT JOIN master_violation_table v ON dv.violation_id = v.id
-    WHERE b.bid = business_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_business_by_id(business_id integer) OWNER TO postgres;
-
---
--- Name: get_business_type_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_business_type_by_id(p_b_typeid integer) RETURNS TABLE(b_typename character varying, remarks text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT bt.b_typename, bt.remarks
-    FROM business_type_table bt
-    WHERE bt.b_typeid = p_b_typeid;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_business_type_by_id(p_b_typeid integer) OWNER TO postgres;
-
---
--- Name: get_business_types(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_business_types() RETURNS TABLE(b_typeid integer, b_typename character varying, remarks text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY SELECT * FROM business_type_table;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_business_types() OWNER TO postgres;
-
---
--- Name: get_cash_payment_list(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_cash_payment_list() RETURNS TABLE(id integer, payment_type character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT * FROM cash_payment_list;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_cash_payment_list() OWNER TO postgres;
-
---
--- Name: get_categories(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_categories() RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, remarks character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mct.category_id, 
-        mct.category_name::VARCHAR(255), 
-        mct.super_cat_id,   -- Keep null values as they are
-        mct.remarks::VARCHAR(255)  
-    FROM master_category_table AS mct;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_categories() OWNER TO postgres;
-
---
--- Name: get_category_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_category_by_id(p_category_id integer) RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, remarks text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mc.category_id, 
-        mc.category_name, 
-        mc.super_cat_id, 
-        COALESCE(mc.remarks, 'No remarks') 
-    FROM master_category_table mc
-    WHERE mc.category_id = p_category_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_category_by_id(p_category_id integer) OWNER TO postgres;
-
---
--- Name: get_daily_price_update(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_daily_price_update() RETURNS TABLE(product_id integer, product_name character varying, price character varying, status integer, unit_id integer, unit_name character varying, wholeseller_id integer, wholeseller_name character varying, b_mandi_id integer, mandi_name character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        dpu.product_id,
-        mp.product_name,
-        dpu.price,
-        dpu.status,
-        dpu.unit_id,
-        ut.unit_name,
-        dpu.wholeseller_id,
-        bt.b_name AS wholeseller_name,
-        bt.b_mandi_id,
-        mmt.mandi_name
-    FROM daily_price_update dpu
-    JOIN master_product mp ON dpu.product_id = mp.product_id
-    JOIN units_table ut ON dpu.unit_id = ut.id
-    JOIN business_table bt ON dpu.wholeseller_id = bt.bid
-    LEFT JOIN master_mandi_table mmt ON bt.b_mandi_id = mmt.mandi_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_daily_price_update() OWNER TO postgres;
-
---
--- Name: get_driver_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_driver_by_id(p_driver_id integer) RETURNS TABLE(driver_id integer, driver_name character varying, driver_age integer, driver_license character varying, driver_number character varying, driver_address character varying, driver_status character varying, date_of_joining date, experience_years integer, license_expiry_date date, emergency_contact character varying, assigned_route_id integer, created_at timestamp without time zone, updated_at timestamp without time zone, d_o_b date, col1 text, col2 text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-      master_driver_table.driver_id,
-
-        master_driver_table.driver_name, 
-        master_driver_table.driver_age, 
-        master_driver_table.driver_license, 
-        master_driver_table.driver_number, 
-        master_driver_table.driver_address,
-        master_driver_table.driver_status, 
-        master_driver_table.date_of_joining, 
-        master_driver_table.experience_years, 
-        master_driver_table.license_expiry_date,
-        master_driver_table.emergency_contact, 
-        master_driver_table.assigned_route_id, 
-        master_driver_table.created_at, 
-        master_driver_table.updated_at, 
-        master_driver_table.d_o_b, 
-        master_driver_table.col1, 
-        master_driver_table.col2
-    FROM master_driver_table
-    WHERE master_driver_table.driver_id = p_driver_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_driver_by_id(p_driver_id integer) OWNER TO postgres;
-
---
--- Name: get_driver_violations(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_driver_violations() RETURNS TABLE(id integer, driver_id integer, driver_name character varying, violation_id integer, violation_name text, entry_date date)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        dv.id,
-        dv.driver_id, 
-        d.driver_name, 
-        dv.violation_id, 
-        v.violation_name, 
-        dv.entry_date
-    FROM driver_violation_table dv
-    JOIN master_driver_table d ON dv.driver_id = d.driver_id
-    JOIN master_violation_table v ON dv.violation_id = v.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_driver_violations() OWNER TO postgres;
-
---
--- Name: get_invoice_details(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_invoice_details() RETURNS TABLE(id integer, invoice_number character varying, order_id integer, total_amount numeric, discount_amount numeric, invoice_date timestamp without time zone, due_date date, pay_mode integer, pay_mode_name character varying, pay_type integer, pay_type_name character varying, final_amount numeric)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        i.id,
-        i.invoice_number,
-        i.order_id,
-        i.total_amount,
-        i.discount_amount,
-        i.invoice_date,
-        i.due_date,
-        i.pay_mode,
-        m.payment_mode AS pay_mode_name,
-        i.pay_type,
-        c.payment_type AS pay_type_name,
-        i.final_amount
-    FROM invoice_table i
-    LEFT JOIN mode_of_payments_list m ON i.pay_mode = m.id
-    LEFT JOIN cash_payment_list c ON i.pay_type = c.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_invoice_details() OWNER TO postgres;
-
---
--- Name: get_invoice_details_with_business_info(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_invoice_details_with_business_info() RETURNS TABLE(id integer, invoice_number text, order_id bigint, retailer_id bigint, retailer_name text, retailer_email text, retailer_phone text, retailer_address text, retailer_location_id integer, retailer_state_id integer, wholeseller_id bigint, wholeseller_name text, wholeseller_email text, wholeseller_phone text, wholeseller_address text, wholeseller_location_id integer, wholeseller_state_id integer, total_amount numeric, discount_amount numeric, invoice_date date, due_date date, pay_mode integer, pay_mode_name text, pay_type integer, pay_type_name text, final_amount numeric, order_item_id bigint, product_id bigint, product_name text, retailer_status text, wholeseller_state_name text, retailer_state_name text, wholeseller_location_name text, retailer_location_name text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        i.id, 
-        i.invoice_number::TEXT,  
-        i.order_id,
-        b_retailer.bid AS retailer_id, 
-        b_retailer.b_name::TEXT AS retailer_name,  -- ? Explicit cast
-        b_retailer.b_email::TEXT AS retailer_email,
-        b_retailer.b_phone_num::TEXT AS retailer_phone,
-        b_retailer.b_address::TEXT AS retailer_address, 
-        b_retailer.b_location_id,
-        b_retailer.b_state_id,
-
-        b_wholeseller.bid AS wholeseller_id, 
-        b_wholeseller.b_name::TEXT AS wholeseller_name,
-        b_wholeseller.b_email::TEXT AS wholeseller_email,
-        b_wholeseller.b_phone_num::TEXT AS wholeseller_phone,
-        b_wholeseller.b_address::TEXT AS wholeseller_address, 
-        b_wholeseller.b_location_id,
-        b_wholeseller.b_state_id,
-
-        i.total_amount, 
-        i.discount_amount, 
-        i.invoice_date::DATE,  
-        i.due_date::DATE,  
-        m.id AS pay_mode, 
-        m.payment_mode::TEXT AS pay_mode_name,
-        c.id AS pay_type, 
-        c.payment_type::TEXT AS pay_type_name,
-        i.final_amount,
-        oi.order_item_id,
-        p.product_id, 
-        p.product_name::TEXT,
-        idt.retailer_status::TEXT,
-
-        ms_wholeseller.state::TEXT AS wholeseller_state_name,
-        ms_retailer.state::TEXT AS retailer_state_name,
-        ml_wholeseller.location::TEXT AS wholeseller_location_name,
-        ml_retailer.location::TEXT AS retailer_location_name
-
-    FROM invoice_table i
-    JOIN order_table o ON i.order_id = o.order_id
-    JOIN business_table b_retailer ON o.retailer_id = b_retailer.bid
-    JOIN business_table b_wholeseller ON o.wholeseller_id = b_wholeseller.bid
-    JOIN mode_of_payments_list m ON i.pay_mode = m.id
-    JOIN cash_payment_list c ON i.pay_type = c.id
-    JOIN order_item_table oi ON o.order_id = oi.order_id
-    JOIN master_product p ON oi.product_id = p.product_id
-    JOIN invoice_details_table idt ON i.id = idt.invoice_id
-    LEFT JOIN retailer_status rst ON idt.retailer_status = rst.id
-
-    -- Join to get state names
-    LEFT JOIN master_states ms_wholeseller ON b_wholeseller.b_state_id = ms_wholeseller.id
-    LEFT JOIN master_states ms_retailer ON b_retailer.b_state_id = ms_retailer.id
-
-    -- Join to get location names
-    LEFT JOIN master_location ml_wholeseller ON b_wholeseller.b_location_id = ml_wholeseller.id
-    LEFT JOIN master_location ml_retailer ON b_retailer.b_location_id = ml_retailer.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_invoice_details_with_business_info() OWNER TO postgres;
-
---
--- Name: get_invoice_details_with_order_info(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_invoice_details_with_order_info() RETURNS TABLE(id integer, invoice_number character varying, order_id bigint, retailer_id integer, wholeseller_id integer, total_amount numeric, discount_amount numeric, invoice_date timestamp without time zone, due_date date, pay_mode integer, pay_mode_name character varying, pay_type integer, pay_type_name character varying, final_amount numeric)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        i.id,
-        i.invoice_number,
-        i.order_id,
-        o.retailer_id,
-        o.wholeseller_id,
-        i.total_amount,
-        i.discount_amount,
-        i.invoice_date,
-        i.due_date,
-        i.pay_mode,
-        m.payment_mode AS pay_mode_name,
-        i.pay_type,
-        c.payment_type AS pay_type_name,
-        i.final_amount
-    FROM invoice_table i
-    LEFT JOIN order_table o ON i.order_id = o.order_id
-    LEFT JOIN mode_of_payments_list m ON i.pay_mode = m.id
-    LEFT JOIN cash_payment_list c ON i.pay_type = c.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_invoice_details_with_order_info() OWNER TO postgres;
-
---
--- Name: get_master_categories(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_categories() RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, created_at timestamp without time zone, updated_at timestamp without time zone, col1 text, col2 text, remarks text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mc.category_id,
-        mc.category_name,
-        mc.super_cat_id,
-        mc.created_at,
-        mc.updated_at,
-        mc.col1,
-        mc.col2,
-        mc.remarks
-    FROM master_category_table mc;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_categories() OWNER TO postgres;
-
---
--- Name: get_master_locations(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_locations() RETURNS TABLE(id integer, location character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        ml.id, ml.location -- Use alias to avoid ambiguity
-    FROM master_location ml;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_locations() OWNER TO postgres;
-
---
--- Name: get_master_mandis(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_mandis() RETURNS TABLE(mandi_id integer, mandi_location text, mandi_number text, mandi_incharge text, mandi_incharge_num text, mandi_pincode text, mandi_address text, remarks text, mandi_city integer, mandi_state integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        m.mandi_id,
-        m.mandi_location::TEXT,     -- Casting to TEXT to avoid type mismatches
-        m.mandi_number::TEXT,
-        m.mandi_incharge::TEXT,
-        m.mandi_incharge_num::TEXT,
-        m.mandi_pincode::TEXT,
-        m.mandi_address::TEXT,
-        m.remarks::TEXT,
-        m.mandi_city,
-        m.mandi_state
-    FROM master_mandi_table m;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_mandis() OWNER TO postgres;
-
---
--- Name: get_master_product_by_category(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_product_by_category(cat_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name text, product_name text, status integer, image_path text, regional_name1 text, regional_name2 text, regional_name3 text, regional_name4 text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        mp.product_id, 
-        mp.category_id, 
-        mc.category_name, 
-        mp.product_name, 
-        mp.status, 
-        mp.image_path, 
-        mp.regional_name1, 
-        mp.regional_name2, 
-        mp.regional_name3, 
-        mp.regional_name4
-    FROM master_product mp
-    JOIN master_category_table mc ON mp.category_id = mc.category_id
-    WHERE mp.category_id = cat_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_product_by_category(cat_id integer) OWNER TO postgres;
-
---
--- Name: get_master_product_by_id(bigint); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_product_by_id(p_product_id bigint) RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, status integer, image_path character varying, regional_name1 character varying, regional_name2 character varying, regional_name3 character varying, regional_name4 character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mp.product_id, 
-        mp.category_id, 
-        mc.category_name, 
-        mp.product_name, 
-        mp.status, 
-        mp.image_path,
-        mp.regional_name1,
-        mp.regional_name2,
-        mp.regional_name3,
-        mp.regional_name4
-    FROM master_product mp
-    LEFT JOIN master_category_table mc ON mp.category_id = mc.category_id
-    WHERE mp.product_id = p_product_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_product_by_id(p_product_id bigint) OWNER TO postgres;
-
---
--- Name: get_master_products(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_products() RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, status integer, image_path character varying, regional_name1 character varying, regional_name2 character varying, regional_name3 character varying, regional_name4 character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mp.product_id, 
-        mp.category_id, 
-        mc.category_name, 
-        mp.product_name, 
-        mp.status, 
-        mp.image_path,
-        mp.regional_name1,
-        mp.regional_name2,
-        mp.regional_name3,
-        mp.regional_name4
-    FROM master_product mp
-    LEFT JOIN master_category_table mc ON mp.category_id = mc.category_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_products() OWNER TO postgres;
-
---
--- Name: get_master_states(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_states() RETURNS TABLE(id integer, state character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        ms.id, ms.state
-    FROM master_states ms;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_states() OWNER TO postgres;
-
---
--- Name: get_master_vehicles(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_vehicles() RETURNS TABLE(vehicle_id integer, insurance_id integer, vehicle_name character varying, vehicle_manufacture_year character varying, vehicle_warranty character varying, vehicle_make integer, vehicle_make_name character varying, vehicle_model integer, vehicle_model_name character varying, vehicle_registration_no character varying, vehicle_engine_type integer, vehicle_engine_type_name character varying, vehicle_purchase_date date, vehicle_color character varying, vehicle_insurance_id integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mv.vehicle_id,
-        mv.insurance_id,
-        mv.vehicle_name,
-        mv.vehicle_manufacture_year,
-        mv.vehicle_warranty,
-        mv.vehicle_make,
-        vm.make AS vehicle_make_name,
-        mv.vehicle_model,
-        vmod.model AS vehicle_model_name,
-        mv.vehicle_registration_no,
-        mv.vehicle_engine_type,
-        vet.engine_type AS vehicle_engine_type_name,
-        mv.vehicle_purchase_date,
-        mv.vehicle_color,
-        mv.vehicle_insurance_id
-    FROM master_vehicle_table mv
-    LEFT JOIN vehicle_make vm ON mv.vehicle_make = vm.id
-    LEFT JOIN vehicle_model vmod ON mv.vehicle_model = vmod.id
-    LEFT JOIN vehicle_engine_type vet ON mv.vehicle_engine_type = vet.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_vehicles() OWNER TO postgres;
-
---
--- Name: get_master_violations(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_master_violations() RETURNS TABLE(id integer, violation_name text, level_of_serious text, status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        mv.id, mv.violation_name, mv.level_of_serious, mv.status
-    FROM master_violation_table mv;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_master_violations() OWNER TO postgres;
-
---
--- Name: get_mode_of_payment_details(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_mode_of_payment_details() RETURNS TABLE(id integer, pay_mode integer, pay_type integer, pay_mode_name character varying, pay_type_name character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        mp.id, 
-        mp.pay_mode, 
-        mp.pay_type, 
-        mpl.payment_mode AS pay_mode_name, 
-        cpl.payment_type AS pay_type_name
-    FROM mode_of_payment mp
-    LEFT JOIN mode_of_payments_list mpl ON mp.pay_mode = mpl.id
-    LEFT JOIN cash_payment_list cpl ON mp.pay_type = cpl.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_mode_of_payment_details() OWNER TO postgres;
-
---
--- Name: get_mode_of_payments(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_mode_of_payments() RETURNS TABLE(id integer, payment_mode character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY SELECT * FROM mode_of_payments_list;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_mode_of_payments() OWNER TO postgres;
-
---
--- Name: get_order_details(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_order_details() RETURNS TABLE(order_id bigint, order_item_id bigint, date_of_order timestamp without time zone, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, order_status text, retailer_id bigint, retailer_name text, wholeseller_id bigint, wholeseller_name text, location_name text, state_name text, pincode text, address text, total_order_amount numeric, product_id bigint, product_name text, quantity numeric, unit_id integer, unit_name text, amt_of_order_item numeric, order_item_status text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        o.order_id::BIGINT,  
-        oi.order_item_id::BIGINT,  
-        o.date_of_order,
-        o.expected_delivery_date, -- ? Moved before order_status
-        o.actual_delivery_date,   -- ? Moved before order_status
-        os.order_status::TEXT,  
-        o.retailer_id::BIGINT, 
-        r.b_name::TEXT,  
-        o.wholeseller_id::BIGINT, 
-        w.b_name::TEXT,  
-        l.location::TEXT,  
-        s.state::TEXT,  
-        o.pincode::TEXT,  
-        o.address::TEXT,  
-        o.total_order_amount,
-        oi.product_id,
-        mp.product_name::TEXT,  
-        oi.quantity,
-        oi.unit_id,
-        u.unit_name::TEXT,  
-        oi.amt_of_order_item,
-        ois.order_status::TEXT  
-    FROM order_table o
-    JOIN order_item_table oi ON o.order_id = oi.order_id
-    LEFT JOIN order_status_table os ON o.order_status = os.order_status_id  
-    LEFT JOIN business_table r ON o.retailer_id = r.bid  
-    LEFT JOIN business_table w ON o.wholeseller_id = w.bid  
-    LEFT JOIN master_location l ON o.location_id = l.id  
-    LEFT JOIN master_states s ON o.state_id = s.id  
-    LEFT JOIN master_product mp ON oi.product_id = mp.product_id
-    LEFT JOIN units_table u ON oi.unit_id = u.id  
-    LEFT JOIN order_status_table ois ON oi.order_item_status = ois.order_status_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_order_details() OWNER TO postgres;
-
---
--- Name: get_order_details(bigint); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_order_details(p_order_id bigint DEFAULT NULL::bigint) RETURNS TABLE(order_id bigint, order_item_id bigint, date_of_order timestamp without time zone, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, order_status text, retailer_id bigint, retailer_name character varying, wholeseller_id bigint, wholeseller_name character varying, location_name character varying, state_name character varying, b_address text, total_order_amount numeric, product_id bigint, product_name character varying, quantity numeric, unit_id integer, unit_name character varying, amt_of_order_item numeric, order_item_status text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-RETURN QUERY
-SELECT
-oi.order_id::BIGINT,
-oi.order_item_id::BIGINT,
-o.date_of_order::TIMESTAMP,
-o.expected_delivery_date::TIMESTAMP,
-o.actual_delivery_date::TIMESTAMP,
-o.order_status::TEXT,
-r.bid::BIGINT,
-r.b_name::VARCHAR(255),
-w.bid::BIGINT,
-w.b_name::VARCHAR(255),
-ml.location::VARCHAR(255),
-ms.state::VARCHAR(255),
-r.b_address::TEXT,
-o.total_order_amount::NUMERIC(10,2),
-mp.product_id::BIGINT,
-mp.product_name::VARCHAR(255),
-oi.quantity::NUMERIC(10,2),
-u.id::INTEGER,
-u.unit_name::VARCHAR(255),
-oi.amt_of_order_item::NUMERIC(10,3),
-oi.order_item_status::TEXT
-FROM order_item_table oi
-JOIN order_table o ON oi.order_id = o.order_id
-JOIN business_table r ON o.retailer_id = r.bid
-JOIN business_table w ON o.wholeseller_id = w.bid
-JOIN master_product mp ON oi.product_id = mp.product_id
-JOIN units_table u ON oi.unit_id = u.id
-JOIN master_location ml ON r.b_location_id = ml.id
-JOIN master_states ms ON r.b_state_id = ms.id      
-WHERE p_order_id IS NULL OR oi.order_id = p_order_id; -- Filters if parameter is provided
-END;
-$$;
-
-
-ALTER FUNCTION public.get_order_details(p_order_id bigint) OWNER TO postgres;
-
---
--- Name: get_order_history(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_order_history() RETURNS TABLE(order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, retailer_name character varying, wholeseller_id integer, wholeseller_name character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, pincode character varying, address text, delivery_completed_date timestamp without time zone, history_id integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        oh.order_id,
-        oh.date_of_order,
-        oh.order_status,
-        oh.expected_delivery_date,
-        oh.actual_delivery_date,
-        oh.retailer_id,
-        COALESCE(b1.b_name, 'Unknown') AS retailer_name,
-        oh.wholeseller_id,
-        COALESCE(b2.b_name, 'Unknown') AS wholeseller_name,
-        oh.location_id,
-        COALESCE(ml.location, 'Unknown') AS location_name,
-        oh.state_id,
-        COALESCE(ms.state, 'Unknown') AS state_name,
-        oh.pincode,
-        oh.address,
-        oh.delivery_completed_date,
-        oh.history_id
-    FROM order_history_table oh
-    LEFT JOIN business_table b1 ON oh.retailer_id = b1.bid
-    LEFT JOIN business_table b2 ON oh.wholeseller_id = b2.bid
-    LEFT JOIN master_location ml ON oh.location_id = ml.id
-    LEFT JOIN master_states ms ON oh.state_id = ms.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_order_history() OWNER TO postgres;
-
---
--- Name: get_order_item_details(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_order_item_details(p_order_item_id integer) RETURNS TABLE(order_item_id bigint, order_id bigint, retailer_id bigint, wholeseller_id bigint, product_id bigint, retailer_name character varying, wholeseller_name character varying, product_name character varying, quantity numeric, unit_id integer, amt_of_order_item numeric, order_item_status text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        details.order_item_id::BIGINT,
-        details.order_id::BIGINT,
-        details.retailer_id::BIGINT,
-        details.wholeseller_id::BIGINT,
-        details.product_id::BIGINT,
-        details.retailer_name::VARCHAR(255),
-        details.wholeseller_name::VARCHAR(255),
-        details.product_name::VARCHAR(255),
-        details.quantity::NUMERIC(10,2),
-        details.unit_id::INTEGER,
-        details.amt_of_order_item::NUMERIC(10,3),
-        details.order_item_status::TEXT  -- Explicitly cast it to TEXT
-    FROM get_order_details() AS details
-    WHERE details.order_item_id = p_order_item_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_order_item_details(p_order_item_id integer) OWNER TO postgres;
-
---
--- Name: get_order_item_details(bigint); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_order_item_details(p_order_item_id bigint) RETURNS TABLE(order_item_id bigint, order_id bigint, retailer_name character varying, wholeseller_name character varying, product_name character varying, quantity numeric, unit_id integer, amt_of_order_item numeric, order_item_status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT 
-        oi.order_item_id,
-        oi.order_id,
-        r.b_name AS retailer_name,
-        w.b_name AS wholeseller_name,
-        mp.product_name,
-        oi.quantity,
-        oi.unit_id,
-        oi.amt_of_order_item,
-        oi.order_item_status
-    FROM order_item_table oi
-    JOIN order_table o ON oi.order_id = o.order_id
-    JOIN business_table r ON o.retailer_id = r.bid
-    JOIN business_table w ON o.wholeseller_id = w.bid
-    JOIN master_product mp ON oi.product_id = mp.product_id
-    WHERE oi.order_item_id = p_order_item_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_order_item_details(p_order_item_id bigint) OWNER TO postgres;
-
---
--- Name: get_order_status_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_order_status_by_id(p_order_status_id integer) RETURNS text
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_order_status TEXT;
-BEGIN
-    -- Fetch the order_status from the table
-    SELECT order_status INTO v_order_status 
-    FROM order_status_table 
-    WHERE order_status_id = p_order_status_id;
-
-    -- If no matching ID is found, return a message
-    IF v_order_status IS NULL THEN
-        RETURN 'Order Status ID not found';
-    END IF;
-
-    RETURN v_order_status;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_order_status_by_id(p_order_status_id integer) OWNER TO postgres;
-
---
--- Name: get_orders_with_items(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_orders_with_items() RETURNS TABLE(order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, retailer_name character varying, wholeseller_id integer, wholeseller_name character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, total_order_amount numeric, order_item_id bigint, product_id bigint, product_name character varying, quantity numeric, amt_of_order_item numeric)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        o.order_id,
-        o.date_of_order,
-        o.order_status,
-        o.expected_delivery_date,
-        o.actual_delivery_date,
-        o.retailer_id,
-        r.b_name AS retailer_name,
-        o.wholeseller_id,
-        w.b_name AS wholeseller_name,
-        o.location_id,
-        ml.location AS location_name,
-        o.state_id,
-        ms.state AS state_name,
-        o.total_order_amount,
-        oi.order_item_id,
-        oi.product_id,
-        mp.product_name,
-        oi.quantity,
-        oi.amt_of_order_item
-    FROM order_table o
-    LEFT JOIN business_table r ON o.retailer_id = r.bid
-    LEFT JOIN business_table w ON o.wholeseller_id = w.bid
-    LEFT JOIN master_location ml ON o.location_id = ml.id
-    LEFT JOIN master_states ms ON o.state_id = ms.id
-    LEFT JOIN order_item_table oi ON o.order_id = oi.order_id
-    LEFT JOIN master_product mp ON oi.product_id = mp.product_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_orders_with_items() OWNER TO postgres;
-
---
--- Name: get_payment_type_by_id(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_payment_type_by_id(p_id integer) RETURNS character varying
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_payment_type VARCHAR(50);
-BEGIN
-    SELECT payment_type INTO v_payment_type 
-    FROM cash_payment_list 
+    UPDATE admin_schema.cash_payment_list
+    SET payment_type = p_payment_type
     WHERE id = p_id;
+END;
+$$;
 
-    IF v_payment_type IS NULL THEN
-        RAISE EXCEPTION 'Payment type not found for ID %', p_id;
+
+ALTER FUNCTION admin_schema.update_cash_payment(p_id integer, p_payment_type character varying) OWNER TO postgres;
+
+--
+-- Name: update_category_regional_name(integer, integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_category_regional_name(p_category_regional_id integer, p_language_id integer, p_category_id integer, p_category_regional_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.category_regional_name
+    SET language_id = p_language_id,
+        category_id = p_category_id,
+        category_regional_name = p_category_regional_name
+    WHERE category_regional_id = p_category_regional_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_category_regional_name(p_category_regional_id integer, p_language_id integer, p_category_id integer, p_category_regional_name character varying) OWNER TO postgres;
+
+--
+-- Name: update_city(integer, character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_city(p_id integer, p_city_shortnames character varying, p_city_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_city
+    SET city_shortnames = p_city_shortnames,
+        city_name = p_city_name
+    WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_city(p_id integer, p_city_shortnames character varying, p_city_name character varying) OWNER TO postgres;
+
+--
+-- Name: update_language(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_language(p_id integer, p_language_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_language
+    SET language_name = p_language_name
+    WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_language(p_id integer, p_language_name character varying) OWNER TO postgres;
+
+--
+-- Name: update_mandi(integer, character varying, character varying, character varying, character varying, text, integer, character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_mandi(p_mandi_id integer, p_mandi_location character varying, p_mandi_incharge character varying, p_mandi_incharge_num character varying, p_mandi_pincode character varying, p_mandi_address text DEFAULT NULL::text, p_mandi_state integer DEFAULT NULL::integer, p_mandi_name character varying DEFAULT NULL::character varying, p_mandi_shortnames character varying DEFAULT NULL::character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_mandi_table
+    SET 
+        mandi_location = p_mandi_location,
+        mandi_incharge = p_mandi_incharge,
+        mandi_incharge_num = p_mandi_incharge_num,
+        mandi_pincode = p_mandi_pincode,
+        mandi_address = p_mandi_address,
+        mandi_state = p_mandi_state,
+        mandi_name = p_mandi_name,
+        mandi_shortnames = p_mandi_shortnames
+    WHERE mandi_id = p_mandi_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_mandi(p_mandi_id integer, p_mandi_location character varying, p_mandi_incharge character varying, p_mandi_incharge_num character varying, p_mandi_pincode character varying, p_mandi_address text, p_mandi_state integer, p_mandi_name character varying, p_mandi_shortnames character varying) OWNER TO postgres;
+
+--
+-- Name: update_order_status(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_order_status(p_order_status_id integer, p_order_status character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.order_status_table 
+    SET order_status = p_order_status 
+    WHERE order_status_id = p_order_status_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_order_status(p_order_status_id integer, p_order_status character varying) OWNER TO postgres;
+
+--
+-- Name: update_payment_mode(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_payment_mode(p_id integer, p_payment_mode character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.mode_of_payments_list SET payment_mode = p_payment_mode WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_payment_mode(p_id integer, p_payment_mode character varying) OWNER TO postgres;
+
+--
+-- Name: update_product(bigint, integer, character varying, character varying, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_product(p_product_id bigint, p_category_id integer, p_product_name character varying, p_image_path character varying, p_active_status integer, p_product_regional_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_product
+    SET 
+        category_id = p_category_id,
+        product_name = p_product_name,
+        image_path = p_image_path,
+        active_status = p_active_status,
+        product_regional_id = p_product_regional_id
+    WHERE product_id = p_product_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_product(p_product_id bigint, p_category_id integer, p_product_name character varying, p_image_path character varying, p_active_status integer, p_product_regional_id integer) OWNER TO postgres;
+
+--
+-- Name: update_product_category(integer, character varying, integer, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_product_category(p_category_id integer, p_category_name character varying, p_super_cat_id integer DEFAULT NULL::integer, p_img_path text DEFAULT NULL::text, p_active_status integer DEFAULT 1, p_category_regional_id integer DEFAULT NULL::integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_product_category_table
+    SET 
+        category_name = p_category_name,
+        super_cat_id = p_super_cat_id,
+        img_path = p_img_path,
+        active_status = p_active_status,
+        category_regional_id = p_category_regional_id
+    WHERE category_id = p_category_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_product_category(p_category_id integer, p_category_name character varying, p_super_cat_id integer, p_img_path text, p_active_status integer, p_category_regional_id integer) OWNER TO postgres;
+
+--
+-- Name: update_product_regional_name(integer, integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_product_regional_name(p_product_regional_id integer, p_language_id integer, p_product_id integer, p_product_regional_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.product_regional_name
+    SET language_id = p_language_id,
+        product_id = p_product_id,
+        product_regional_name = p_product_regional_name
+    WHERE product_regional_id = p_product_regional_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_product_regional_name(p_product_regional_id integer, p_language_id integer, p_product_id integer, p_product_regional_name character varying) OWNER TO postgres;
+
+--
+-- Name: update_state(integer, character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_state(p_id integer, p_state character varying, p_state_shortnames character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_states 
+    SET state = p_state, state_shortnames = p_state_shortnames
+    WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_state(p_id integer, p_state character varying, p_state_shortnames character varying) OWNER TO postgres;
+
+--
+-- Name: update_unit(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_unit(p_id integer, p_unit_name character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.units_table 
+    SET unit_name = p_unit_name 
+    WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_unit(p_id integer, p_unit_name character varying) OWNER TO postgres;
+
+--
+-- Name: update_user(integer, character varying, character varying, character varying, text, character varying, integer, integer, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_user(p_user_id integer, p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_active_status integer, p_role_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.user_table 
+    SET 
+        name = p_name, 
+        mobile_num = p_mobile_num, 
+        email = p_email, 
+        address = p_address, 
+        pincode = p_pincode, 
+        location = p_location, 
+        state = p_state, 
+        active_status = p_active_status, 
+        role_id = p_role_id
+    WHERE user_id = p_user_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_user(p_user_id integer, p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_active_status integer, p_role_id integer) OWNER TO postgres;
+
+--
+-- Name: update_vehicle(integer, character varying, character varying, character varying, character varying, integer, integer, integer, date, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_vehicle(p_vehicle_id integer, p_vehicle_name character varying, p_vehicle_registration_no character varying, p_vehicle_manufacture_year character varying, p_vehicle_warranty character varying, p_vehicle_make integer, p_vehicle_model integer, p_vehicle_engine_type integer, p_vehicle_purchase_date date, p_vehicle_color character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_vehicle_table
+    SET 
+        vehicle_name = p_vehicle_name,
+        vehicle_registration_no = p_vehicle_registration_no,
+        vehicle_manufacture_year = p_vehicle_manufacture_year,
+        vehicle_warranty = p_vehicle_warranty,
+        vehicle_make = p_vehicle_make,
+        vehicle_model = p_vehicle_model,
+        vehicle_engine_type = p_vehicle_engine_type,
+        vehicle_purchase_date = p_vehicle_purchase_date,
+        vehicle_color = p_vehicle_color,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE vehicle_id = p_vehicle_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_vehicle(p_vehicle_id integer, p_vehicle_name character varying, p_vehicle_registration_no character varying, p_vehicle_manufacture_year character varying, p_vehicle_warranty character varying, p_vehicle_make integer, p_vehicle_model integer, p_vehicle_engine_type integer, p_vehicle_purchase_date date, p_vehicle_color character varying) OWNER TO postgres;
+
+--
+-- Name: upsert_business_branch(integer, integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, character varying, character varying, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.upsert_business_branch(p_b_branch_id integer, p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE 
+    new_branch_id INT;
+BEGIN
+    IF p_b_branch_id IS NULL THEN
+        -- Insert new branch
+        INSERT INTO admin_schema.business_branch_table (
+            bid, b_shop_name, b_type_id, b_location, b_state, b_mandi_id, 
+            b_address, b_email, b_number, b_gst_num, b_pan_num, 
+            b_privilege_user, b_established_year, created_at, updated_at
+        ) VALUES (
+            p_bid, p_b_shop_name, p_b_type_id, p_b_location, p_b_state, p_b_mandi_id, 
+            p_b_address, p_b_email, p_b_number, p_b_gst_num, p_b_pan_num, 
+            p_b_privilege_user, p_b_established_year, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        ) RETURNING b_branch_id INTO new_branch_id;
+
+    ELSE
+        -- Update existing branch
+        UPDATE admin_schema.business_branch_table
+        SET 
+            bid = p_bid,
+            b_shop_name = p_b_shop_name,
+            b_type_id = p_b_type_id,
+            b_location = p_b_location,
+            b_state = p_b_state,
+            b_mandi_id = p_b_mandi_id,
+            b_address = p_b_address,
+            b_email = p_b_email,
+            b_number = p_b_number,
+            b_gst_num = p_b_gst_num,
+            b_pan_num = p_b_pan_num,
+            b_privilege_user = p_b_privilege_user,
+            b_established_year = p_b_established_year,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE b_branch_id = p_b_branch_id
+        RETURNING b_branch_id INTO new_branch_id;
     END IF;
 
-    RETURN v_payment_type;
+    RETURN new_branch_id;
 END;
 $$;
 
 
-ALTER FUNCTION public.get_payment_type_by_id(p_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.upsert_business_branch(p_b_branch_id integer, p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying) OWNER TO postgres;
 
 --
--- Name: get_products_by_category(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_business_by_id(bigint); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_products_by_category(p_category_id integer) RETURNS TABLE(product_id bigint, category_id integer, product_name character varying, status integer, image_path character varying, regional_name1 character varying, regional_name2 character varying, regional_name3 character varying, regional_name4 character varying)
+CREATE FUNCTION public.get_business_by_id(p_bid bigint) RETURNS TABLE(bid bigint, b_person_name text, b_registration_num text, b_owner_name text, active_status integer, created_at timestamp with time zone, updated_at timestamp with time zone, b_category_id integer, b_type_id integer)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY
-    SELECT 
-        mp.product_id, 
-        mp.category_id, 
-        mp.product_name, 
-        mp.status, 
-        mp.image_path, 
-        mp.regional_name1, 
-        mp.regional_name2, 
-        mp.regional_name3, 
-        mp.regional_name4
-    FROM master_product mp
-    WHERE mp.category_id = p_category_id;
+    RETURN QUERY SELECT * FROM admin_schema.business_table WHERE bid = p_bid;
 END;
 $$;
 
 
-ALTER FUNCTION public.get_products_by_category(p_category_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_business_by_id(p_bid bigint) OWNER TO postgres;
 
 --
--- Name: insert_business(integer, integer, integer, text, character varying, character varying, character varying, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: get_businesses(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE PROCEDURE public.insert_business(IN p_b_typeid integer, IN p_b_location_id integer, IN p_b_state_id integer, IN p_b_address text, IN p_b_email character varying, IN p_b_gst_num character varying, IN p_b_pan_num character varying, IN p_b_phone_num text DEFAULT NULL::text, IN p_b_mandi_id integer DEFAULT NULL::integer)
+CREATE FUNCTION public.get_businesses() RETURNS TABLE(bid bigint, b_person_name text, b_registration_num text, b_owner_name text, active_status integer, created_at timestamp with time zone, updated_at timestamp with time zone, b_category_id integer, b_type_id integer)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    INSERT INTO business_table (
-        b_typeid, b_location_id, b_state_id, b_mandi_id,
-        b_address, b_phone_num, b_email, b_gst_num, b_pan_num
+    RETURN QUERY SELECT * FROM admin_schema.business_table;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_businesses() OWNER TO postgres;
+
+--
+-- Name: insert_business(text, text, text, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_business(p_b_person_name text, p_b_registration_num text, p_b_owner_name text, p_active_status integer, p_b_category_id integer, p_b_type_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.business_table (
+        b_person_name, 
+        b_registration_num, 
+        b_owner_name, 
+        active_status, 
+        b_category_id, 
+        b_type_id
     ) VALUES (
-        p_b_typeid, p_b_location_id, p_b_state_id, p_b_mandi_id,
-        p_b_address, p_b_phone_num, p_b_email, p_b_gst_num, p_b_pan_num
+        p_b_person_name, 
+        p_b_registration_num, 
+        p_b_owner_name, 
+        p_active_status, 
+        p_b_category_id, 
+        p_b_type_id
     );
 END;
 $$;
 
 
-ALTER PROCEDURE public.insert_business(IN p_b_typeid integer, IN p_b_location_id integer, IN p_b_state_id integer, IN p_b_address text, IN p_b_email character varying, IN p_b_gst_num character varying, IN p_b_pan_num character varying, IN p_b_phone_num text, IN p_b_mandi_id integer) OWNER TO postgres;
+ALTER FUNCTION public.insert_business(p_b_person_name text, p_b_registration_num text, p_b_owner_name text, p_active_status integer, p_b_category_id integer, p_b_type_id integer) OWNER TO postgres;
 
 --
--- Name: insert_business(integer, character varying, integer, integer, text, character varying, character varying, character varying, integer, text); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: insert_business_user(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.insert_business(p_b_typeid integer, p_b_name character varying, p_b_location_id integer, p_b_state_id integer, p_b_address text, p_b_email character varying, p_b_gst_num character varying, p_b_pan_num character varying, p_b_mandi_id integer DEFAULT NULL::integer, p_b_phone_num text DEFAULT NULL::text) RETURNS void
+CREATE FUNCTION public.insert_business_user() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    INSERT INTO public.business_table (
-        b_typeid, b_name, b_location_id, b_state_id,
-        b_address, b_email, b_gst_num, b_pan_num,
-        b_mandi_id, b_phone_num
-    ) VALUES (
-        p_b_typeid, p_b_name, p_b_location_id, p_b_state_id,
-        p_b_address, p_b_email, p_b_gst_num, p_b_pan_num,
-        NULLIF(p_b_mandi_id, 0), NULLIF(p_b_phone_num, '')
-    );
-END;
-$$;
+    -- Insert user record when new business is created
+    INSERT INTO admin_schema.business_user_table (b_id, user_name, password)
+    SELECT NEW.bid, b_shop_name, b_number
+    FROM admin_schema.business_branch_table
+    WHERE bid = NEW.bid
+    LIMIT 1; -- Ensure only one entry per business
 
-
-ALTER FUNCTION public.insert_business(p_b_typeid integer, p_b_name character varying, p_b_location_id integer, p_b_state_id integer, p_b_address text, p_b_email character varying, p_b_gst_num character varying, p_b_pan_num character varying, p_b_mandi_id integer, p_b_phone_num text) OWNER TO postgres;
-
---
--- Name: insert_business_type(character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.insert_business_type(p_b_typename character varying, p_remarks text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO business_type_table (b_typename, remarks)
-    VALUES (p_b_typename, p_remarks);
-END;
-$$;
-
-
-ALTER FUNCTION public.insert_business_type(p_b_typename character varying, p_remarks text) OWNER TO postgres;
-
---
--- Name: insert_business_user_on_activation(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.insert_business_user_on_activation() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    -- Insert into business_user_table only if active_status = 1
-    IF NEW.active_status = 1 THEN
-        INSERT INTO admin_schema.business_user_table (b_id, role_id)
-        VALUES (NEW.bid, NEW.role_id)
-        ON CONFLICT (b_id) DO NOTHING; -- Prevent duplicate entries
-    END IF;
     RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION public.insert_business_user_on_activation() OWNER TO postgres;
-
---
--- Name: insert_category(character varying, integer, text, text, text); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_category(IN cat_name character varying, IN super_cat integer DEFAULT NULL::integer, IN col1_text text DEFAULT NULL::text, IN col2_text text DEFAULT NULL::text, IN remarks_text text DEFAULT NULL::text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO master_category_table (category_name, super_cat_id, col1, col2, remarks, created_at, updated_at)
-    VALUES (cat_name, super_cat, col1_text, col2_text, remarks_text, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_category(IN cat_name character varying, IN super_cat integer, IN col1_text text, IN col2_text text, IN remarks_text text) OWNER TO postgres;
-
---
--- Name: insert_driver(character varying, integer, character varying, character varying, character varying, character varying, date, integer, date, character varying, integer, text, text, date); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.insert_driver(p_driver_name character varying, p_driver_age integer, p_driver_license character varying, p_driver_number character varying, p_driver_address character varying, p_driver_status character varying, p_date_of_joining date, p_experience_years integer, p_license_expiry_date date, p_emergency_contact character varying, p_assigned_route_id integer, p_col1 text, p_col2 text, p_d_o_b date) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO master_driver_table (
-        driver_name, driver_age, driver_license, driver_number, driver_address, driver_status,
-        date_of_joining, experience_years, license_expiry_date, emergency_contact, assigned_route_id, 
-        col1, col2, d_o_b, updated_at
-    ) VALUES (
-        p_driver_name, p_driver_age, p_driver_license, p_driver_number, p_driver_address, p_driver_status,
-        p_date_of_joining, p_experience_years, p_license_expiry_date, p_emergency_contact, p_assigned_route_id, 
-        p_col1, p_col2, p_d_o_b, CURRENT_TIMESTAMP
-    );
-END;
-$$;
-
-
-ALTER FUNCTION public.insert_driver(p_driver_name character varying, p_driver_age integer, p_driver_license character varying, p_driver_number character varying, p_driver_address character varying, p_driver_status character varying, p_date_of_joining date, p_experience_years integer, p_license_expiry_date date, p_emergency_contact character varying, p_assigned_route_id integer, p_col1 text, p_col2 text, p_d_o_b date) OWNER TO postgres;
-
---
--- Name: insert_driver(character varying, integer, character varying, character varying, character varying, character varying, date, integer, integer, date, character varying, integer, text, text, date, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_driver(IN p_driver_name character varying, IN p_driver_age integer DEFAULT NULL::integer, IN p_driver_license character varying DEFAULT NULL::character varying, IN p_driver_number character varying DEFAULT NULL::character varying, IN p_driver_address character varying DEFAULT NULL::character varying, IN p_driver_status character varying DEFAULT NULL::character varying, IN p_date_of_joining date DEFAULT NULL::date, IN p_experience_years integer DEFAULT NULL::integer, IN p_vehicle_id integer DEFAULT NULL::integer, IN p_license_expiry_date date DEFAULT NULL::date, IN p_emergency_contact character varying DEFAULT NULL::character varying, IN p_assigned_route_id integer DEFAULT NULL::integer, IN p_col1 text DEFAULT NULL::text, IN p_col2 text DEFAULT NULL::text, IN p_d_o_b date DEFAULT NULL::date, IN p_violation integer DEFAULT NULL::integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO master_driver_table (
-        driver_name, driver_age, driver_license, driver_number, driver_address,
-        driver_status, date_of_joining, experience_years, vehicle_id,
-        license_expiry_date, emergency_contact, assigned_route_id, col1, col2, d_o_b, violation, created_at
-    ) VALUES (
-        p_driver_name, p_driver_age, p_driver_license, p_driver_number, p_driver_address,
-        p_driver_status, p_date_of_joining, p_experience_years, p_vehicle_id,
-        p_license_expiry_date, p_emergency_contact, p_assigned_route_id, p_col1, p_col2, p_d_o_b, p_violation, CURRENT_TIMESTAMP
-    );
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_driver(IN p_driver_name character varying, IN p_driver_age integer, IN p_driver_license character varying, IN p_driver_number character varying, IN p_driver_address character varying, IN p_driver_status character varying, IN p_date_of_joining date, IN p_experience_years integer, IN p_vehicle_id integer, IN p_license_expiry_date date, IN p_emergency_contact character varying, IN p_assigned_route_id integer, IN p_col1 text, IN p_col2 text, IN p_d_o_b date, IN p_violation integer) OWNER TO postgres;
-
---
--- Name: insert_location(character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_location(IN p_location character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO master_location (location) 
-    VALUES (p_location);
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_location(IN p_location character varying) OWNER TO postgres;
-
---
--- Name: insert_master_mandi(character varying, character varying, character varying, character varying, character varying, text, text, integer, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_master_mandi(IN p_mandi_location character varying, IN p_mandi_number character varying, IN p_mandi_incharge character varying, IN p_mandi_incharge_num character varying, IN p_mandi_pincode character varying, IN p_mandi_address text, IN p_remarks text, IN p_mandi_city integer, IN p_mandi_state integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO public.master_mandi_table (
-        mandi_location, mandi_number, mandi_incharge,
-        mandi_incharge_num, mandi_pincode, mandi_address,
-        remarks, mandi_city, mandi_state
-    ) 
-    VALUES (
-        p_mandi_location, p_mandi_number, p_mandi_incharge,
-        p_mandi_incharge_num, p_mandi_pincode, p_mandi_address,
-        p_remarks, p_mandi_city, p_mandi_state
-    );
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_master_mandi(IN p_mandi_location character varying, IN p_mandi_number character varying, IN p_mandi_incharge character varying, IN p_mandi_incharge_num character varying, IN p_mandi_pincode character varying, IN p_mandi_address text, IN p_remarks text, IN p_mandi_city integer, IN p_mandi_state integer) OWNER TO postgres;
-
---
--- Name: insert_master_product(integer, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_master_product(IN p_category_id integer, IN p_product_name character varying, IN p_status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO public.master_product (
-        category_id, product_name, status
-    ) 
-    VALUES (
-        p_category_id, p_product_name, COALESCE(p_status, 0)
-    );
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_master_product(IN p_category_id integer, IN p_product_name character varying, IN p_status integer) OWNER TO postgres;
+ALTER FUNCTION public.insert_business_user() OWNER TO postgres;
 
 --
 -- Name: insert_master_product(integer, character varying, integer, character varying, character varying, character varying, character varying, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -1735,981 +1661,49 @@ $$;
 ALTER PROCEDURE public.insert_master_product(IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying, IN p_regional_name1 character varying, IN p_regional_name2 character varying, IN p_regional_name3 character varying, IN p_regional_name4 character varying) OWNER TO postgres;
 
 --
--- Name: insert_master_state(character varying); Type: PROCEDURE; Schema: public; Owner: postgres
+-- Name: set_business_user_credentials(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE PROCEDURE public.insert_master_state(IN p_state character varying)
+CREATE FUNCTION public.set_business_user_credentials() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    INSERT INTO public.master_states (state) 
-    VALUES (p_state);
-END;
-$$;
+    -- Fetch b_shop_name and b_number from business_branch_table based on bid
+    SELECT b_shop_name, b_number INTO NEW.user_name, NEW.password
+    FROM admin_schema.business_branch_table
+    WHERE bid = NEW.b_id
+    LIMIT 1; -- Ensuring one row is picked
 
-
-ALTER PROCEDURE public.insert_master_state(IN p_state character varying) OWNER TO postgres;
-
---
--- Name: insert_master_vehicle(integer, character varying, character varying, character varying, integer, integer, character varying, integer, date, character varying, text, text, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_master_vehicle(IN p_insurance_id integer, IN p_vehicle_name character varying, IN p_vehicle_manufacture_year character varying, IN p_vehicle_warranty character varying, IN p_vehicle_make integer, IN p_vehicle_model integer, IN p_vehicle_registration_no character varying, IN p_vehicle_engine_type integer, IN p_vehicle_purchase_date date, IN p_vehicle_color character varying, IN p_col1 text, IN p_col2 text, IN p_col3 text, IN p_vehicle_insurance_id integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO public.master_vehicle_table (
-        insurance_id, vehicle_name, vehicle_manufacture_year, vehicle_warranty,
-        vehicle_make, vehicle_model, vehicle_registration_no, vehicle_engine_type,
-        vehicle_purchase_date, vehicle_color, col1, col2, col3, vehicle_insurance_id
-    ) 
-    VALUES (
-        p_insurance_id, p_vehicle_name, p_vehicle_manufacture_year, p_vehicle_warranty,
-        p_vehicle_make, p_vehicle_model, p_vehicle_registration_no, p_vehicle_engine_type,
-        p_vehicle_purchase_date, p_vehicle_color, p_col1, p_col2, p_col3, p_vehicle_insurance_id
-    );
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_master_vehicle(IN p_insurance_id integer, IN p_vehicle_name character varying, IN p_vehicle_manufacture_year character varying, IN p_vehicle_warranty character varying, IN p_vehicle_make integer, IN p_vehicle_model integer, IN p_vehicle_registration_no character varying, IN p_vehicle_engine_type integer, IN p_vehicle_purchase_date date, IN p_vehicle_color character varying, IN p_col1 text, IN p_col2 text, IN p_col3 text, IN p_vehicle_insurance_id integer) OWNER TO postgres;
-
---
--- Name: insert_master_violation(text, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_master_violation(IN p_violation_name text, IN p_level_of_serious text, IN p_status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO public.master_violation_table (violation_name, level_of_serious, status)
-    VALUES (p_violation_name, p_level_of_serious, COALESCE(p_status, 1));
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_master_violation(IN p_violation_name text, IN p_level_of_serious text, IN p_status integer) OWNER TO postgres;
-
---
--- Name: insert_order_status(text); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.insert_order_status(status_name text) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    new_status_id INTEGER;
-BEGIN
-    INSERT INTO order_status_table (order_status)
-    VALUES (status_name)
-    RETURNING order_status_id INTO new_status_id;
-
-    RETURN new_status_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.insert_order_status(status_name text) OWNER TO postgres;
-
---
--- Name: insert_order_status(integer, text); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.insert_order_status(order_id integer, order_status text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO order_status_table (order_status_id, order_status) VALUES (order_status_id, order_status); 
-END;
-$$;
-
-
-ALTER FUNCTION public.insert_order_status(order_id integer, order_status text) OWNER TO postgres;
-
---
--- Name: insert_user(integer, character varying, character varying, character varying, text, character varying, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.insert_user(p_user_type_id integer, p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_status integer) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO user_table (user_type_id, name, mobile_num, email, address, pincode, location, state, status)
-    VALUES (p_user_type_id, p_name, p_mobile_num, p_email, p_address, p_pincode, p_location, p_state, p_status);
-END;
-$$;
-
-
-ALTER FUNCTION public.insert_user(p_user_type_id integer, p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_status integer) OWNER TO postgres;
-
---
--- Name: insert_user(integer, character varying, date, character varying, character varying, text, character varying, integer, character varying, character varying, character varying, date, character varying, character varying, integer, character varying, text, text, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.insert_user(IN p_user_type_id integer, IN p_name character varying, IN p_dt_of_commence_business date, IN p_mobile_num character varying, IN p_email character varying, IN p_address text, IN p_pincode character varying, IN p_location integer, IN p_business_license_no character varying, IN p_validity character varying, IN p_gst_no character varying, IN p_expiry_dt date, IN p_business_name character varying, IN p_business_type character varying, IN p_mandi_id integer, IN p_mandi_type_id character varying, IN p_remarks text, IN p_col1 text, IN p_col2 text, IN p_state integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO public.user_table (
-        user_type_id, name, dt_of_commence_business, mobile_num, email, address,
-        pincode, location, business_license_no, validity, gst_no, expiry_dt,
-        business_name, business_type, mandi_id, mandi_type_id, remarks, col1, col2, state
-    )
-    VALUES (
-        p_user_type_id, p_name, p_dt_of_commence_business, p_mobile_num, p_email, p_address,
-        p_pincode, p_location, p_business_license_no, p_validity, p_gst_no, p_expiry_dt,
-        p_business_name, p_business_type, p_mandi_id, p_mandi_type_id, p_remarks, p_col1, p_col2, p_state
-    );
-END;
-$$;
-
-
-ALTER PROCEDURE public.insert_user(IN p_user_type_id integer, IN p_name character varying, IN p_dt_of_commence_business date, IN p_mobile_num character varying, IN p_email character varying, IN p_address text, IN p_pincode character varying, IN p_location integer, IN p_business_license_no character varying, IN p_validity character varying, IN p_gst_no character varying, IN p_expiry_dt date, IN p_business_name character varying, IN p_business_type character varying, IN p_mandi_id integer, IN p_mandi_type_id character varying, IN p_remarks text, IN p_col1 text, IN p_col2 text, IN p_state integer) OWNER TO postgres;
-
---
--- Name: log_permission_changes(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.log_permission_changes() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO admin_schema.permission_audit_log (changed_by, role_id, table_name, action)
-    VALUES (current_setting('app.current_user')::INT, NEW.role_id, NEW.table_name, 'Updated Permissions');
     RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION public.log_permission_changes() OWNER TO postgres;
+ALTER FUNCTION public.set_business_user_credentials() OWNER TO postgres;
 
 --
--- Name: manage_user_bank_details(character varying, integer, integer, character, character varying, character, character varying, character varying, character varying, character varying, boolean); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_business(bigint, text, text, text, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.manage_user_bank_details(operation_type character varying, p_id integer DEFAULT NULL::integer, p_user_id integer DEFAULT NULL::integer, p_card_number character DEFAULT NULL::bpchar, p_upi_id character varying DEFAULT NULL::character varying, p_ifsc_code character DEFAULT NULL::bpchar, p_account_number character varying DEFAULT NULL::character varying, p_account_holder_name character varying DEFAULT NULL::character varying, p_bank_name character varying DEFAULT NULL::character varying, p_branch_name character varying DEFAULT NULL::character varying, p_status boolean DEFAULT NULL::boolean) RETURNS json
+CREATE FUNCTION public.update_business(p_bid bigint, p_b_person_name text, p_b_registration_num text, p_b_owner_name text, p_active_status integer, p_b_category_id integer, p_b_type_id integer) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF operation_type = 'INSERT' THEN
-        INSERT INTO user_bank_details(
-            user_id, card_number, upi_id, ifsc_code, account_number, 
-            account_holder_name, bank_name, branch_name, status
-        ) VALUES (
-            p_user_id, p_card_number, p_upi_id, p_ifsc_code, p_account_number,
-            p_account_holder_name, p_bank_name, p_branch_name, p_status
-        );
-        RETURN json_build_object('status', 'success', 'message', 'User bank detail added successfully');
-    ELSE
-        RETURN json_build_object('status', 'error', 'message', 'Unsupported operation');
-    END IF;
-END;
-$$;
-
-
-ALTER FUNCTION public.manage_user_bank_details(operation_type character varying, p_id integer, p_user_id integer, p_card_number character, p_upi_id character varying, p_ifsc_code character, p_account_number character varying, p_account_holder_name character varying, p_bank_name character varying, p_branch_name character varying, p_status boolean) OWNER TO postgres;
-
---
--- Name: manage_users(text, integer, integer, character varying, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.manage_users(IN op_type text, IN p_user_id integer DEFAULT NULL::integer, IN p_user_type_id integer DEFAULT NULL::integer, IN p_username character varying DEFAULT NULL::character varying, IN p_password character varying DEFAULT NULL::character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    -- Insert Operation
-    IF op_type = 'INSERT' THEN
-        INSERT INTO users (user_type_id, username, password)
-        VALUES (p_user_type_id, p_username, p_password);
-
-    -- Update Operation
-    ELSIF op_type = 'UPDATE' THEN
-        UPDATE users
-        SET 
-            user_type_id = COALESCE(p_user_type_id, user_type_id),
-            username = COALESCE(p_username, username),
-            password = COALESCE(p_password, password)
-        WHERE user_id = p_user_id;
-
-    -- Delete Operation
-    ELSIF op_type = 'DELETE' THEN
-        DELETE FROM users WHERE user_id = p_user_id;
-
-    -- Handle Invalid Operation
-    ELSE
-        RAISE EXCEPTION 'Invalid operation type: %', op_type;
-    END IF;
-END;
-$$;
-
-
-ALTER PROCEDURE public.manage_users(IN op_type text, IN p_user_id integer, IN p_user_type_id integer, IN p_username character varying, IN p_password character varying) OWNER TO postgres;
-
---
--- Name: prevent_duplicate_registration(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.prevent_duplicate_registration() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 
-        FROM admin_schema.business_table 
-        WHERE b_registration_num = NEW.b_registration_num 
-        AND role_id NOT IN (2, 4)  -- ✅ Allows duplicate for role_id 2 & 4
-    ) THEN
-        RAISE EXCEPTION 'Registration number % already exists for another role', NEW.b_registration_num;
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.prevent_duplicate_registration() OWNER TO postgres;
-
---
--- Name: set_default_pay_type(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.set_default_pay_type() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF NEW.pay_mode = 1 THEN
-        NEW.pay_type = 5;
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.set_default_pay_type() OWNER TO postgres;
-
---
--- Name: sp_get_order_status(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.sp_get_order_status() RETURNS TABLE(order_id integer, order_status character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY SELECT * FROM order_status_table;
-END;
-$$;
-
-
-ALTER FUNCTION public.sp_get_order_status() OWNER TO postgres;
-
---
--- Name: sp_get_orders(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.sp_get_orders() RETURNS TABLE(order_id bigint, date_of_order timestamp without time zone, order_status integer, order_status_name text, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id bigint, retailer_name text, wholeseller_id bigint, wholeseller_name text, location_id integer, location_name text, state_id integer, state_name text, pincode text, address text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY 
-    SELECT
-        o.order_id::BIGINT,  -- Explicit casting
-        o.date_of_order,
-        o.order_status,
-        os.order_status AS order_status_name,
-        o.expected_delivery_date,
-        o.actual_delivery_date,
-        o.retailer_id::BIGINT,  -- Explicit casting
-        r.b_name AS retailer_name,
-        o.wholeseller_id::BIGINT,  -- Explicit casting
-        w.b_name AS wholeseller_name,
-        o.location_id::INT,  -- Explicit casting
-        ml.location AS location_name,
-        o.state_id::INT,  -- Explicit casting
-        ms.state AS state_name,
-        o.pincode,
-        o.address
-    FROM order_table o
-    LEFT JOIN order_status_table os ON o.order_status = os.order_status_id
-    LEFT JOIN business_table r ON o.retailer_id = r.bid
-    LEFT JOIN business_table w ON o.wholeseller_id = w.bid
-    LEFT JOIN master_location ml ON o.location_id = ml.id
-    LEFT JOIN master_states ms ON o.state_id = ms.id;
-END;
-$$;
-
-
-ALTER FUNCTION public.sp_get_orders() OWNER TO postgres;
-
---
--- Name: sp_insert_order(integer, timestamp without time zone, timestamp without time zone, integer, integer, integer, integer, character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.sp_insert_order(p_order_status integer, p_expected_delivery_date timestamp without time zone, p_actual_delivery_date timestamp without time zone, p_retailer_id integer, p_wholeseller_id integer, p_location_id integer, p_state_id integer, p_pincode character varying, p_address text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO order_table (
-        date_of_order,
-        order_status,
-        expected_delivery_date,
-        actual_delivery_date,
-        retailer_id,
-        wholeseller_id,
-        location_id,
-        state_id,
-        pincode,
-        address
-    ) VALUES (
-        CURRENT_TIMESTAMP,
-        p_order_status,
-        p_expected_delivery_date,
-        p_actual_delivery_date,
-        p_retailer_id,
-        p_wholeseller_id,
-        p_location_id,
-        p_state_id,
-        p_pincode,
-        p_address
-    );
-END;
-$$;
-
-
-ALTER FUNCTION public.sp_insert_order(p_order_status integer, p_expected_delivery_date timestamp without time zone, p_actual_delivery_date timestamp without time zone, p_retailer_id integer, p_wholeseller_id integer, p_location_id integer, p_state_id integer, p_pincode character varying, p_address text) OWNER TO postgres;
-
---
--- Name: sp_insert_order_status(character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.sp_insert_order_status(IN p_order_status character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    INSERT INTO order_status_table (order_status)
-    VALUES (p_order_status);
-END;
-$$;
-
-
-ALTER PROCEDURE public.sp_insert_order_status(IN p_order_status character varying) OWNER TO postgres;
-
---
--- Name: sp_update_order(integer, integer, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.sp_update_order(p_order_id integer, p_order_status integer, p_actual_delivery_date timestamp without time zone) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE order_table
+    UPDATE admin_schema.business_table
     SET 
-        order_status = p_order_status,
-        actual_delivery_date = p_actual_delivery_date
-    WHERE order_id = p_order_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.sp_update_order(p_order_id integer, p_order_status integer, p_actual_delivery_date timestamp without time zone) OWNER TO postgres;
-
---
--- Name: sp_update_order_status(integer, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.sp_update_order_status(IN p_order_id integer, IN p_order_status character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE order_status_table
-    SET order_status = p_order_status
-    WHERE order_id = p_order_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.sp_update_order_status(IN p_order_id integer, IN p_order_status character varying) OWNER TO postgres;
-
---
--- Name: update_amt_of_order_item(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_amt_of_order_item() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE 
-    product_price NUMERIC(10,2);
-    tax_rate NUMERIC(5,2);
-BEGIN
-    -- Fetch price and tax_percentage from product_price_table
-    SELECT price, tax_percentage INTO product_price, tax_rate 
-    FROM product_price_table 
-    WHERE product_id = NEW.product_id;
-
-    -- If product exists, calculate the amt_of_order_item
-    IF product_price IS NOT NULL THEN
-        NEW.amt_of_order_item := NEW.quantity * product_price * (1 + tax_rate / 100);
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_amt_of_order_item() OWNER TO postgres;
-
---
--- Name: update_business(integer, integer, integer, integer, text, text, character varying, character varying, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_business(IN p_bid integer, IN p_b_typeid integer, IN p_b_location_id integer, IN p_b_state_id integer, IN p_b_address text, IN p_b_phone_num text, IN p_b_email character varying, IN p_b_gst_num character varying, IN p_b_pan_num character varying, IN p_b_mandi_id integer DEFAULT NULL::integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE business_table
-    SET 
-        b_typeid = p_b_typeid,
-        b_location_id = p_b_location_id,
-        b_state_id = p_b_state_id,
-        b_mandi_id = p_b_mandi_id,
-        b_address = p_b_address,
-        b_phone_num = p_b_phone_num,
-        b_email = p_b_email,
-        b_gst_num = p_b_gst_num,
-        b_pan_num = p_b_pan_num
+        b_person_name = p_b_person_name,
+        b_registration_num = p_b_registration_num,
+        b_owner_name = p_b_owner_name,
+        active_status = p_active_status,
+        b_category_id = p_b_category_id,
+        b_type_id = p_b_type_id,
+        updated_at = NOW()
     WHERE bid = p_bid;
 END;
 $$;
 
 
-ALTER PROCEDURE public.update_business(IN p_bid integer, IN p_b_typeid integer, IN p_b_location_id integer, IN p_b_state_id integer, IN p_b_address text, IN p_b_phone_num text, IN p_b_email character varying, IN p_b_gst_num character varying, IN p_b_pan_num character varying, IN p_b_mandi_id integer) OWNER TO postgres;
-
---
--- Name: update_business(integer, integer, character varying, character varying, integer, text, text, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_business(_bid integer, _b_typeid integer, _b_name character varying, _b_location character varying, _b_mandiid integer DEFAULT NULL::integer, _b_address text DEFAULT NULL::text, _b_comt text DEFAULT NULL::text, _b_email character varying DEFAULT NULL::character varying, _b_gstnum character varying DEFAULT NULL::character varying, _b_pan character varying DEFAULT NULL::character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE business_table
-    SET b_typeid = _b_typeid,
-        b_name = _b_name,
-        b_location = _b_location,
-        b_mandiid = _b_mandiid,
-        b_address = _b_address,
-        b_comt = _b_comt,
-        b_email = _b_email,
-        b_gstnum = _b_gstnum,
-        b_pan = _b_pan
-    WHERE bid = _bid;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_business(_bid integer, _b_typeid integer, _b_name character varying, _b_location character varying, _b_mandiid integer, _b_address text, _b_comt text, _b_email character varying, _b_gstnum character varying, _b_pan character varying) OWNER TO postgres;
-
---
--- Name: update_business_type(integer, character varying, text); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_business_type(p_b_typeid integer, p_b_typename character varying, p_remarks text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE business_type_table
-    SET b_typename = p_b_typename,
-        remarks = p_remarks
-    WHERE b_typeid = p_b_typeid;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_business_type(p_b_typeid integer, p_b_typename character varying, p_remarks text) OWNER TO postgres;
-
---
--- Name: update_cash_payment(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_cash_payment(payment_id integer, payment_name character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE cash_payment_list 
-    SET payment_type = payment_name 
-    WHERE id = payment_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_cash_payment(payment_id integer, payment_name character varying) OWNER TO postgres;
-
---
--- Name: update_category(integer, character varying, integer, text, text, text); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_category(IN cat_id integer, IN new_cat_name character varying, IN new_super_cat integer DEFAULT NULL::integer, IN new_col1 text DEFAULT NULL::text, IN new_col2 text DEFAULT NULL::text, IN new_remarks text DEFAULT NULL::text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE master_category_table
-    SET 
-        category_name = new_cat_name,
-        super_cat_id = new_super_cat,
-        col1 = new_col1,
-        col2 = new_col2,
-        remarks = new_remarks,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE category_id = cat_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_category(IN cat_id integer, IN new_cat_name character varying, IN new_super_cat integer, IN new_col1 text, IN new_col2 text, IN new_remarks text) OWNER TO postgres;
-
---
--- Name: update_driver(integer, character varying, integer, character varying, character varying, character varying, character varying, date, integer, date, character varying, integer, text, text, date); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_driver(p_driver_id integer, p_driver_name character varying, p_driver_age integer, p_driver_license character varying, p_driver_number character varying, p_driver_address character varying, p_driver_status character varying, p_date_of_joining date, p_experience_years integer, p_license_expiry_date date, p_emergency_contact character varying, p_assigned_route_id integer, p_col1 text, p_col2 text, p_d_o_b date) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE master_driver_table
-    SET
-        driver_name = p_driver_name,
-        driver_age = p_driver_age,
-        driver_license = p_driver_license,
-        driver_number = p_driver_number,
-        driver_address = p_driver_address,
-        driver_status = p_driver_status,
-        date_of_joining = p_date_of_joining,
-        experience_years = p_experience_years,
-        license_expiry_date = p_license_expiry_date,
-        emergency_contact = p_emergency_contact,
-        assigned_route_id = p_assigned_route_id,
-        col1 = p_col1,
-        col2 = p_col2,
-        d_o_b = p_d_o_b,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE driver_id = p_driver_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_driver(p_driver_id integer, p_driver_name character varying, p_driver_age integer, p_driver_license character varying, p_driver_number character varying, p_driver_address character varying, p_driver_status character varying, p_date_of_joining date, p_experience_years integer, p_license_expiry_date date, p_emergency_contact character varying, p_assigned_route_id integer, p_col1 text, p_col2 text, p_d_o_b date) OWNER TO postgres;
-
---
--- Name: update_driver(integer, character varying, integer, character varying, character varying, character varying, character varying, date, integer, integer, date, character varying, integer, text, text, date, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_driver(IN p_driver_id integer, IN p_driver_name character varying DEFAULT NULL::character varying, IN p_driver_age integer DEFAULT NULL::integer, IN p_driver_license character varying DEFAULT NULL::character varying, IN p_driver_number character varying DEFAULT NULL::character varying, IN p_driver_address character varying DEFAULT NULL::character varying, IN p_driver_status character varying DEFAULT NULL::character varying, IN p_date_of_joining date DEFAULT NULL::date, IN p_experience_years integer DEFAULT NULL::integer, IN p_vehicle_id integer DEFAULT NULL::integer, IN p_license_expiry_date date DEFAULT NULL::date, IN p_emergency_contact character varying DEFAULT NULL::character varying, IN p_assigned_route_id integer DEFAULT NULL::integer, IN p_col1 text DEFAULT NULL::text, IN p_col2 text DEFAULT NULL::text, IN p_d_o_b date DEFAULT NULL::date, IN p_violation integer DEFAULT NULL::integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE master_driver_table  
-    SET 
-        driver_name = COALESCE(p_driver_name, driver_name),
-        driver_age = COALESCE(p_driver_age, driver_age),
-        driver_license = COALESCE(p_driver_license, driver_license),
-        driver_number = COALESCE(p_driver_number, driver_number),
-        driver_address = COALESCE(p_driver_address, driver_address),
-        driver_status = COALESCE(p_driver_status, driver_status),
-        date_of_joining = COALESCE(p_date_of_joining, date_of_joining),
-        experience_years = COALESCE(p_experience_years, experience_years),
-        vehicle_id = COALESCE(p_vehicle_id, vehicle_id),
-        license_expiry_date = COALESCE(p_license_expiry_date, license_expiry_date),
-        emergency_contact = COALESCE(p_emergency_contact, emergency_contact),
-        assigned_route_id = COALESCE(p_assigned_route_id, assigned_route_id),
-        col1 = COALESCE(p_col1, col1),
-        col2 = COALESCE(p_col2, col2),
-        d_o_b = COALESCE(p_d_o_b, d_o_b),
-        violation = COALESCE(p_violation, violation),
-        updated_at = CURRENT_TIMESTAMP
-    WHERE driver_id = p_driver_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_driver(IN p_driver_id integer, IN p_driver_name character varying, IN p_driver_age integer, IN p_driver_license character varying, IN p_driver_number character varying, IN p_driver_address character varying, IN p_driver_status character varying, IN p_date_of_joining date, IN p_experience_years integer, IN p_vehicle_id integer, IN p_license_expiry_date date, IN p_emergency_contact character varying, IN p_assigned_route_id integer, IN p_col1 text, IN p_col2 text, IN p_d_o_b date, IN p_violation integer) OWNER TO postgres;
-
---
--- Name: update_location(integer, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_location(IN p_id integer, IN p_location character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE master_location 
-    SET location = p_location
-    WHERE id = p_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_location(IN p_id integer, IN p_location character varying) OWNER TO postgres;
-
---
--- Name: update_master_mandi(integer, character varying, character varying, character varying, character varying, character varying, text, text, integer, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_master_mandi(IN p_mandi_id integer, IN p_mandi_location character varying, IN p_mandi_number character varying, IN p_mandi_incharge character varying, IN p_mandi_incharge_num character varying, IN p_mandi_pincode character varying, IN p_mandi_address text, IN p_remarks text, IN p_mandi_city integer, IN p_mandi_state integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.master_mandi_table
-    SET
-        mandi_location = p_mandi_location,
-        mandi_number = p_mandi_number,
-        mandi_incharge = p_mandi_incharge,
-        mandi_incharge_num = p_mandi_incharge_num,
-        mandi_pincode = p_mandi_pincode,
-        mandi_address = p_mandi_address,
-        remarks = p_remarks,
-        mandi_city = p_mandi_city,
-        mandi_state = p_mandi_state,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE mandi_id = p_mandi_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_master_mandi(IN p_mandi_id integer, IN p_mandi_location character varying, IN p_mandi_number character varying, IN p_mandi_incharge character varying, IN p_mandi_incharge_num character varying, IN p_mandi_pincode character varying, IN p_mandi_address text, IN p_remarks text, IN p_mandi_city integer, IN p_mandi_state integer) OWNER TO postgres;
-
---
--- Name: update_master_product(integer, integer, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_master_product(IN p_product_id integer, IN p_category_id integer, IN p_product_name character varying, IN p_status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.master_product
-    SET
-        category_id = p_category_id,
-        product_name = p_product_name,
-        status = p_status
-    WHERE product_id = p_product_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_master_product(IN p_product_id integer, IN p_category_id integer, IN p_product_name character varying, IN p_status integer) OWNER TO postgres;
-
---
--- Name: update_master_product(bigint, integer, character varying, integer, character varying, character varying, character varying, character varying, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_master_product(IN p_product_id bigint, IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying DEFAULT NULL::character varying, IN p_regional_name1 character varying DEFAULT NULL::character varying, IN p_regional_name2 character varying DEFAULT NULL::character varying, IN p_regional_name3 character varying DEFAULT NULL::character varying, IN p_regional_name4 character varying DEFAULT NULL::character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE master_product
-    SET category_id = p_category_id,
-        product_name = p_product_name,
-        status = p_status,
-        image_path = p_image_path,
-        regional_name1 = p_regional_name1,
-        regional_name2 = p_regional_name2,
-        regional_name3 = p_regional_name3,
-        regional_name4 = p_regional_name4
-    WHERE product_id = p_product_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_master_product(IN p_product_id bigint, IN p_category_id integer, IN p_product_name character varying, IN p_status integer, IN p_image_path character varying, IN p_regional_name1 character varying, IN p_regional_name2 character varying, IN p_regional_name3 character varying, IN p_regional_name4 character varying) OWNER TO postgres;
-
---
--- Name: update_master_state(integer, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_master_state(IN p_id integer, IN p_state character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.master_states
-    SET state = p_state
-    WHERE id = p_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_master_state(IN p_id integer, IN p_state character varying) OWNER TO postgres;
-
---
--- Name: update_master_vehicle(integer, integer, character varying, character varying, character varying, integer, integer, character varying, integer, date, character varying, text, text, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_master_vehicle(IN p_vehicle_id integer, IN p_insurance_id integer, IN p_vehicle_name character varying, IN p_vehicle_manufacture_year character varying, IN p_vehicle_warranty character varying, IN p_vehicle_make integer, IN p_vehicle_model integer, IN p_vehicle_registration_no character varying, IN p_vehicle_engine_type integer, IN p_vehicle_purchase_date date, IN p_vehicle_color character varying, IN p_col1 text, IN p_col2 text, IN p_col3 text, IN p_vehicle_insurance_id integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.master_vehicle_table
-    SET
-        insurance_id = p_insurance_id,
-        vehicle_name = p_vehicle_name,
-        vehicle_manufacture_year = p_vehicle_manufacture_year,
-        vehicle_warranty = p_vehicle_warranty,
-        vehicle_make = p_vehicle_make,
-        vehicle_model = p_vehicle_model,
-        vehicle_registration_no = p_vehicle_registration_no,
-        vehicle_engine_type = p_vehicle_engine_type,
-        vehicle_purchase_date = p_vehicle_purchase_date,
-        vehicle_color = p_vehicle_color,
-        col1 = p_col1,
-        col2 = p_col2,
-        col3 = p_col3,
-        vehicle_insurance_id = p_vehicle_insurance_id,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE vehicle_id = p_vehicle_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_master_vehicle(IN p_vehicle_id integer, IN p_insurance_id integer, IN p_vehicle_name character varying, IN p_vehicle_manufacture_year character varying, IN p_vehicle_warranty character varying, IN p_vehicle_make integer, IN p_vehicle_model integer, IN p_vehicle_registration_no character varying, IN p_vehicle_engine_type integer, IN p_vehicle_purchase_date date, IN p_vehicle_color character varying, IN p_col1 text, IN p_col2 text, IN p_col3 text, IN p_vehicle_insurance_id integer) OWNER TO postgres;
-
---
--- Name: update_master_violation(integer, text, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_master_violation(IN p_id integer, IN p_violation_name text, IN p_level_of_serious text, IN p_status integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.master_violation_table
-    SET violation_name = p_violation_name,
-        level_of_serious = p_level_of_serious,
-        status = p_status
-    WHERE id = p_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_master_violation(IN p_id integer, IN p_violation_name text, IN p_level_of_serious text, IN p_status integer) OWNER TO postgres;
-
---
--- Name: update_mode_of_payment(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_mode_of_payment(p_id integer, p_payment_mode character varying) RETURNS TABLE(id integer, payment_mode character varying)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE mode_of_payments_list
-    SET payment_mode = p_payment_mode
-    WHERE id = p_id
-    RETURNING mode_of_payments_list.id, mode_of_payments_list.payment_mode;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_mode_of_payment(p_id integer, p_payment_mode character varying) OWNER TO postgres;
-
---
--- Name: update_order_history(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_order_history() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    -- Insert updated order details into order_history_table
-    INSERT INTO order_history_table (
-        order_id, 
-        date_of_order, 
-        order_status, 
-        expected_delivery_date, 
-        actual_delivery_date, 
-        retailer_id, 
-        wholeseller_id, 
-        location_id, 
-        state_id, 
-        pincode, 
-        address, 
-        delivery_completed_date
-    )
-    VALUES (
-        NEW.order_id, 
-        NEW.date_of_order, 
-        NEW.order_status, 
-        NEW.expected_delivery_date, 
-        NEW.actual_delivery_date, 
-        NEW.retailer_id, 
-        NEW.wholeseller_id, 
-        NEW.location_id, 
-        NEW.state_id, 
-        NEW.pincode, 
-        NEW.address,
-        CASE 
-            WHEN NEW.order_status = 6 THEN CURRENT_TIMESTAMP 
-            ELSE NULL 
-        END
-    );
-
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_order_history() OWNER TO postgres;
-
---
--- Name: update_order_timestamp(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-
-CREATE FUNCTION public.update_order_timestamp() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.updated_by = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_order_timestamp() OWNER TO postgres;
-
---
--- Name: update_timestamp(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_timestamp() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_timestamp() OWNER TO postgres;
-
---
--- Name: update_total_order_amount(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_total_order_amount() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE order_table
-    SET total_order_amount = (
-        SELECT COALESCE(SUM(amt_of_order_item), 0)
-        FROM order_item_table
-        WHERE order_id = NEW.order_id
-    )
-    WHERE order_id = NEW.order_id;
-
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_total_order_amount() OWNER TO postgres;
-
---
--- Name: update_updated_at(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_updated_at() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_updated_at() OWNER TO postgres;
-
---
--- Name: update_user(integer, character varying, character varying, character varying, text, character varying, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_user(p_user_id integer, p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_status integer) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE user_table
-    SET name = p_name,
-        mobile_num = p_mobile_num,
-        email = p_email,
-        address = p_address,
-        pincode = p_pincode,
-        location = p_location,
-        state = p_state,
-        status = p_status
-    WHERE user_id = p_user_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_user(p_user_id integer, p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_status integer) OWNER TO postgres;
-
---
--- Name: update_user(integer, integer, character varying, date, character varying, character varying, text, character varying, integer, character varying, character varying, character varying, date, character varying, character varying, integer, character varying, text, text, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
---
-
-CREATE PROCEDURE public.update_user(IN p_user_id integer, IN p_user_type_id integer, IN p_name character varying, IN p_dt_of_commence_business date, IN p_mobile_num character varying, IN p_email character varying, IN p_address text, IN p_pincode character varying, IN p_location integer, IN p_business_license_no character varying, IN p_validity character varying, IN p_gst_no character varying, IN p_expiry_dt date, IN p_business_name character varying, IN p_business_type character varying, IN p_mandi_id integer, IN p_mandi_type_id character varying, IN p_remarks text, IN p_col1 text, IN p_col2 text, IN p_state integer)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.user_table
-    SET
-        user_type_id = p_user_type_id,
-        name = p_name,
-        dt_of_commence_business = p_dt_of_commence_business,
-        mobile_num = p_mobile_num,
-        email = p_email,
-        address = p_address,
-        pincode = p_pincode,
-        location = p_location,
-        business_license_no = p_business_license_no,
-        validity = p_validity,
-        gst_no = p_gst_no,
-        expiry_dt = p_expiry_dt,
-        business_name = p_business_name,
-        business_type = p_business_type,
-        mandi_id = p_mandi_id,
-        mandi_type_id = p_mandi_type_id,
-        remarks = p_remarks,
-        col1 = p_col1,
-        col2 = p_col2,
-        state = p_state
-    WHERE user_id = p_user_id;
-END;
-$$;
-
-
-ALTER PROCEDURE public.update_user(IN p_user_id integer, IN p_user_type_id integer, IN p_name character varying, IN p_dt_of_commence_business date, IN p_mobile_num character varying, IN p_email character varying, IN p_address text, IN p_pincode character varying, IN p_location integer, IN p_business_license_no character varying, IN p_validity character varying, IN p_gst_no character varying, IN p_expiry_dt date, IN p_business_name character varying, IN p_business_type character varying, IN p_mandi_id integer, IN p_mandi_type_id character varying, IN p_remarks text, IN p_col1 text, IN p_col2 text, IN p_state integer) OWNER TO postgres;
-
---
--- Name: user_table_audit_function(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.user_table_audit_function() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        INSERT INTO audit_log(user_id, action_type, changed_data)
-        VALUES (NEW.user_id, 'INSERT', to_jsonb(NEW));
-    ELSIF TG_OP = 'UPDATE' THEN
-        INSERT INTO audit_log(user_id, action_type, changed_data)
-        VALUES (NEW.user_id, 'UPDATE', to_jsonb(NEW));
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO audit_log(user_id, action_type, changed_data)
-        VALUES (OLD.user_id, 'DELETE', to_jsonb(OLD));
-    END IF;
-    RETURN NULL; -- Trigger function does not modify the table
-END;
-$$;
-
-
-ALTER FUNCTION public.user_table_audit_function() OWNER TO postgres;
+ALTER FUNCTION public.update_business(p_bid bigint, p_b_person_name text, p_b_registration_num text, p_b_owner_name text, p_active_status integer, p_b_category_id integer, p_b_type_id integer) OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -2809,7 +1803,9 @@ CREATE TABLE admin_schema.business_table (
     b_owner_name character varying(255),
     active_status integer,
     created_at timestamp with time zone,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    b_category_id integer,
+    b_type_id integer
 );
 
 
@@ -2979,10 +1975,10 @@ ALTER SEQUENCE admin_schema.indian_driver_licenses_type_license_type_id_seq OWNE
 
 
 --
--- Name: master_category_table; Type: TABLE; Schema: admin_schema; Owner: admin
+-- Name: master_product_category_table; Type: TABLE; Schema: admin_schema; Owner: admin
 --
 
-CREATE TABLE admin_schema.master_category_table (
+CREATE TABLE admin_schema.master_product_category_table (
     category_id integer NOT NULL,
     category_name character varying(255) NOT NULL,
     super_cat_id integer,
@@ -2992,7 +1988,7 @@ CREATE TABLE admin_schema.master_category_table (
 );
 
 
-ALTER TABLE admin_schema.master_category_table OWNER TO admin;
+ALTER TABLE admin_schema.master_product_category_table OWNER TO admin;
 
 --
 -- Name: master_category_table_category_id_seq; Type: SEQUENCE; Schema: admin_schema; Owner: admin
@@ -3013,7 +2009,7 @@ ALTER SEQUENCE admin_schema.master_category_table_category_id_seq OWNER TO admin
 -- Name: master_category_table_category_id_seq; Type: SEQUENCE OWNED BY; Schema: admin_schema; Owner: admin
 --
 
-ALTER SEQUENCE admin_schema.master_category_table_category_id_seq OWNED BY admin_schema.master_category_table.category_id;
+ALTER SEQUENCE admin_schema.master_category_table_category_id_seq OWNED BY admin_schema.master_product_category_table.category_id;
 
 
 --
@@ -4708,13 +3704,6 @@ ALTER TABLE ONLY admin_schema.indian_driver_licenses_type ALTER COLUMN license_t
 
 
 --
--- Name: master_category_table category_id; Type: DEFAULT; Schema: admin_schema; Owner: admin
---
-
-ALTER TABLE ONLY admin_schema.master_category_table ALTER COLUMN category_id SET DEFAULT nextval('admin_schema.master_category_table_category_id_seq'::regclass);
-
-
---
 -- Name: master_city id; Type: DEFAULT; Schema: admin_schema; Owner: postgres
 --
 
@@ -4754,6 +3743,13 @@ ALTER TABLE ONLY admin_schema.master_mandi_table ALTER COLUMN mandi_id SET DEFAU
 --
 
 ALTER TABLE ONLY admin_schema.master_product ALTER COLUMN product_id SET DEFAULT nextval('admin_schema.master_product_utf8_product_id_seq'::regclass);
+
+
+--
+-- Name: master_product_category_table category_id; Type: DEFAULT; Schema: admin_schema; Owner: admin
+--
+
+ALTER TABLE ONLY admin_schema.master_product_category_table ALTER COLUMN category_id SET DEFAULT nextval('admin_schema.master_category_table_category_id_seq'::regclass);
 
 
 --
@@ -4998,6 +3994,7 @@ ALTER TABLE ONLY public.wholeseller_rating_table ALTER COLUMN id SET DEFAULT nex
 -- Data for Name: business_branch_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
+INSERT INTO admin_schema.business_branch_table VALUES (4, 104, 'JohnShop', 1, 1, 1, NULL, '123 Street', 'john@example.com', '9876543210', NULL, NULL, NULL, NULL, '2025-03-27 11:55:01.194804', '2025-03-27 11:55:01.194804', 0);
 
 
 --
@@ -5010,9 +4007,12 @@ ALTER TABLE ONLY public.wholeseller_rating_table ALTER COLUMN id SET DEFAULT nex
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (5, 'FreshMarket', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30');
-INSERT INTO admin_schema.business_table VALUES (6, 'TradeHub', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30');
-INSERT INTO admin_schema.business_table VALUES (12, 'SuperMart', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30');
+INSERT INTO admin_schema.business_table VALUES (5, 'FreshMarket', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (6, 'TradeHub', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (12, 'SuperMart', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (101, 'John Doe', 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (103, 'John Doe', 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (104, 'John Doe', 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', NULL, NULL);
 
 
 --
@@ -5028,6 +4028,7 @@ INSERT INTO admin_schema.business_type_table VALUES (3, 'wholeseller_user');
 -- Data for Name: business_user_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
+INSERT INTO admin_schema.business_user_table VALUES (104, 'JohnShop', '9876543210', 1, '2025-03-27 11:55:01.194804', '2025-03-27 11:55:01.194804', NULL, false);
 
 
 --
@@ -5051,19 +4052,6 @@ INSERT INTO admin_schema.cash_payment_list VALUES (5, 'Credit/Pay after delivery
 -- Data for Name: indian_driver_licenses_type; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-
-
---
--- Data for Name: master_category_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
---
-
-INSERT INTO admin_schema.master_category_table VALUES (5, 'Roots', 2, NULL, 1, NULL);
-INSERT INTO admin_schema.master_category_table VALUES (6, 'Vegetables', 3, NULL, 1, NULL);
-INSERT INTO admin_schema.master_category_table VALUES (8, 'Fruits', 4, NULL, 1, NULL);
-INSERT INTO admin_schema.master_category_table VALUES (4, 'Leafy', 0, NULL, 1, NULL);
-INSERT INTO admin_schema.master_category_table VALUES (9, 'Organic', NULL, NULL, 1, NULL);
-INSERT INTO admin_schema.master_category_table VALUES (10, 'Organic Vegetables', 9, NULL, 1, NULL);
-INSERT INTO admin_schema.master_category_table VALUES (11, 'Organic Fruits', 9, NULL, 1, NULL);
 
 
 --
@@ -5107,6 +4095,19 @@ INSERT INTO admin_schema.master_mandi_table VALUES (2, 'Location 1', 'John Doe',
 INSERT INTO admin_schema.master_product VALUES (1, 4, 'New Product', NULL, 1, NULL);
 INSERT INTO admin_schema.master_product VALUES (2, 5, 'product 2', NULL, 1, NULL);
 INSERT INTO admin_schema.master_product VALUES (3, 6, 'product 2', NULL, 1, NULL);
+
+
+--
+-- Data for Name: master_product_category_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
+--
+
+INSERT INTO admin_schema.master_product_category_table VALUES (5, 'Roots', 2, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (6, 'Vegetables', 3, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (8, 'Fruits', 4, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (4, 'Leafy', 0, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (9, 'Organic', NULL, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (10, 'Organic Vegetables', 9, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (11, 'Organic Fruits', 9, NULL, 1, NULL);
 
 
 --
@@ -5410,7 +4411,7 @@ INSERT INTO public.retailer_status VALUES (3, 'negotiation');
 -- Name: business_branch_table_b_branch_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.business_branch_table_b_branch_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.business_branch_table_b_branch_id_seq', 4, true);
 
 
 --
@@ -5831,10 +4832,10 @@ ALTER TABLE ONLY admin_schema.indian_driver_licenses_type
 
 
 --
--- Name: master_category_table master_category_table_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
+-- Name: master_product_category_table master_category_table_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
-ALTER TABLE ONLY admin_schema.master_category_table
+ALTER TABLE ONLY admin_schema.master_product_category_table
     ADD CONSTRAINT master_category_table_pkey PRIMARY KEY (category_id);
 
 
@@ -6295,73 +5296,40 @@ ALTER TABLE ONLY public.wholeseller_rating_table
 
 
 --
--- Name: business_user_table auto_assign_permissions; Type: TRIGGER; Schema: admin_schema; Owner: admin
+-- Name: business_table business_user_auto_insert; Type: TRIGGER; Schema: admin_schema; Owner: postgres
 --
 
-CREATE TRIGGER auto_assign_permissions AFTER INSERT ON admin_schema.business_user_table FOR EACH ROW EXECUTE FUNCTION public.assign_role_permissions();
-
-
---
--- Name: user_table trigger_create_user; Type: TRIGGER; Schema: admin_schema; Owner: admin
---
-
-CREATE TRIGGER trigger_create_user AFTER UPDATE OF active_status ON admin_schema.user_table FOR EACH ROW WHEN (((new.active_status = 1) AND (old.active_status <> 1))) EXECUTE FUNCTION public.create_user_on_activation();
+CREATE TRIGGER business_user_auto_insert AFTER INSERT ON admin_schema.business_table FOR EACH ROW EXECUTE FUNCTION public.insert_business_user();
 
 
 --
--- Name: business_branch_table trigger_update_timestamp; Type: TRIGGER; Schema: admin_schema; Owner: postgres
+-- Name: business_user_table business_user_insert_trigger; Type: TRIGGER; Schema: admin_schema; Owner: admin
 --
 
-CREATE TRIGGER trigger_update_timestamp BEFORE UPDATE ON admin_schema.business_branch_table FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-
-
---
--- Name: invoice_table invoice_number_trigger; Type: TRIGGER; Schema: business_schema; Owner: postgres
---
-
-CREATE TRIGGER invoice_number_trigger BEFORE INSERT ON business_schema.invoice_table FOR EACH ROW EXECUTE FUNCTION public.generate_invoice_number();
+CREATE TRIGGER business_user_insert_trigger BEFORE INSERT ON admin_schema.business_user_table FOR EACH ROW EXECUTE FUNCTION public.set_business_user_credentials();
 
 
 --
--- Name: order_table set_order_timestamp; Type: TRIGGER; Schema: business_schema; Owner: postgres
+-- Name: business_branch_table trg_insert_business_user; Type: TRIGGER; Schema: admin_schema; Owner: postgres
 --
 
-CREATE TRIGGER set_order_timestamp BEFORE UPDATE ON business_schema.order_table FOR EACH ROW EXECUTE FUNCTION public.update_order_timestamp();
-
-
---
--- Name: invoice_details_table set_timestamp; Type: TRIGGER; Schema: business_schema; Owner: postgres
---
-
-CREATE TRIGGER set_timestamp BEFORE UPDATE ON business_schema.invoice_details_table FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER trg_insert_business_user AFTER INSERT ON admin_schema.business_branch_table FOR EACH ROW EXECUTE FUNCTION admin_schema.insert_business_user();
 
 
 --
--- Name: mode_of_payment trg_default_pay_type; Type: TRIGGER; Schema: business_schema; Owner: admin
+-- Name: business_table fk_b_cat; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
 --
 
-CREATE TRIGGER trg_default_pay_type BEFORE INSERT ON business_schema.mode_of_payment FOR EACH ROW EXECUTE FUNCTION public.set_default_pay_type();
-
-
---
--- Name: order_item_table trigger_update_amt; Type: TRIGGER; Schema: business_schema; Owner: postgres
---
-
-CREATE TRIGGER trigger_update_amt BEFORE INSERT OR UPDATE ON business_schema.order_item_table FOR EACH ROW EXECUTE FUNCTION public.update_amt_of_order_item();
+ALTER TABLE ONLY admin_schema.business_table
+    ADD CONSTRAINT fk_b_cat FOREIGN KEY (b_category_id) REFERENCES admin_schema.business_category_table(b_category_id);
 
 
 --
--- Name: order_table trigger_update_order_history; Type: TRIGGER; Schema: business_schema; Owner: postgres
+-- Name: business_table fk_b_type; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
 --
 
-CREATE TRIGGER trigger_update_order_history BEFORE UPDATE ON business_schema.order_table FOR EACH ROW EXECUTE FUNCTION public.update_order_history();
-
-
---
--- Name: order_item_table trigger_update_total_order_amount; Type: TRIGGER; Schema: business_schema; Owner: postgres
---
-
-CREATE TRIGGER trigger_update_total_order_amount AFTER INSERT OR DELETE OR UPDATE ON business_schema.order_item_table FOR EACH ROW EXECUTE FUNCTION public.update_total_order_amount();
+ALTER TABLE ONLY admin_schema.business_table
+    ADD CONSTRAINT fk_b_type FOREIGN KEY (b_type_id) REFERENCES admin_schema.business_table(bid);
 
 
 --
@@ -6370,6 +5338,14 @@ CREATE TRIGGER trigger_update_total_order_amount AFTER INSERT OR DELETE OR UPDAT
 
 ALTER TABLE ONLY admin_schema.business_branch_table
     ADD CONSTRAINT fk_business FOREIGN KEY (bid) REFERENCES admin_schema.business_table(bid) ON DELETE CASCADE;
+
+
+--
+-- Name: business_user_table fk_business_user; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
+--
+
+ALTER TABLE ONLY admin_schema.business_user_table
+    ADD CONSTRAINT fk_business_user FOREIGN KEY (b_id) REFERENCES admin_schema.business_table(bid) ON DELETE CASCADE;
 
 
 --
@@ -6385,14 +5361,14 @@ ALTER TABLE ONLY admin_schema.master_vehicle_table
 --
 
 ALTER TABLE ONLY admin_schema.category_regional_name
-    ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES admin_schema.master_category_table(category_id) ON DELETE CASCADE;
+    ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES admin_schema.master_product_category_table(category_id) ON DELETE CASCADE;
 
 
 --
--- Name: master_category_table fk_category_regional; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
+-- Name: master_product_category_table fk_category_regional; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
-ALTER TABLE ONLY admin_schema.master_category_table
+ALTER TABLE ONLY admin_schema.master_product_category_table
     ADD CONSTRAINT fk_category_regional FOREIGN KEY (category_regional_id) REFERENCES admin_schema.category_regional_name(category_regional_id) ON DELETE CASCADE;
 
 
@@ -6761,12 +5737,6 @@ ALTER TABLE admin_schema.business_user_table ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_schema.cash_payment_list ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: master_category_table; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
---
-
-ALTER TABLE admin_schema.master_category_table ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: master_driver_table; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
 --
 
@@ -6789,6 +5759,12 @@ ALTER TABLE admin_schema.master_mandi_table ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE admin_schema.master_product ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: master_product_category_table; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
+--
+
+ALTER TABLE admin_schema.master_product_category_table ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: master_states; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
@@ -6942,10 +5918,10 @@ GRANT ALL ON TABLE admin_schema.indian_driver_licenses_type TO admin;
 
 
 --
--- Name: TABLE master_category_table; Type: ACL; Schema: admin_schema; Owner: admin
+-- Name: TABLE master_product_category_table; Type: ACL; Schema: admin_schema; Owner: admin
 --
 
-GRANT SELECT ON TABLE admin_schema.master_category_table TO retailer;
+GRANT SELECT ON TABLE admin_schema.master_product_category_table TO retailer;
 
 
 --

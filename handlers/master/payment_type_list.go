@@ -8,7 +8,6 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
-// CashPayment struct
 type CashPayment struct {
 	ID          int64  `json:"id"`
 	PaymentType string `json:"payment_type"`
@@ -49,7 +48,6 @@ func GetCashPaymentByID(c *fiber.Ctx) error {
 	return c.JSON(payment)
 }
 
-// Create a new cash payment
 func InsertPaymentType(c *fiber.Ctx) error {
 	type Request struct {
 		PaymentType string `json:"payment_type"`

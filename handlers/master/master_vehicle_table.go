@@ -3,160 +3,106 @@ package Masterhandlers
 import (
 	"context"
 	"log"
-	"strconv"
-"time"
+	"net/http"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
-	"github.com/go-playground/validator/v10"
 )
-func InsertMasterVehicle(c *fiber.Ctx) error {
-	type Request struct {
-		InsuranceID          int    `json:"insurance_id"`
-		VehicleName          string `json:"vehicle_name" validate:"required,max=255"`
-		VehicleManufactureYear string `json:"vehicle_manufacture_year" validate:"max=4"`
-		VehicleWarranty      string `json:"vehicle_warranty" validate:"max=255"`
-		VehicleMake          int    `json:"vehicle_make" validate:"required"`
-		VehicleModel         int    `json:"vehicle_model" validate:"required"`
-		VehicleRegistrationNo string `json:"vehicle_registration_no" validate:"required,max=50"`
-		VehicleEngineType    int    `json:"vehicle_engine_type" validate:"required"`
-		VehiclePurchaseDate  string `json:"vehicle_purchase_date" validate:"required"`
-		VehicleColor         string `json:"vehicle_color" validate:"required,max=50"`
-		Col1                 string `json:"col1"`
-		Col2                 string `json:"col2"`
-		Col3                 string `json:"col3"`
-		VehicleInsuranceID   int    `json:"vehicle_insurance_id"`
-	}
 
-	var req Request
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
-	}
-
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-	_, err := db.Pool.Exec(context.Background(), `
-		CALL insert_master_vehicle($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
-	`, req.InsuranceID, req.VehicleName, req.VehicleManufactureYear, req.VehicleWarranty, 
-		req.VehicleMake, req.VehicleModel, req.VehicleRegistrationNo, req.VehicleEngineType, 
-		req.VehiclePurchaseDate, req.VehicleColor, req.Col1, req.Col2, req.Col3, req.VehicleInsuranceID)
-
-	if err != nil {
-		log.Printf("Failed to insert vehicle: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert vehicle"})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Vehicle added successfully"})
-}
-func UpdateMasterVehicle(c *fiber.Ctx) error {
-	type Request struct {
-		VehicleID            int    `json:"vehicle_id" validate:"required,min=1"`
-		InsuranceID          int    `json:"insurance_id"`
-		VehicleName          string `json:"vehicle_name" validate:"required,max=255"`
-		VehicleManufactureYear string `json:"vehicle_manufacture_year" validate:"max=4"`
-		VehicleWarranty      string `json:"vehicle_warranty" validate:"max=255"`
-		VehicleMake          int    `json:"vehicle_make" validate:"required"`
-		VehicleModel         int    `json:"vehicle_model" validate:"required"`
-		VehicleRegistrationNo string `json:"vehicle_registration_no" validate:"required,max=50"`
-		VehicleEngineType    int    `json:"vehicle_engine_type" validate:"required"`
-		VehiclePurchaseDate  string `json:"vehicle_purchase_date" validate:"required"`
-		VehicleColor         string `json:"vehicle_color" validate:"required,max=50"`
-		Col1                 string `json:"col1"`
-		Col2                 string `json:"col2"`
-		Col3                 string `json:"col3"`
-		VehicleInsuranceID   int    `json:"vehicle_insurance_id"`
-	}
-
-	var req Request
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
-	}
-
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	_, err := db.Pool.Exec(context.Background(), `
-		CALL update_master_vehicle($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
-	`, req.VehicleID, req.InsuranceID, req.VehicleName, req.VehicleManufactureYear, req.VehicleWarranty, 
-		req.VehicleMake, req.VehicleModel, req.VehicleRegistrationNo, req.VehicleEngineType, 
-		req.VehiclePurchaseDate, req.VehicleColor, req.Col1, req.Col2, req.Col3, req.VehicleInsuranceID)
-
-	if err != nil {
-		log.Printf("Failed to update vehicle: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update vehicle"})
-	}
-
-	return c.JSON(fiber.Map{"message": "Vehicle updated successfully"})
-}
-func DeleteMasterVehicle(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if id == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID is required"})
-	}
-
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
-	}
-	_, err = db.Pool.Exec(context.Background(), `
-		CALL delete_master_vehicle($1);
-	`, idInt)
-
-	if err != nil {
-		log.Printf("Failed to delete vehicle: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete vehicle"})
-	}
-
-	return c.JSON(fiber.Map{"message": "Vehicle deleted successfully"})
+type Vehicle struct {
+	VehicleID             int64     `json:"vehicle_id"`
+	VehicleName           string    `json:"vehicle_name"`
+	VehicleRegistrationNo string    `json:"vehicle_registration_no"`
+	VehicleYear           string    `json:"vehicle_manufacture_year"`
+	VehicleWarranty       string    `json:"vehicle_warranty"`
+	VehicleMake           int64     `json:"vehicle_make"`
+	VehicleModel          int64     `json:"vehicle_model"`
+	VehicleEngineType     int64     `json:"vehicle_engine_type"`
+	VehiclePurchaseDate   time.Time `json:"vehicle_purchase_date"`
+	VehicleColor          string    `json:"vehicle_color"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
-func GetVehicles(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_master_vehicles()")
+func GetAllVehicles(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_vehicles()")
 	if err != nil {
-		log.Printf("Failed to fetch vehicle records: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch vehicles"})
+		log.Println("Error fetching vehicles:", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch vehicles"})
 	}
 	defer rows.Close()
 
-	var vehicles []map[string]interface{}
-
+	var vehicles []Vehicle
 	for rows.Next() {
-		var vehicleID, insuranceID, vehicleMake, vehicleModel, vehicleEngineType, vehicleInsuranceID *int
-		var vehicleMakeName, vehicleModelName, vehicleEngineTypeName *string
-		var vehicleName, vehicleManufactureYear, vehicleWarranty, vehicleRegistrationNo, vehicleColor*string
-		var vehiclePurchaseDate *time.Time
-
+		var v Vehicle
 		if err := rows.Scan(
-			&vehicleID, &insuranceID, &vehicleName, &vehicleManufactureYear, &vehicleWarranty,
-			&vehicleMake, &vehicleMakeName, &vehicleModel, &vehicleModelName, &vehicleRegistrationNo,
-			&vehicleEngineType, &vehicleEngineTypeName, &vehiclePurchaseDate, &vehicleColor,
-		 &vehicleInsuranceID,
+			&v.VehicleID, &v.VehicleName, &v.VehicleRegistrationNo, &v.VehicleYear,
+			&v.VehicleWarranty, &v.VehicleMake, &v.VehicleModel, &v.VehicleEngineType,
+			&v.VehiclePurchaseDate, &v.VehicleColor, &v.CreatedAt, &v.UpdatedAt,
 		); err != nil {
-			log.Printf("Error scanning row: %v", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
+			log.Println("Error scanning row:", err)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to parse data"})
 		}
+		vehicles = append(vehicles, v)
+	}
+	return c.JSON(vehicles)
+}
 
-		vehicles = append(vehicles, map[string]interface{}{
-			"vehicle_id":              vehicleID,
-			"insurance_id":            insuranceID,
-			"vehicle_name":            vehicleName,
-			"vehicle_manufacture_year": vehicleManufactureYear,
-			"vehicle_warranty":        vehicleWarranty,
-			"vehicle_make":            vehicleMake,
-			"vehicle_make_name":       vehicleMakeName,
-			"vehicle_model":           vehicleModel,
-			"vehicle_model_name":      vehicleModelName,
-			"vehicle_registration_no": vehicleRegistrationNo,
-			"vehicle_engine_type":     vehicleEngineType,
-			"vehicle_engine_type_name": vehicleEngineTypeName,
-			"vehicle_purchase_date":   vehiclePurchaseDate,
-			"vehicle_color":           vehicleColor,
-			"vehicle_insurance_id":    vehicleInsuranceID,
-		})
+func GetVehicleByID(c *fiber.Ctx) error {
+	vehicleID := c.Params("id")
+	var v Vehicle
+
+	err := db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_vehicle_by_id($1)", vehicleID).
+		Scan(
+			&v.VehicleID, &v.VehicleName, &v.VehicleRegistrationNo, &v.VehicleYear,
+			&v.VehicleWarranty, &v.VehicleMake, &v.VehicleModel, &v.VehicleEngineType,
+			&v.VehiclePurchaseDate, &v.VehicleColor, &v.CreatedAt, &v.UpdatedAt,
+		)
+	if err != nil {
+		log.Println("Error fetching vehicle:", err)
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "Vehicle not found"})
+	}
+	return c.JSON(v)
+}
+
+func InsertVehicle(c *fiber.Ctx) error {
+	var v Vehicle
+	if err := c.BodyParser(&v); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	return c.JSON(vehicles)
+	_, err := db.Pool.Exec(
+		context.Background(),
+		"CALL admin_schema.insert_vehicle($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+		v.VehicleName, v.VehicleRegistrationNo, v.VehicleYear, v.VehicleWarranty,
+		v.VehicleMake, v.VehicleModel, v.VehicleEngineType, v.VehiclePurchaseDate, v.VehicleColor,
+	)
+	if err != nil {
+		log.Println("Error inserting vehicle:", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert vehicle"})
+	}
+
+	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "Vehicle created successfully"})
+}
+
+func UpdateVehicle(c *fiber.Ctx) error {
+	vehicleID := c.Params("id")
+	var v Vehicle
+	if err := c.BodyParser(&v); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	_, err := db.Pool.Exec(
+		context.Background(),
+		"CALL admin_schema.update_vehicle($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		vehicleID, v.VehicleName, v.VehicleRegistrationNo, v.VehicleYear, v.VehicleWarranty,
+		v.VehicleMake, v.VehicleModel, v.VehicleEngineType, v.VehiclePurchaseDate, v.VehicleColor,
+	)
+	if err != nil {
+		log.Println("Error updating vehicle:", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update vehicle"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Vehicle updated successfully"})
 }
