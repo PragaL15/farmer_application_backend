@@ -17,7 +17,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getStates", Masterhandlers.GetStates)
 	app.Get("/getVehicles", Masterhandlers.GetVehicles)
 	app.Get("/getViolations", Masterhandlers.GetViolations)
-	app.Get("/getBusinesses", Masterhandlers.GetBusinesses)
+	app.Get("/getBusinesses", Masterhandlers.GetAllBusinesses)
 	app.Get("/getDriverViolation", handlers.GetDriverViolations)
 	app.Get("/getOrderStatus", Masterhandlers.GetOrderStatuses)
 	app.Get("/getBusinessTypes", Masterhandlers.GetBusinessTypes)
@@ -28,8 +28,12 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
 	app.Get("/getDailyPriceDetails", handlers.GetDailyPriceUpdates)
 	app.Get("/getPaymentMode", handlers.GetPaymentModes)
-
+	app.Get("/getBusinessCategory", Masterhandlers.GetBusinessCategories)
+	app.Get("/getBusinessBranches", Masterhandlers.GetAllBusinessBranches)
+  
 	app.Get("/products/:id", Masterhandlers.GetProductByID)
+	app.Get("/getBusinesses/:id", Masterhandlers.GetBusinessByID)
+	app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
   app.Get("/categories/:category_id", Masterhandlers.GetCategoryByID)
   app.Get("/allOrderDetails/:id", handlers.GetOrderDetailsByOrderID)
   app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
@@ -38,6 +42,7 @@ func RegisterRoutes(app *fiber.App) {
   app.Get("/getPaymentTypeById/:id", Masterhandlers.GetPaymentTypeByID)
   app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
   app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
+  app.Get("/getDriverById/:id", Masterhandlers.GetBusinessBranchByID)
 
 	// POST Routes
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
@@ -56,6 +61,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/paymentModes", handlers.InsertPaymentMode)
 	app.Post("/businessTypeDetails", Masterhandlers.InsertBusinessType)
 	app.Post("/listPaymentsDetails", Masterhandlers.InsertListPaymentMethod)
+	app.Post("/InsertBusinessCategory", Masterhandlers.InsertBusinessCategory)
+	app.Post("/business-branches", Masterhandlers.InsertBusinessBranch)
 
 	// PUT Routes (Updating)
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
@@ -75,4 +82,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/paymentModeUpdate", handlers.UpdatePaymentMode)
 	app.Put("/businessTypeUpdate", Masterhandlers.UpdateBusinessType)
 	app.Put("/listPaymentUpdate", Masterhandlers.UpdateListPaymentMethod)
+	app.Put("/businessCategoryUpdate", Masterhandlers.UpdateBusinessCategory)
+	app.Put("/branch/:id", Masterhandlers.UpdateBusinessBranch)
+
 }
+
