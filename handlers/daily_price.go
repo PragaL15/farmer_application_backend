@@ -95,7 +95,6 @@ func InsertPriceHandler(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Price inserted successfully"})
 }
 
-// UpdatePriceHandler updates the price of a product.
 func UpdatePriceHandler(c *fiber.Ctx) error {
 	var req PriceData
 	if err := c.BodyParser(&req); err != nil {
