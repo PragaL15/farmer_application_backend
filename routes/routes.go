@@ -78,6 +78,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/InsertDailyPrice", handlers.InsertPriceHandler)
 	app.Post("/PostProductCategoryRegional", Masterhandlers.InsertProductCategoryRegionalName)
 
+	
 	// PUT Routes (Updating)
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
 	app.Put("/categoryUpdate", Masterhandlers.UpdateCategory)
