@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v4"
