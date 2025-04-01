@@ -27,7 +27,6 @@ type Order struct {
 	FinalAmount          float64 `json:"final_amount"`
 }
 
-// Insert Order Handler
 func InsertOrderHandler(c *fiber.Ctx) error {
 	var req Order
 	if err := c.BodyParser(&req); err != nil {
@@ -51,7 +50,6 @@ func InsertOrderHandler(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Order created successfully", "order_id": orderID})
 }
 
-// Get Order Handler
 func GetOrderHandler(c *fiber.Ctx) error {
 	orderID := c.Query("order_id")
 
