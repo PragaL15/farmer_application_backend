@@ -50,7 +50,7 @@ func RegisterRoutes(app *fiber.App) {
   app.Get("/getPaymentTypeById/:id", Masterhandlers.GetCashPaymentByID)
   app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
   app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
-  app.Get("/getDriverById/:id", Masterhandlers.GetBusinessBranchByID)
+  app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
 	app.Get("/getBusinessUser/:id", Masterhandlers.GetBusinessUserByID) 
 	app.Get("/getProductCategoryRegional/:id", Masterhandlers.GetProductCategoryRegionalNameByID) 
 
