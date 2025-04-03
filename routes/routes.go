@@ -25,9 +25,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessTypes", Masterhandlers.GetBusinessTypes)
 	app.Get("/getModeOfPayments", Masterhandlers.GetPaymentModes)
 	app.Get("/getListPaymentMethod", Masterhandlers.GetAllCashPaymentsType)
-	app.Get("/getCompleteOrderDetails", handlers.GetOrderDetails)
 	app.Get("/getOrderHistoryDetails", handlers.GetOrderHistory)
-	app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
+	//app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
 	app.Get("/getDailyPriceDetails", handlers.GetPriceHandler)
 	app.Get("/getPaymentMode", Masterhandlers.GetPaymentModes)
 	app.Get("/getBusinessCategory", Masterhandlers.GetBusinessCategories)
@@ -44,7 +43,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
   app.Get("/getCategories/:category_id", Masterhandlers.GetCategoryByID)
   app.Get("/getStates/:state_id", Masterhandlers.GetStateByID)
-  app.Get("/allOrderDetails/:id", handlers.GetOrderDetailsByOrderID)
   app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
   app.Get("/getPaymentModeById/:id", Masterhandlers.GetPaymentModeByID)
   app.Get("/getOrderStatusById/:id", Masterhandlers.GetOrderStatusByID)
@@ -77,6 +75,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/InsertBusinessCategory", Masterhandlers.InsertBusinessCategory)
 	app.Post("/business-branches", Masterhandlers.InsertBusinessBranch)
 	app.Post("/InsertDailyPrice", handlers.InsertPriceHandler)
+	app.Post("/InsertInvoiceDetails", handlers.InsertInvoiceDetails)
 	app.Post("/PostProductCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
 
 	

@@ -2,95 +2,54 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-type Invoice struct {
-	ID                    int       `json:"id"`
-	InvoiceNumber         string    `json:"invoice_number"`
-	OrderID               int       `json:"order_id"`
-	TotalAmount           float64   `json:"total_amount"`
-	RetailerID            int       `json:"retailer_id"`
-	RetailerName          string    `json:"retailer_name"`
-	RetailerEmail         string    `json:"retailer_email"`
-	RetailerPhone         string    `json:"retailer_phone"`
-	RetailerAddress       string    `json:"retailer_address"`
-	RetailerLocationID    int       `json:"retailer_location_id"`
-	RetailerStateID       int       `json:"retailer_state_id"`
-	RetailerStateName     string    `json:"retailer_state_name"`
-	RetailerLocationName  string    `json:"retailer_location_name"`
-	WholesellerID         int       `json:"wholeseller_id"`
-	WholesellerName       string    `json:"wholeseller_name"`
-	WholesellerEmail      string    `json:"wholeseller_email"`
-	WholesellerPhone      string    `json:"wholeseller_phone"`
-	WholesellerAddress    string    `json:"wholeseller_address"`
-	WholesellerLocationID int       `json:"wholeseller_location_id"`
-	WholesellerStateID    int       `json:"wholeseller_state_id"`
-	WholesellerStateName  string    `json:"wholeseller_state_name"`
-	WholesellerLocationName string  `json:"wholeseller_location_name"`
-	DiscountAmount        float64   `json:"discount_amount"`
-	InvoiceDate           string    `json:"invoice_date"`
-	DueDate               string    `json:"due_date"`
-	PayMode               int       `json:"pay_mode"`
-	PayModeName           string    `json:"pay_mode_name"`
-	PayType               int       `json:"pay_type"`
-	PayTypeName           string    `json:"pay_type_name"`
-	FinalAmount           float64   `json:"final_amount"`
-	StatusName            string    `json:"status_name"`
-	Products              []Product `json:"products"`
+
+// InvoiceRequest represents the request payload
+type InvoiceRequest struct {
+	OrderID              int     `json:"order_id"`
+	WholesellerID        int     `json:"wholeseller_id"`
+	TotalAmount         float64 `json:"total_amount"`
+	DiscountAmount      float64 `json:"discount_amount,omitempty"`
+	TaxAmount           float64 `json:"tax_amount,omitempty"`
+	ProposedDeliveryDate string  `json:"proposed_delivery_date,omitempty"`
+	Notes               string  `json:"notes,omitempty"`
+	DecisionNotes       string  `json:"decision_notes,omitempty"`
+	InvoiceNumber       string  `json:"invoice_number,omitempty"`
 }
-type Product struct {
-	OrderItemID int    `json:"order_item_id"`
-	ProductID   int    `json:"product_id"`
-	ProductName string `json:"product_name"`
-}
-func GetInvoiceDetails(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_invoice_details_with_business_info();")
+
+// CreateInvoice handles invoice creation or updating
+func InsertInvoiceDetails(c *fiber.Ctx) error {
+	// Parse request body
+	var req InvoiceRequest
+	if err := c.BodyParser(&req); err != nil {
+		log.Printf("Invalid request payload: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
+	}
+
+	// Execute the function
+	var jsonResponse string
+	err := db.Pool.QueryRow(context.Background(),
+		`SELECT business_schema.create_and_send_invoice($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		req.OrderID, req.WholesellerID, req.TotalAmount, req.DiscountAmount, req.TaxAmount,
+		req.ProposedDeliveryDate, req.Notes, req.DecisionNotes, req.InvoiceNumber,
+	).Scan(&jsonResponse)
+
 	if err != nil {
-		log.Printf("Failed to fetch invoice details: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch invoice details"})
+		log.Printf("Database error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create or update invoice"})
 	}
-	defer rows.Close()
-	var invoices []Invoice
-	for rows.Next() {
-		var invoice Invoice
-		var product Product
-		var invoiceDate, dueDate time.Time
-		err := rows.Scan(
-			&invoice.ID, &invoice.InvoiceNumber, &invoice.OrderID, 
-			&invoice.RetailerID, &invoice.RetailerName, &invoice.RetailerEmail, 
-			&invoice.RetailerPhone, &invoice.RetailerAddress, &invoice.RetailerLocationID, 
-			&invoice.RetailerStateID, &invoice.WholesellerID, &invoice.WholesellerName, 
-			&invoice.WholesellerEmail, &invoice.WholesellerPhone, &invoice.WholesellerAddress, 
-			&invoice.WholesellerLocationID, &invoice.WholesellerStateID, 
-			&invoice.TotalAmount, &invoice.DiscountAmount, &invoiceDate, 
-			&dueDate, &invoice.PayMode, &invoice.PayModeName, 
-			&invoice.PayType, &invoice.PayTypeName, &invoice.FinalAmount, 
-			&product.OrderItemID, &product.ProductID, &product.ProductName, 
-			&invoice.StatusName, &invoice.WholesellerStateName, &invoice.RetailerStateName, 
-			&invoice.WholesellerLocationName, &invoice.RetailerLocationName,
-		)
-		if err != nil {
-			log.Printf("Error scanning row: %v", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
-		}
-		invoice.InvoiceDate = invoiceDate.Format(time.RFC3339)
-		invoice.DueDate = dueDate.Format("2006-01-02")
-		found := false
-		for i := range invoices {
-			if invoices[i].ID == invoice.ID {
-				invoices[i].Products = append(invoices[i].Products, product)
-				found = true
-				break
-			}
-		}
-		if !found {
-			invoice.Products = []Product{product}
-			invoices = append(invoices, invoice)
-		}
+
+	// Parse JSON response from function
+	var response map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonResponse), &response); err != nil {
+		log.Printf("JSON parse error: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing response"})
 	}
-	return c.JSON(invoices)
+
+	return c.JSON(response)
 }
