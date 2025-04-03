@@ -52,7 +52,7 @@ func RegisterRoutes(app *fiber.App) {
   app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
 	app.Get("/getBusinessUser/:id", Masterhandlers.GetBusinessUserByID) 
 	app.Get("/getProductCategoryRegional/:id", Masterhandlers.GetProductCategoryRegionalByID) 
-
+  app.Get("/invoice/:invoice_id", handlers.GetInvoiceDetails)
 
 	// POST Routes
 	app.Post("/user-bank-details", handlers.InsertUserBankDetail)
