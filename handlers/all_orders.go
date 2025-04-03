@@ -137,7 +137,6 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 			})
 	}
 
-	// Define our response structure
 	type ProductDetail struct {
 			ProductID    int64   `json:"product_id"`
 			ProductName string  `json:"product_name"`
@@ -164,7 +163,6 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 			Products          []ProductDetail `json:"products"`
 	}
 
-	// First get the basic order information
 	var order struct {
 			OrderID             int64
 			DateOfOrder        time.Time
