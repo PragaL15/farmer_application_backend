@@ -22,16 +22,13 @@ type InvoiceRequest struct {
 	InvoiceNumber       string  `json:"invoice_number,omitempty"`
 }
 
-// CreateInvoice handles invoice creation or updating
 func InsertInvoiceDetails(c *fiber.Ctx) error {
-	// Parse request body
 	var req InvoiceRequest
 	if err := c.BodyParser(&req); err != nil {
 		log.Printf("Invalid request payload: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload"})
 	}
 
-	// Execute the function
 	var jsonResponse string
 	err := db.Pool.QueryRow(context.Background(),
 		`SELECT business_schema.create_and_send_invoice($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -44,7 +41,6 @@ func InsertInvoiceDetails(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create or update invoice"})
 	}
 
-	// Parse JSON response from function
 	var response map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonResponse), &response); err != nil {
 		log.Printf("JSON parse error: %v", err)

@@ -186,17 +186,20 @@ ALTER FUNCTION admin_schema.get_all_cash_payments() OWNER TO postgres;
 -- Name: get_all_category_regional_names(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_all_category_regional_names() RETURNS TABLE(category_regional_id integer, language_id integer, category_id integer, category_regional_name character varying)
+CREATE FUNCTION admin_schema.get_all_category_regional_names() RETURNS TABLE(category_regional_id integer, category_regional_name character varying, language_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
     SELECT 
         crn.category_regional_id, 
-        crn.language_id, 
-        crn.category_id, 
-        crn.category_regional_name
-    FROM admin_schema.category_regional_name AS crn;
+        crn.category_regional_name, 
+        ml.language_name
+    FROM 
+        admin_schema.category_regional_name crn
+    JOIN 
+        admin_schema.master_language ml 
+        ON crn.language_id = ml.id;
 END;
 $$;
 
@@ -534,19 +537,24 @@ ALTER FUNCTION admin_schema.get_cash_payment_by_id(p_id integer) OWNER TO postgr
 -- Name: get_category_regional_name_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_category_regional_name_by_id(p_id integer) RETURNS TABLE(category_regional_id integer, language_id integer, category_id integer, category_regional_name character varying)
+CREATE FUNCTION admin_schema.get_category_regional_name_by_id(p_category_regional_id integer) RETURNS TABLE(category_regional_id integer, language_id integer, category_regional_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT category_regional_id, language_id, category_id, category_regional_name
-    FROM admin_schema.category_regional_name
-    WHERE category_regional_id = p_id;
+    SELECT 
+        crn.category_regional_id, 
+        crn.language_id, 
+        crn.category_regional_name
+    FROM 
+        admin_schema.category_regional_name crn
+    WHERE 
+        crn.category_regional_id = p_category_regional_id;
 END;
 $$;
 
 
-ALTER FUNCTION admin_schema.get_category_regional_name_by_id(p_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.get_category_regional_name_by_id(p_category_regional_id integer) OWNER TO postgres;
 
 --
 -- Name: get_city_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -889,20 +897,25 @@ $$;
 ALTER FUNCTION admin_schema.insert_cash_payment(p_payment_type character varying) OWNER TO postgres;
 
 --
--- Name: insert_category_regional_name(integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: insert_category_regional_name(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.insert_category_regional_name(p_language_id integer, p_category_id integer, p_category_regional_name character varying) RETURNS void
+CREATE FUNCTION admin_schema.insert_category_regional_name(p_language_id integer, p_category_regional_name character varying) RETURNS integer
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    new_id INTEGER;
 BEGIN
-    INSERT INTO admin_schema.category_regional_name (language_id, category_id, category_regional_name)
-    VALUES (p_language_id, p_category_id, p_category_regional_name);
+    INSERT INTO admin_schema.category_regional_name (language_id, category_regional_name)
+    VALUES (p_language_id, p_category_regional_name)
+    RETURNING category_regional_id INTO new_id;
+
+    RETURN new_id;
 END;
 $$;
 
 
-ALTER FUNCTION admin_schema.insert_category_regional_name(p_language_id integer, p_category_id integer, p_category_regional_name character varying) OWNER TO postgres;
+ALTER FUNCTION admin_schema.insert_category_regional_name(p_language_id integer, p_category_regional_name character varying) OWNER TO postgres;
 
 --
 -- Name: insert_city(character varying, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -1247,6 +1260,48 @@ $$;
 ALTER FUNCTION admin_schema.update_cash_payment(p_id integer, p_payment_type character varying) OWNER TO postgres;
 
 --
+-- Name: update_category_regional_name(integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_category_regional_name(p_category_regional_id integer, p_language_id integer, p_category_regional_name character varying) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    category_exists BOOLEAN;
+    language_exists BOOLEAN;
+BEGIN
+    -- Check if the category_regional_id exists
+    SELECT EXISTS (SELECT 1 FROM admin_schema.category_regional_name WHERE category_regional_id = p_category_regional_id)
+    INTO category_exists;
+
+    -- Check if the language_id exists
+    SELECT EXISTS (SELECT 1 FROM admin_schema.master_language WHERE id = p_language_id)
+    INTO language_exists;
+
+    -- If category_regional_id does not exist
+    IF NOT category_exists THEN
+        RETURN 'Error: category_regional_id does not exist';
+    END IF;
+
+    -- If language_id does not exist
+    IF NOT language_exists THEN
+        RETURN 'Error: language_id does not exist';
+    END IF;
+
+    -- Update the category regional name
+    UPDATE admin_schema.category_regional_name
+    SET language_id = p_language_id,
+        category_regional_name = p_category_regional_name
+    WHERE category_regional_id = p_category_regional_id;
+
+    RETURN 'Update successful';
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_category_regional_name(p_category_regional_id integer, p_language_id integer, p_category_regional_name character varying) OWNER TO postgres;
+
+--
 -- Name: update_category_regional_name(integer, integer, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -1559,6 +1614,559 @@ $$;
 ALTER FUNCTION admin_schema.upsert_business_branch(p_b_branch_id integer, p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying) OWNER TO postgres;
 
 --
+-- Name: create_and_send_invoice(bigint, integer, numeric, numeric, numeric, date, text, text, character varying); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_total_amount numeric, p_discount_amount numeric DEFAULT 0, p_tax_amount numeric DEFAULT NULL::numeric, p_proposed_delivery_date date DEFAULT NULL::date, p_notes text DEFAULT NULL::text, p_decision_notes text DEFAULT NULL::text, p_invoice_number character varying DEFAULT NULL::character varying) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_invoice_id INTEGER;
+    v_retailer_id INTEGER;
+    v_existing_invoice_number VARCHAR(50);
+BEGIN
+    -- Check if an invoice already exists for the order_id + wholeseller_id
+    SELECT invoice_number INTO v_existing_invoice_number
+    FROM business_schema.invoice_table
+    WHERE order_id = p_order_id AND wholeseller_id = p_wholeseller_id;
+    
+    -- If invoice exists, update instead of insert
+    IF v_existing_invoice_number IS NOT NULL THEN
+        UPDATE business_schema.invoice_table
+        SET total_amount = p_total_amount,
+            discount_amount = p_discount_amount,
+            tax_amount = p_tax_amount,
+            proposed_delivery_date = p_proposed_delivery_date,
+            notes = p_notes,
+            decision_notes = p_decision_notes,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = p_order_id AND wholeseller_id = p_wholeseller_id;
+        
+        RETURN json_build_object(
+            'status', 'success',
+            'message', 'Invoice updated successfully',
+            'invoice_number', v_existing_invoice_number
+        );
+    END IF;
+
+    -- If no invoice exists, create a new one
+    INSERT INTO business_schema.invoice_table (
+        invoice_number, order_id, total_amount, discount_amount, tax_amount,
+        wholeseller_id, notes, proposed_delivery_date, decision_notes, retailer_decision_date
+    ) VALUES (
+        'INV-' || nextval('business_schema.invoice_number_seq'),
+        p_order_id, p_total_amount, p_discount_amount, p_tax_amount,
+        p_wholeseller_id, p_notes, p_proposed_delivery_date, p_decision_notes, CURRENT_TIMESTAMP
+    ) RETURNING invoice_number INTO v_existing_invoice_number;
+
+    RETURN json_build_object(
+        'status', 'success',
+        'message', 'Invoice created successfully',
+        'invoice_number', v_existing_invoice_number
+    );
+
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'Invoice number must be unique'
+        );
+    WHEN OTHERS THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'Error creating invoice: ' || SQLERRM
+        );
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_proposed_delivery_date date, p_notes text, p_decision_notes text, p_invoice_number character varying) OWNER TO postgres;
+
+--
+-- Name: create_and_send_invoice(bigint, integer, character varying, numeric, numeric, numeric, date, text, text); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_invoice_number character varying, p_total_amount numeric, p_discount_amount numeric DEFAULT 0, p_tax_amount numeric DEFAULT NULL::numeric, p_proposed_delivery_date date DEFAULT NULL::date, p_notes text DEFAULT NULL::text, p_decision_notes text DEFAULT NULL::text) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_invoice_id INTEGER;
+    v_retailer_id INTEGER;
+    v_invoice_data JSON;
+    v_notification_id INTEGER;
+    v_accepted_status INTEGER := 2; -- Default to 2 if status column exists, adjust as needed
+    v_status_column_exists BOOLEAN;
+BEGIN
+    -- Check if status column exists in wholeseller_offers
+    SELECT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_schema = 'business_schema' 
+        AND table_name = 'wholeseller_offers' 
+        AND column_name = 'status'
+    ) INTO v_status_column_exists;
+
+    -- Validate order exists and get retailer_id
+    SELECT retailer_id INTO v_retailer_id
+    FROM business_schema.order_table
+    WHERE order_id = p_order_id;
+    
+    IF v_retailer_id IS NULL THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'Order not found'
+        );
+    END IF;
+    
+    -- Dynamic wholeseller offer verification
+    IF v_status_column_exists THEN
+        -- Check with status condition if column exists
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM business_schema.wholeseller_offers
+            WHERE order_id = p_order_id 
+            AND wholeseller_id = p_wholeseller_id
+            AND status = v_accepted_status
+        ) THEN
+            RETURN json_build_object(
+                'status', 'error',
+                'message', 'No accepted offer (status=' || v_accepted_status || ') found from this wholeseller for the order'
+            );
+        END IF;
+    ELSE
+        -- Check without status condition if column doesn't exist
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM business_schema.wholeseller_offers
+            WHERE order_id = p_order_id 
+            AND wholeseller_id = p_wholeseller_id
+        ) THEN
+            RETURN json_build_object(
+                'status', 'error',
+                'message', 'No offer found from this wholeseller for the order'
+            );
+        END IF;
+    END IF;
+    
+    -- Create the invoice
+    INSERT INTO business_schema.invoice_table (
+        invoice_number,
+        order_id,
+        total_amount,
+        discount_amount,
+        tax_amount,
+        wholeseller_id,
+        retailer_id,
+        notes,
+        proposed_delivery_date,
+        decision_notes,
+        retailer_decision_date
+    ) VALUES (
+        p_invoice_number,
+        p_order_id,
+        p_total_amount,
+        p_discount_amount,
+        p_tax_amount,
+        p_wholeseller_id,
+        v_retailer_id,
+        p_notes,
+        p_proposed_delivery_date,
+        p_decision_notes,
+        CURRENT_TIMESTAMP
+    ) RETURNING id INTO v_invoice_id;
+    
+    -- Create notification for retailer (if notifications table exists)
+    BEGIN
+        INSERT INTO business_schema.notifications_table (
+            user_id,
+            user_type,
+            notification_type,
+            reference_id,
+            message,
+            status
+        ) VALUES (
+            v_retailer_id,
+            'retailer',
+            'new_invoice',
+            v_invoice_id,
+            'New invoice #' || p_invoice_number || ' received for your order',
+            1 -- unread
+        ) RETURNING id INTO v_notification_id;
+    EXCEPTION WHEN undefined_table THEN
+        v_notification_id := NULL; -- Continue if notifications table doesn't exist
+    END;
+    
+    -- Prepare response data
+    SELECT json_build_object(
+        'invoice_id', v_invoice_id,
+        'invoice_number', p_invoice_number,
+        'order_id', p_order_id,
+        'total_amount', p_total_amount,
+        'final_amount', p_total_amount - COALESCE(p_discount_amount, 0) + COALESCE(p_tax_amount, 0),
+        'wholeseller_id', p_wholeseller_id,
+        'retailer_id', v_retailer_id,
+        'proposed_delivery_date', p_proposed_delivery_date,
+        'notification_id', v_notification_id
+    ) INTO v_invoice_data;
+    
+    RETURN json_build_object(
+        'status', 'success',
+        'message', 'Invoice created and sent to retailer',
+        'data', v_invoice_data
+    );
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'Invoice number must be unique'
+        );
+    WHEN foreign_key_violation THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'Invalid reference (order, wholeseller, or retailer)'
+        );
+    WHEN OTHERS THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'Error creating invoice: ' || SQLERRM
+        );
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_invoice_number character varying, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_proposed_delivery_date date, p_notes text, p_decision_notes text) OWNER TO postgres;
+
+--
+-- Name: create_invoice_on_offer(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_invoice_on_offer() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Check if a record for this (order_id, wholeseller_id) already exists
+    IF NOT EXISTS (
+        SELECT 1 FROM business_schema.invoice_table
+        WHERE order_id = NEW.order_id AND wholeseller_id = NEW.wholeseller_id
+    ) THEN
+        INSERT INTO business_schema.invoice_table (
+            order_id, wholeseller_id, invoice_date, due_date,
+            total_amount, status
+        ) VALUES (
+            NEW.order_id, NEW.wholeseller_id, CURRENT_DATE,
+            NEW.proposed_delivery_date - INTERVAL '7 days', -- Due 1 week before delivery
+            NEW.offered_price, 1 -- Draft status
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.create_invoice_on_offer() OWNER TO postgres;
+
+--
+-- Name: create_retailer_order(integer, text, text, text, numeric, date, date, integer[], numeric[], integer[], numeric[], integer[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_retailer_order(retailer_id integer, retailer_contact text, pincode text, address text, max_price_limit numeric, desired_delivery_date date, delivery_deadline date, product_ids integer[], quantities numeric[], unit_ids integer[], max_item_prices numeric[], wholeseller_id integer[]) RETURNS TABLE(order_id integer, status text, message text)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_order_id INT;
+BEGIN
+    -- Insert into order_table and get the generated order_id
+    INSERT INTO business_schema.order_table (
+        date_of_order, order_status, actual_delivery_date,
+        retailer_id, total_order_amount, retailer_contact_mobile,
+        delivery_pincode, delivery_address, max_price_limit,
+        desired_delivery_date, delivery_deadline, created_by, updated_by, version
+    ) VALUES (
+        NOW(), 1, NULL,
+        retailer_id, 0, retailer_contact,
+        pincode, address, max_price_limit,
+        desired_delivery_date, delivery_deadline, NOW(), NOW(), 1
+    ) RETURNING business_schema.order_table.order_id INTO new_order_id;
+
+    -- Return success response
+    RETURN QUERY SELECT new_order_id, 'success', 'Order created successfully';
+EXCEPTION 
+    WHEN OTHERS THEN 
+        -- Ensure order_id is always an integer (NULL in case of failure)
+        RETURN QUERY SELECT NULL::INT, 'error', 'Order creation failed: ' || SQLERRM;
+END; $$;
+
+
+ALTER FUNCTION business_schema.create_retailer_order(retailer_id integer, retailer_contact text, pincode text, address text, max_price_limit numeric, desired_delivery_date date, delivery_deadline date, product_ids integer[], quantities numeric[], unit_ids integer[], max_item_prices numeric[], wholeseller_id integer[]) OWNER TO postgres;
+
+--
+-- Name: fetch_price_data(integer, integer, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.fetch_price_data(p_product_id integer, p_unit_id integer, p_wholeseller_id integer) RETURNS TABLE(product_id integer, price double precision, unit_id integer, wholeseller_id integer, currency text, created_at timestamp without time zone, updated_at timestamp without time zone, remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT product_id, price, unit_id, wholeseller_id, currency, created_at, updated_at, remarks
+    FROM business_schema.daily_price_update
+    WHERE product_id = p_product_id AND unit_id = p_unit_id AND wholeseller_id = p_wholeseller_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.fetch_price_data(p_product_id integer, p_unit_id integer, p_wholeseller_id integer) OWNER TO postgres;
+
+--
+-- Name: get_invoice_with_items(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_invoice_with_items(p_order_id bigint) RETURNS TABLE(invoice_number text, order_id bigint, total_amount numeric, discount_amount numeric, tax_amount numeric, final_amount numeric, wholeseller_id integer, status integer, invoice_status integer, invoice_date timestamp without time zone, due_date date, payment_date date, currency text, notes text, proposed_delivery_date date, retailer_decision_date timestamp without time zone, decision_notes text, product_id bigint, product_name text, unit_id integer, unit_name text, quantity numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT 
+        i.invoice_number::TEXT,  
+        i.order_id, 
+        i.total_amount, 
+        i.discount_amount, 
+        i.tax_amount, 
+        i.final_amount,
+        i.wholeseller_id,  -- No casting needed if it's already INTEGER
+        i.status, 
+        i.invoice_status, 
+        i.invoice_date, 
+        i.due_date, 
+        i.payment_date,
+        i.currency::TEXT,  
+        i.notes::TEXT,  
+        i.proposed_delivery_date, 
+        i.retailer_decision_date, 
+        i.decision_notes::TEXT,  
+        oi.product_id, 
+        mp.product_name::TEXT,  
+        oi.unit_id, 
+        ut.unit_name::TEXT,  
+        oi.quantity
+    FROM business_schema.invoice_table i
+    LEFT JOIN business_schema.order_item_table oi ON i.order_id = oi.order_id
+    LEFT JOIN admin_schema.master_product mp ON oi.product_id = mp.product_id
+    LEFT JOIN admin_schema.units_table ut ON oi.unit_id = ut.id  
+    WHERE i.order_id = p_order_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_invoice_with_items(p_order_id bigint) OWNER TO postgres;
+
+--
+-- Name: get_order_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_details(p_order_id bigint) RETURNS TABLE(order_id bigint, date_of_order timestamp without time zone, order_status integer, actual_delivery_date date, shop_name character varying, branch_id integer, product_name character varying, category_id integer, category_name character varying, unit_id integer, unit_name character varying, total_order_amount numeric, discount_amount numeric, tax_amount numeric, final_amount numeric, retailer_contact_mobile character varying, delivery_pincode character varying, delivery_address text, max_price_limit numeric, desired_delivery_date date, delivery_deadline date, wholeseller_offer_id bigint, cancellation_reason text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.order_id,
+        o.date_of_order,
+        o.order_status,
+        o.actual_delivery_date,
+        bb.b_shop_name AS shop_name,
+        bb.b_branch_id AS branch_id,
+        mp.product_name,
+        mp.category_id,
+        mpc.category_name,
+        oit.unit_id,
+        ut.unit_name,
+        o.total_order_amount,
+        o.discount_amount,
+        o.tax_amount,
+        o.final_amount,
+        o.retailer_contact_mobile,
+        o.delivery_pincode,
+        o.delivery_address,
+        o.max_price_limit,
+        o.desired_delivery_date,
+        o.delivery_deadline,
+        o.wholeseller_offer_id,
+        o.cancellation_reason
+    FROM 
+        business_schema.order_table o
+    JOIN 
+        admin_schema.business_branch_table bb ON o.retailer_id = bb.bid
+    JOIN 
+        business_schema.order_item_table oit ON o.order_id = oit.order_id
+    JOIN 
+        admin_schema.master_product mp ON oit.product_id = mp.product_id
+    LEFT JOIN 
+        admin_schema.master_product_category_table mpc ON mp.category_id = mpc.category_id
+    LEFT JOIN 
+        admin_schema.units_table ut ON oit.unit_id = ut.id
+    WHERE 
+        o.order_id = p_order_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_details(p_order_id bigint) OWNER TO postgres;
+
+--
+-- Name: insert_order(date, integer, date, date, integer, integer, integer, integer, text, text, numeric, numeric, numeric, numeric); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_order(p_date_of_order date, p_order_status integer, p_expected_delivery_date date, p_actual_delivery_date date, p_retailer_id integer, p_wholeseller_id integer, p_location_id integer, p_state_id integer, p_address text, p_pincode text, p_total_order_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_final_amount numeric) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_order_id BIGINT;
+BEGIN
+    INSERT INTO business_schema.order_table( 
+        date_of_order, order_status, expected_delivery_date, actual_delivery_date,
+        retailer_id, wholeseller_id, location_id, state_id, address, pincode,
+        total_order_amount, discount_amount, tax_amount, final_amount
+    ) VALUES (
+        p_date_of_order, p_order_status, p_expected_delivery_date, p_actual_delivery_date,
+        p_retailer_id, p_wholeseller_id, p_location_id, p_state_id, p_address, p_pincode,
+        p_total_order_amount, p_discount_amount, p_tax_amount, p_final_amount
+    )
+    RETURNING order_id INTO new_order_id;
+    
+    RETURN new_order_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_order(p_date_of_order date, p_order_status integer, p_expected_delivery_date date, p_actual_delivery_date date, p_retailer_id integer, p_wholeseller_id integer, p_location_id integer, p_state_id integer, p_address text, p_pincode text, p_total_order_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_final_amount numeric) OWNER TO postgres;
+
+--
+-- Name: insert_price_data(integer, double precision, integer, integer, text, timestamp without time zone, timestamp without time zone, text); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_price_data(p_product_id integer, p_price double precision, p_unit_id integer, p_wholeseller_id integer, p_currency text, p_created_at timestamp without time zone, p_updated_at timestamp without time zone, p_remarks text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO business_schema.daily_price_update 
+    (product_id, price, unit_id, wholeseller_id, currency, created_at, updated_at, remarks)
+    VALUES (p_product_id, p_price, p_unit_id, p_wholeseller_id, p_currency, p_created_at, p_updated_at, p_remarks);
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_price_data(p_product_id integer, p_price double precision, p_unit_id integer, p_wholeseller_id integer, p_currency text, p_created_at timestamp without time zone, p_updated_at timestamp without time zone, p_remarks text) OWNER TO postgres;
+
+--
+-- Name: log_order_activity(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.log_order_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- When a new order is created
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO business_schema.order_activity_log (
+            order_id, user_id, user_type, activity_type
+        ) VALUES (
+            NEW.order_id, NEW.retailer_id, 'retailer', 'order_placed'
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.log_order_activity() OWNER TO postgres;
+
+--
+-- Name: update_item_prices(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.update_item_prices() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- When an invoice is created
+    IF TG_OP = 'INSERT' THEN
+        -- Update order items with invoice prices
+        UPDATE business_schema.order_item_table oi
+        SET 
+            wholeseller_price = id.unit_price,
+            agreed_quantity = id.quantity
+        FROM business_schema.invoice_details_table id
+        WHERE id.invoice_id = NEW.id
+        AND oi.order_item_id = id.order_item_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.update_item_prices() OWNER TO postgres;
+
+--
+-- Name: update_order_on_acceptance(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.update_order_on_acceptance() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- When an invoice is marked as accepted (status=2)
+    IF NEW.status = 2 THEN
+        -- Update the order table
+        UPDATE business_schema.order_table
+        SET 
+            wholeseller_id = NEW.wholeseller_id,
+            order_phase = 3, -- Confirmed
+            final_amount = NEW.total_amount,
+            updated_by = CURRENT_TIMESTAMP
+        WHERE order_id = NEW.order_id;
+        
+        -- Reject all other invoices for this order
+        UPDATE business_schema.invoice_table
+        SET status = 3 -- Rejected
+        WHERE order_id = NEW.order_id AND id != NEW.id;
+        
+        -- Log the activity
+        INSERT INTO business_schema.order_activity_log (
+            order_id, user_id, user_type, activity_type, notes
+        ) VALUES (
+            NEW.order_id, 
+            (SELECT retailer_id FROM business_schema.order_table WHERE order_id = NEW.order_id),
+            'retailer', 
+            'invoice_accepted',
+            'Accepted invoice ' || NEW.invoice_number || ' from Wholeseller ' || NEW.wholeseller_id
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.update_order_on_acceptance() OWNER TO postgres;
+
+--
+-- Name: update_price_data(double precision, text, timestamp without time zone, text, integer, integer, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.update_price_data(p_price double precision, p_currency text, p_updated_at timestamp without time zone, p_remarks text, p_product_id integer, p_unit_id integer, p_wholeseller_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE business_schema.daily_price_update
+    SET price = p_price, currency = p_currency, updated_at = p_updated_at, remarks = p_remarks
+    WHERE product_id = p_product_id AND unit_id = p_unit_id AND wholeseller_id = p_wholeseller_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.update_price_data(p_price double precision, p_currency text, p_updated_at timestamp without time zone, p_remarks text, p_product_id integer, p_unit_id integer, p_wholeseller_id integer) OWNER TO postgres;
+
+--
 -- Name: get_business_by_id(bigint); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1805,7 +2413,8 @@ CREATE TABLE admin_schema.business_table (
     created_at timestamp with time zone,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     b_category_id integer,
-    b_type_id integer
+    b_type_id integer,
+    is_active boolean DEFAULT true
 );
 
 
@@ -1864,16 +2473,16 @@ CREATE TABLE admin_schema.business_user_table (
 ALTER TABLE admin_schema.business_user_table OWNER TO admin;
 
 --
--- Name: cash_payment_list; Type: TABLE; Schema: admin_schema; Owner: admin
+-- Name: payment_type_list; Type: TABLE; Schema: admin_schema; Owner: admin
 --
 
-CREATE TABLE admin_schema.cash_payment_list (
+CREATE TABLE admin_schema.payment_type_list (
     id integer NOT NULL,
     payment_type character varying(50) NOT NULL
 );
 
 
-ALTER TABLE admin_schema.cash_payment_list OWNER TO admin;
+ALTER TABLE admin_schema.payment_type_list OWNER TO admin;
 
 --
 -- Name: cash_payment_list_id_seq; Type: SEQUENCE; Schema: admin_schema; Owner: admin
@@ -1894,7 +2503,7 @@ ALTER SEQUENCE admin_schema.cash_payment_list_id_seq OWNER TO admin;
 -- Name: cash_payment_list_id_seq; Type: SEQUENCE OWNED BY; Schema: admin_schema; Owner: admin
 --
 
-ALTER SEQUENCE admin_schema.cash_payment_list_id_seq OWNED BY admin_schema.cash_payment_list.id;
+ALTER SEQUENCE admin_schema.cash_payment_list_id_seq OWNED BY admin_schema.payment_type_list.id;
 
 
 --
@@ -1904,7 +2513,6 @@ ALTER SEQUENCE admin_schema.cash_payment_list_id_seq OWNED BY admin_schema.cash_
 CREATE TABLE admin_schema.category_regional_name (
     category_regional_id integer NOT NULL,
     language_id integer NOT NULL,
-    category_id integer NOT NULL,
     category_regional_name character varying(100) NOT NULL
 );
 
@@ -2827,7 +3435,12 @@ CREATE TABLE business_schema.invoice_details_table (
     quantity numeric(10,2) NOT NULL,
     retailer_approval_status integer DEFAULT 0,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    unit_price numeric(10,2),
+    original_price numeric(10,2),
+    negotiated_price numeric(10,2),
+    is_approved boolean DEFAULT false,
+    rejection_reason text
 );
 
 
@@ -2867,16 +3480,44 @@ CREATE TABLE business_schema.invoice_table (
     discount_amount numeric(10,2) DEFAULT 0,
     invoice_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     due_date date,
-    pay_mode integer,
-    pay_type integer,
     tax_amount numeric(10,2),
     payment_date date,
     currency character varying(10) DEFAULT 'INR'::character varying,
-    final_amount numeric(10,2) GENERATED ALWAYS AS (((total_amount - discount_amount) + tax_amount)) STORED
+    final_amount numeric(10,2) GENERATED ALWAYS AS (((total_amount - discount_amount) + tax_amount)) STORED,
+    wholeseller_id integer,
+    status integer DEFAULT 1,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    retailer_id integer,
+    invoice_status integer DEFAULT 1,
+    notes text,
+    proposed_delivery_date date,
+    retailer_decision_date timestamp without time zone,
+    decision_notes text
 );
 
 
 ALTER TABLE business_schema.invoice_table OWNER TO postgres;
+
+--
+-- Name: invoice_number_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.invoice_number_seq
+    START WITH 10
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.invoice_number_seq OWNER TO postgres;
+
+--
+-- Name: invoice_number_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.invoice_number_seq OWNED BY business_schema.invoice_table.invoice_number;
+
 
 --
 -- Name: invoice_table_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
@@ -2936,6 +3577,48 @@ ALTER SEQUENCE business_schema.mode_of_payment_id_seq OWNED BY business_schema.m
 
 
 --
+-- Name: order_activity_log; Type: TABLE; Schema: business_schema; Owner: postgres
+--
+
+CREATE TABLE business_schema.order_activity_log (
+    log_id bigint NOT NULL,
+    order_id bigint NOT NULL,
+    user_id integer NOT NULL,
+    user_type character varying(10) NOT NULL,
+    activity_type character varying(50) NOT NULL,
+    activity_timestamp timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    old_value jsonb,
+    new_value jsonb,
+    notes text,
+    ip_address inet,
+    created_at timestamp without time zone
+);
+
+
+ALTER TABLE business_schema.order_activity_log OWNER TO postgres;
+
+--
+-- Name: order_activity_log_log_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.order_activity_log_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.order_activity_log_log_id_seq OWNER TO postgres;
+
+--
+-- Name: order_activity_log_log_id_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.order_activity_log_log_id_seq OWNED BY business_schema.order_activity_log.log_id;
+
+
+--
 -- Name: order_history_table; Type: TABLE; Schema: business_schema; Owner: postgres
 --
 
@@ -2991,7 +3674,12 @@ CREATE TABLE business_schema.order_item_table (
     quantity numeric(10,2),
     unit_id integer,
     discount_amount numeric(10,2),
-    tax_amount numeric(10,2)
+    tax_amount numeric(10,2),
+    max_item_price numeric(10,2) DEFAULT 0.00 NOT NULL,
+    wholeseller_price numeric(10,2),
+    agreed_quantity numeric(10,2),
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
 );
 
 
@@ -3026,20 +3714,25 @@ CREATE TABLE business_schema.order_table (
     order_id bigint NOT NULL,
     date_of_order timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     order_status integer,
-    expected_delivery_date date,
     actual_delivery_date date,
     retailer_id integer,
-    wholeseller_id integer,
-    location_id integer,
-    state_id integer,
-    pincode character varying(6),
-    address character varying(200),
+    wholeseller_id integer[] DEFAULT '{}'::integer[],
     total_order_amount numeric(10,2) DEFAULT 0,
     discount_amount numeric(10,2),
     tax_amount numeric(10,2),
     final_amount numeric(10,2),
     created_by timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_by timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_by timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    retailer_contact_mobile character varying(15) NOT NULL,
+    delivery_pincode character varying(10) NOT NULL,
+    delivery_address text NOT NULL,
+    max_price_limit numeric(10,2) NOT NULL,
+    desired_delivery_date date NOT NULL,
+    delivery_deadline date NOT NULL,
+    wholeseller_offer_id bigint,
+    cancellation_reason text,
+    version integer DEFAULT 1,
+    CONSTRAINT chk_delivery_dates CHECK ((delivery_deadline >= desired_delivery_date))
 );
 
 
@@ -3154,6 +3847,46 @@ ALTER SEQUENCE business_schema.warehouse_list_warehouse_id_seq OWNER TO postgres
 --
 
 ALTER SEQUENCE business_schema.warehouse_list_warehouse_id_seq OWNED BY business_schema.warehouse_list.warehouse_id;
+
+
+--
+-- Name: wholeseller_offers; Type: TABLE; Schema: business_schema; Owner: postgres
+--
+
+CREATE TABLE business_schema.wholeseller_offers (
+    offer_id bigint NOT NULL,
+    order_id bigint NOT NULL,
+    wholeseller_id integer NOT NULL,
+    offered_price numeric(10,2) NOT NULL,
+    proposed_delivery_date date NOT NULL,
+    offer_status integer DEFAULT 1 NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    rejection_reason text
+);
+
+
+ALTER TABLE business_schema.wholeseller_offers OWNER TO postgres;
+
+--
+-- Name: wholeseller_offers_offer_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.wholeseller_offers_offer_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.wholeseller_offers_offer_id_seq OWNER TO postgres;
+
+--
+-- Name: wholeseller_offers_offer_id_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.wholeseller_offers_offer_id_seq OWNED BY business_schema.wholeseller_offers.offer_id;
 
 
 --
@@ -3683,13 +4416,6 @@ ALTER TABLE ONLY admin_schema.business_type_table ALTER COLUMN type_id SET DEFAU
 
 
 --
--- Name: cash_payment_list id; Type: DEFAULT; Schema: admin_schema; Owner: admin
---
-
-ALTER TABLE ONLY admin_schema.cash_payment_list ALTER COLUMN id SET DEFAULT nextval('admin_schema.cash_payment_list_id_seq'::regclass);
-
-
---
 -- Name: category_regional_name category_regional_id; Type: DEFAULT; Schema: admin_schema; Owner: postgres
 --
 
@@ -3788,6 +4514,13 @@ ALTER TABLE ONLY admin_schema.order_status_table ALTER COLUMN order_status_id SE
 
 
 --
+-- Name: payment_type_list id; Type: DEFAULT; Schema: admin_schema; Owner: admin
+--
+
+ALTER TABLE ONLY admin_schema.payment_type_list ALTER COLUMN id SET DEFAULT nextval('admin_schema.cash_payment_list_id_seq'::regclass);
+
+
+--
 -- Name: permission_audit_log log_id; Type: DEFAULT; Schema: admin_schema; Owner: admin
 --
 
@@ -3879,6 +4612,13 @@ ALTER TABLE ONLY business_schema.mode_of_payment ALTER COLUMN id SET DEFAULT nex
 
 
 --
+-- Name: order_activity_log log_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.order_activity_log ALTER COLUMN log_id SET DEFAULT nextval('business_schema.order_activity_log_log_id_seq'::regclass);
+
+
+--
 -- Name: order_history_table history_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
 --
 
@@ -3911,6 +4651,13 @@ ALTER TABLE ONLY business_schema.stock_table ALTER COLUMN stock_id SET DEFAULT n
 --
 
 ALTER TABLE ONLY business_schema.warehouse_list ALTER COLUMN warehouse_id SET DEFAULT nextval('business_schema.warehouse_list_warehouse_id_seq'::regclass);
+
+
+--
+-- Name: wholeseller_offers offer_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_offers ALTER COLUMN offer_id SET DEFAULT nextval('business_schema.wholeseller_offers_offer_id_seq'::regclass);
 
 
 --
@@ -4007,12 +4754,12 @@ INSERT INTO admin_schema.business_branch_table VALUES (4, 104, 'JohnShop', 1, 1,
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (5, 'FreshMarket', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (6, 'TradeHub', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (12, 'SuperMart', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (101, 'John Doe', 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (103, 'John Doe', 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (104, 'John Doe', 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (5, 'FreshMarket', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (6, 'TradeHub', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (12, 'SuperMart', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (101, 'John Doe', 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (103, 'John Doe', 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (104, 'John Doe', 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', NULL, NULL, true);
 
 
 --
@@ -4032,20 +4779,11 @@ INSERT INTO admin_schema.business_user_table VALUES (104, 'JohnShop', '987654321
 
 
 --
--- Data for Name: cash_payment_list; Type: TABLE DATA; Schema: admin_schema; Owner: admin
---
-
-INSERT INTO admin_schema.cash_payment_list VALUES (1, 'Online Banking');
-INSERT INTO admin_schema.cash_payment_list VALUES (2, 'UPI Payment');
-INSERT INTO admin_schema.cash_payment_list VALUES (3, 'Mobile Wallets');
-INSERT INTO admin_schema.cash_payment_list VALUES (4, 'Credit/Debit Cards');
-INSERT INTO admin_schema.cash_payment_list VALUES (5, 'Credit/Pay after delivery');
-
-
---
 -- Data for Name: category_regional_name; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
+INSERT INTO admin_schema.category_regional_name VALUES (3, 2, 'Test Name');
+INSERT INTO admin_schema.category_regional_name VALUES (2, 2, 'नया नाम');
 
 
 --
@@ -4071,6 +4809,8 @@ INSERT INTO admin_schema.master_driver_table VALUES (2, 'John Updated', 'DL12345
 -- Data for Name: master_language; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
+INSERT INTO admin_schema.master_language VALUES (1, 'Hindi');
+INSERT INTO admin_schema.master_language VALUES (2, 'Tamil');
 
 
 --
@@ -4156,6 +4896,17 @@ INSERT INTO admin_schema.order_status_table VALUES (6, 'Cancellation');
 INSERT INTO admin_schema.order_status_table VALUES (7, 'Returned');
 INSERT INTO admin_schema.order_status_table VALUES (8, 'Processing');
 INSERT INTO admin_schema.order_status_table VALUES (9, 'return');
+
+
+--
+-- Data for Name: payment_type_list; Type: TABLE DATA; Schema: admin_schema; Owner: admin
+--
+
+INSERT INTO admin_schema.payment_type_list VALUES (1, 'Online Banking');
+INSERT INTO admin_schema.payment_type_list VALUES (2, 'UPI Payment');
+INSERT INTO admin_schema.payment_type_list VALUES (3, 'Mobile Wallets');
+INSERT INTO admin_schema.payment_type_list VALUES (4, 'Credit/Debit Cards');
+INSERT INTO admin_schema.payment_type_list VALUES (5, 'Credit/Pay after delivery');
 
 
 --
@@ -4254,15 +5005,21 @@ INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '
 -- Data for Name: invoice_details_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.invoice_details_table VALUES (1, 2, 6, 5.00, 0, '2025-03-25 23:01:40.615709', '2025-03-25 23:01:40.615709');
+INSERT INTO business_schema.invoice_details_table VALUES (1, 2, 6, 5.00, 0, '2025-03-25 23:01:40.615709', '2025-03-25 23:01:40.615709', NULL, NULL, NULL, false, NULL);
+INSERT INTO business_schema.invoice_details_table VALUES (3, 5, 14, 0.00, 1, '2025-04-02 06:55:28.383207', '2025-04-02 06:55:28.383207', NULL, NULL, NULL, false, NULL);
+INSERT INTO business_schema.invoice_details_table VALUES (4, 5, 15, 0.00, 1, '2025-04-02 06:55:28.383207', '2025-04-02 06:55:28.383207', NULL, NULL, NULL, false, NULL);
 
 
 --
 -- Data for Name: invoice_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.invoice_table VALUES (2, 'INV-20250224-0001', 1, 590.00, 500.00, '2025-02-24 18:25:44.460827', '2025-03-01', 2, 4, NULL, NULL, 'INR', DEFAULT);
-INSERT INTO business_schema.invoice_table VALUES (3, 'INV-20250225-00003', 3, 1500.00, 100.00, '2025-02-25 14:14:21.29295', '2025-03-02', 1, 2, NULL, NULL, 'INR', DEFAULT);
+INSERT INTO business_schema.invoice_table VALUES (2, 'INV-20250224-0001', 1, 590.00, 500.00, '2025-02-24 18:25:44.460827', '2025-03-01', NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-02 07:17:54.19438', NULL, 1, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.invoice_table VALUES (3, 'INV-20250225-00003', 3, 1500.00, 100.00, '2025-02-25 14:14:21.29295', '2025-03-02', NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-02 07:17:54.19438', NULL, 1, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.invoice_table VALUES (5, 'INV-10', 8, 9200.00, 0.00, '2025-04-02 06:49:33.705601', '2025-04-25', 0.00, NULL, 'INR', DEFAULT, 103, 2, '2025-04-02 07:22:09.722567', NULL, 1, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.invoice_table VALUES (7, 'INV-2025022500007', 12, 14500.00, 0.00, '2025-04-02 00:00:00', '2025-04-12', NULL, NULL, 'INR', DEFAULT, 101, 3, '2025-04-02 07:31:18.740848', NULL, 1, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.invoice_table VALUES (23, 'INV-18', NULL, 1500.00, 0.00, '2025-04-03 11:31:05.940004', NULL, NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-03 11:31:05.940004', NULL, 1, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.invoice_table VALUES (9, 'INV-2025022500006', 12, 1500.00, 50.00, '2025-04-02 00:00:00', '2025-04-11', 100.00, NULL, 'INR', DEFAULT, 103, 2, '2025-04-03 12:19:11.825932', NULL, 1, 'Urgent delivery requested', '2025-04-05', NULL, 'Approved by retailer');
 
 
 --
@@ -4272,6 +5029,40 @@ INSERT INTO business_schema.invoice_table VALUES (3, 'INV-20250225-00003', 3, 15
 INSERT INTO business_schema.mode_of_payment VALUES (1, 2, 3);
 INSERT INTO business_schema.mode_of_payment VALUES (2, 2, 3);
 INSERT INTO business_schema.mode_of_payment VALUES (3, 1, 5);
+
+
+--
+-- Data for Name: order_activity_log; Type: TABLE DATA; Schema: business_schema; Owner: postgres
+--
+
+INSERT INTO business_schema.order_activity_log VALUES (2, 5, 123, 'retailer', 'order_placed', '2025-04-01 22:42:22.326502', NULL, NULL, 'Order created with price limit', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (3, 6, 123, 'retailer', 'order_placed', '2025-04-01 22:42:40.497994', NULL, NULL, 'Order created with price limit', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (4, 8, 123, 'retailer', 'order_placed', '2025-04-01 23:11:00.233704', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (5, 8, 101, 'seller', 'submitted', '2025-04-02 00:21:04.555468', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (6, 8, 103, 'seller', 'submitted', '2025-04-02 00:21:04.555468', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (7, 8, 123, 'retailer', 'offer_accepted', '2025-04-02 07:08:45.930977', NULL, NULL, 'Accepted offer from Wholeseller 103 for ₹9200', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (8, 8, 123, 'retailer', 'invoice_accepted', '2025-04-02 07:17:54.250246', NULL, NULL, 'Accepted invoice INV-10 from Wholeseller 103 for ₹9200', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (9, 8, 123, 'retailer', 'offer_accepted', '2025-04-02 07:22:09.722567', NULL, NULL, 'Accepted offer from Wholeseller 103 for ₹9200', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (13, 12, 123, 'retailer', 'order_placed', '2025-04-02 07:29:55.095162', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (14, 12, 123, 'retailer', 'invoice_accepted', '2025-04-02 07:34:42.988707', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (15, 13, 101, 'retailer', 'order_placed', '2025-04-02 09:54:11.905636', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (16, 13, 101, 'retailer', 'order_placed', '2025-04-02 09:54:11.905636', NULL, NULL, 'Order created with 2 items totaling ₹9000.00', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (17, 13, 101, 'retailer', 'order_accepted', '2025-04-02 09:57:53.926359', NULL, NULL, 'Retailer accepted the order', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (18, 12, 122, 'retailer', 'offer_accepted', '2025-04-02 10:48:14.251041', NULL, NULL, 'Accepted offer 8 from wholeseller 101 for ₹14,500', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (19, 14, 101, 'retailer', 'order_placed', '2025-04-02 11:04:16.235683', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (20, 14, 101, 'retailer', 'order_placed', '2025-04-02 11:04:16.235683', NULL, NULL, 'Order created with 2 items totaling ₹9000.00', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (21, 15, 101, 'retailer', 'order_placed', '2025-04-02 11:08:43.342704', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (22, 15, 101, 'retailer', 'order_placed', '2025-04-02 11:08:43.342704', NULL, NULL, 'Order created with 2 items totaling ₹9000.00', NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (28, 21, 101, 'retailer', 'order_placed', '2025-04-02 17:23:03.937159', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (29, 21, 101, 'retailer', 'order_placed', '2025-04-02 17:23:03.937159', NULL, NULL, 'Created order with 2 items totaling ₹9000.00', NULL, '2025-04-02 17:23:03.937159');
+INSERT INTO business_schema.order_activity_log VALUES (32, 23, 103, 'retailer', 'order_placed', '2025-04-02 17:36:23.545462', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (33, 23, 103, 'retailer', 'order_placed', '2025-04-02 17:36:23.545462', NULL, NULL, 'Created order with 2 items totaling ₹9000.00', NULL, '2025-04-02 17:36:23.545462');
+INSERT INTO business_schema.order_activity_log VALUES (34, 24, 103, 'retailer', 'order_placed', '2025-04-02 17:45:52.079056', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (35, 24, 103, 'retailer', 'order_placed', '2025-04-02 17:45:52.079056', NULL, NULL, 'Created order with 2 items totaling ₹9000.00', NULL, '2025-04-02 17:45:52.079056');
+INSERT INTO business_schema.order_activity_log VALUES (36, 25, 103, 'retailer', 'order_placed', '2025-04-02 17:48:45.911071', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (37, 25, 103, 'retailer', 'order_placed', '2025-04-02 17:48:45.911071', NULL, NULL, 'Created order with 2 items totaling ₹9000.00', NULL, '2025-04-02 17:48:45.911071');
+INSERT INTO business_schema.order_activity_log VALUES (38, 26, 103, 'retailer', 'order_placed', '2025-04-02 18:36:12.502775', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (39, 27, 103, 'retailer', 'order_placed', '2025-04-02 18:36:17.787677', NULL, NULL, NULL, NULL, NULL);
 
 
 --
@@ -4294,22 +5085,54 @@ INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00'
 -- Data for Name: order_item_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.order_item_table VALUES (6, 1, 2, 5.00, 1, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (4, 1, 2, 5.00, 1, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (7, 3, 3, 2.00, 1, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (8, 3, 1, 1.00, 2, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (9, 4, 2, 4.00, 1, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (10, 4, 1, 3.00, 1, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (6, 1, 2, 5.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (4, 1, 2, 5.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (7, 3, 3, 2.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (8, 3, 1, 1.00, 2, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (9, 4, 2, 4.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (10, 4, 1, 3.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (14, 8, 3, 100.00, 1, NULL, NULL, 50.00, 45.00, 100.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (15, 8, 3, 50.00, 1, NULL, NULL, 80.00, 75.00, 50.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (20, 12, 1, 200.00, 1, NULL, NULL, 60.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (21, 12, 1, 100.00, 1, NULL, NULL, 90.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (22, 13, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (23, 13, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (24, 14, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (25, 14, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (26, 15, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (27, 15, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (30, 21, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159');
+INSERT INTO business_schema.order_item_table VALUES (31, 21, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159');
+INSERT INTO business_schema.order_item_table VALUES (34, 23, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:36:23.545462', '2025-04-02 17:36:23.545462');
+INSERT INTO business_schema.order_item_table VALUES (35, 23, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:36:23.545462', '2025-04-02 17:36:23.545462');
+INSERT INTO business_schema.order_item_table VALUES (36, 24, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:45:52.079056', '2025-04-02 17:45:52.079056');
+INSERT INTO business_schema.order_item_table VALUES (37, 24, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:45:52.079056', '2025-04-02 17:45:52.079056');
+INSERT INTO business_schema.order_item_table VALUES (38, 25, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071');
+INSERT INTO business_schema.order_item_table VALUES (39, 25, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071');
 
 
 --
 -- Data for Name: order_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.order_table VALUES (2, '2025-02-22 09:55:59.551139', 4, '2025-02-25', NULL, 5, 6, 2, 1, '654321', '456 Avenue, City', 0.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305');
-INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27', '2025-02-22', 5, 6, 1, 2, '123456', '123 Street, City', 1180.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305');
-INSERT INTO business_schema.order_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26', NULL, 12, 6, 1, 2, '987654', '789 Road, City', 1500.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305');
-INSERT INTO business_schema.order_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28', '2025-02-24', 5, 6, 2, 1, '876543', '1011 Lane, City', 1472.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305');
+INSERT INTO business_schema.order_table VALUES (2, '2025-02-22 09:55:59.551139', 4, NULL, 5, '{6}', 0.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-22', 5, '{6}', 1180.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (3, '2025-02-23 10:30:00', 2, NULL, 12, '{6}', 1500.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-24', 5, '{6}', 1472.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (5, '2025-04-01 22:41:44.246239', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:41:44.246239', '2025-04-01 22:41:44.246239', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (6, '2025-04-01 22:42:40.497994', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:42:40.497994', '2025-04-01 22:42:40.497994', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (7, '2025-04-01 22:57:39.451206', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:57:39.451206', '2025-04-01 22:57:39.451206', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (8, '2025-04-01 23:07:08.258059', NULL, NULL, 123, '{103}', 0.00, NULL, NULL, 9200.00, '2025-04-01 23:07:08.258059', '2025-04-02 07:22:09.722567', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', 4, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (13, '2025-04-02 09:54:11.905636', NULL, NULL, 101, '{NULL}', 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '560001', '123 Retail Street, Bangalore', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (12, '2025-04-02 07:29:55.095162', 2, NULL, 123, '{103}', 0.00, NULL, NULL, 14200.00, '2025-04-02 07:29:55.095162', '2025-04-02 07:34:42.988707', '9876543210', '560001', '456 Retail Avenue, Bangalore', 15000.00, '2025-04-18', '2025-04-25', 8, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (14, '2025-04-02 11:04:16.235683', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (15, '2025-04-02 11:08:43.342704', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (21, '2025-04-02 17:23:03.937159', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (23, '2025-04-02 17:36:23.545462', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:36:23.545462', '2025-04-02 17:36:23.545462', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (24, '2025-04-02 17:45:52.079056', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:45:52.079056', '2025-04-02 17:45:52.079056', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (25, '2025-04-02 17:48:45.911071', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (26, '2025-04-02 18:36:12.502775', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:12.502775', '2025-04-02 18:36:12.502775', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (27, '2025-04-02 18:36:17.787677', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:17.787677', '2025-04-02 18:36:17.787677', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 
 
 --
@@ -4322,6 +5145,16 @@ INSERT INTO business_schema.order_table VALUES (4, '2025-02-24 11:15:00', 5, '20
 -- Data for Name: warehouse_list; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
+
+
+--
+-- Data for Name: wholeseller_offers; Type: TABLE DATA; Schema: business_schema; Owner: postgres
+--
+
+INSERT INTO business_schema.wholeseller_offers VALUES (3, 8, 101, 9500.00, '2025-04-16', 1, '2025-04-01 23:12:23.480634', '2025-04-01 23:12:23.480634', NULL);
+INSERT INTO business_schema.wholeseller_offers VALUES (4, 8, 103, 9200.00, '2025-04-17', 1, '2025-04-01 23:12:23.504043', '2025-04-01 23:12:23.504043', NULL);
+INSERT INTO business_schema.wholeseller_offers VALUES (8, 12, 101, 14500.00, '2025-04-19', 1, '2025-04-02 07:31:18.740848', '2025-04-02 07:31:18.740848', NULL);
+INSERT INTO business_schema.wholeseller_offers VALUES (10, 12, 103, 14200.00, '2025-04-18', 1, '2025-04-02 07:33:04.585076', '2025-04-02 07:33:04.585076', NULL);
 
 
 --
@@ -4439,7 +5272,7 @@ SELECT pg_catalog.setval('admin_schema.cash_payment_list_id_seq', 5, true);
 -- Name: category_regional_name_category_regional_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.category_regional_name_category_regional_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.category_regional_name_category_regional_id_seq', 3, true);
 
 
 --
@@ -4607,14 +5440,21 @@ SELECT pg_catalog.setval('admin_schema.vehicle_model_id_seq', 3, true);
 -- Name: invoice_details_table_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.invoice_details_table_id_seq', 1, true);
+SELECT pg_catalog.setval('business_schema.invoice_details_table_id_seq', 4, true);
+
+
+--
+-- Name: invoice_number_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.invoice_number_seq', 18, true);
 
 
 --
 -- Name: invoice_table_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 3, true);
+SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 23, true);
 
 
 --
@@ -4622,6 +5462,13 @@ SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 3, true);
 --
 
 SELECT pg_catalog.setval('business_schema.mode_of_payment_id_seq', 3, true);
+
+
+--
+-- Name: order_activity_log_log_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.order_activity_log_log_id_seq', 39, true);
 
 
 --
@@ -4635,14 +5482,14 @@ SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 1
 -- Name: order_item_table_product_order_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_item_table_product_order_id_seq', 6, true);
+SELECT pg_catalog.setval('business_schema.order_item_table_product_order_id_seq', 39, true);
 
 
 --
 -- Name: order_table_order_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_table_order_id_seq', 2, true);
+SELECT pg_catalog.setval('business_schema.order_table_order_id_seq', 27, true);
 
 
 --
@@ -4657,6 +5504,13 @@ SELECT pg_catalog.setval('business_schema.stock_table_stock_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('business_schema.warehouse_list_warehouse_id_seq', 1, false);
+
+
+--
+-- Name: wholeseller_offers_offer_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.wholeseller_offers_offer_id_seq', 10, true);
 
 
 --
@@ -4800,18 +5654,18 @@ ALTER TABLE ONLY admin_schema.business_user_table
 
 
 --
--- Name: cash_payment_list cash_payment_list_payment_type_key; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
+-- Name: payment_type_list cash_payment_list_payment_type_key; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
-ALTER TABLE ONLY admin_schema.cash_payment_list
+ALTER TABLE ONLY admin_schema.payment_type_list
     ADD CONSTRAINT cash_payment_list_payment_type_key UNIQUE (payment_type);
 
 
 --
--- Name: cash_payment_list cash_payment_list_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
+-- Name: payment_type_list cash_payment_list_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
-ALTER TABLE ONLY admin_schema.cash_payment_list
+ALTER TABLE ONLY admin_schema.payment_type_list
     ADD CONSTRAINT cash_payment_list_pkey PRIMARY KEY (id);
 
 
@@ -5112,6 +5966,14 @@ ALTER TABLE ONLY business_schema.mode_of_payment
 
 
 --
+-- Name: order_activity_log order_activity_log_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.order_activity_log
+    ADD CONSTRAINT order_activity_log_pkey PRIMARY KEY (log_id);
+
+
+--
 -- Name: order_history_table order_history_table_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
@@ -5144,6 +6006,22 @@ ALTER TABLE ONLY business_schema.stock_table
 
 
 --
+-- Name: wholeseller_offers uniq_wholeseller_order; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_offers
+    ADD CONSTRAINT uniq_wholeseller_order UNIQUE (order_id, wholeseller_id);
+
+
+--
+-- Name: invoice_table unique_invoice; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.invoice_table
+    ADD CONSTRAINT unique_invoice UNIQUE (order_id, wholeseller_id);
+
+
+--
 -- Name: invoice_table unique_invoice_number; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
@@ -5157,6 +6035,14 @@ ALTER TABLE ONLY business_schema.invoice_table
 
 ALTER TABLE ONLY business_schema.warehouse_list
     ADD CONSTRAINT warehouse_list_pkey PRIMARY KEY (warehouse_id);
+
+
+--
+-- Name: wholeseller_offers wholeseller_offers_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_offers
+    ADD CONSTRAINT wholeseller_offers_pkey PRIMARY KEY (offer_id);
 
 
 --
@@ -5296,6 +6182,27 @@ ALTER TABLE ONLY public.wholeseller_rating_table
 
 
 --
+-- Name: idx_order_activity; Type: INDEX; Schema: business_schema; Owner: postgres
+--
+
+CREATE INDEX idx_order_activity ON business_schema.order_activity_log USING btree (order_id);
+
+
+--
+-- Name: idx_wholeseller_offers_order; Type: INDEX; Schema: business_schema; Owner: postgres
+--
+
+CREATE INDEX idx_wholeseller_offers_order ON business_schema.wholeseller_offers USING btree (order_id);
+
+
+--
+-- Name: idx_wholeseller_offers_status; Type: INDEX; Schema: business_schema; Owner: postgres
+--
+
+CREATE INDEX idx_wholeseller_offers_status ON business_schema.wholeseller_offers USING btree (offer_status);
+
+
+--
 -- Name: business_table business_user_auto_insert; Type: TRIGGER; Schema: admin_schema; Owner: postgres
 --
 
@@ -5314,6 +6221,34 @@ CREATE TRIGGER business_user_insert_trigger BEFORE INSERT ON admin_schema.busine
 --
 
 CREATE TRIGGER trg_insert_business_user AFTER INSERT ON admin_schema.business_branch_table FOR EACH ROW EXECUTE FUNCTION admin_schema.insert_business_user();
+
+
+--
+-- Name: invoice_table trg_invoice_created; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trg_invoice_created AFTER INSERT ON business_schema.invoice_table FOR EACH ROW EXECUTE FUNCTION business_schema.update_item_prices();
+
+
+--
+-- Name: invoice_table trg_invoice_status_change; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trg_invoice_status_change AFTER UPDATE OF status ON business_schema.invoice_table FOR EACH ROW EXECUTE FUNCTION business_schema.update_order_on_acceptance();
+
+
+--
+-- Name: wholeseller_offers trg_offer_created; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trg_offer_created AFTER INSERT ON business_schema.wholeseller_offers FOR EACH ROW EXECUTE FUNCTION business_schema.create_invoice_on_offer();
+
+
+--
+-- Name: order_table trg_order_created; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trg_order_created AFTER INSERT ON business_schema.order_table FOR EACH ROW EXECUTE FUNCTION business_schema.log_order_activity();
 
 
 --
@@ -5354,14 +6289,6 @@ ALTER TABLE ONLY admin_schema.business_user_table
 
 ALTER TABLE ONLY admin_schema.master_vehicle_table
     ADD CONSTRAINT fk_category FOREIGN KEY (vehicle_make) REFERENCES admin_schema.vehicle_make(id);
-
-
---
--- Name: category_regional_name fk_category; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
---
-
-ALTER TABLE ONLY admin_schema.category_regional_name
-    ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES admin_schema.master_product_category_table(category_id) ON DELETE CASCADE;
 
 
 --
@@ -5521,7 +6448,7 @@ ALTER TABLE ONLY business_schema.invoice_details_table
 --
 
 ALTER TABLE ONLY business_schema.mode_of_payment
-    ADD CONSTRAINT fk_type FOREIGN KEY (pay_type) REFERENCES admin_schema.cash_payment_list(id);
+    ADD CONSTRAINT fk_type FOREIGN KEY (pay_type) REFERENCES admin_schema.payment_type_list(id);
 
 
 --
@@ -5545,14 +6472,6 @@ ALTER TABLE ONLY business_schema.order_item_table
 --
 
 ALTER TABLE ONLY business_schema.daily_price_update
-    ADD CONSTRAINT fk_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid) ON DELETE CASCADE;
-
-
---
--- Name: order_table fk_wholeseller; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
---
-
-ALTER TABLE ONLY business_schema.order_table
     ADD CONSTRAINT fk_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid) ON DELETE CASCADE;
 
 
@@ -5581,19 +6500,27 @@ ALTER TABLE ONLY business_schema.invoice_table
 
 
 --
--- Name: invoice_table invoice_table_pay_mode_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+-- Name: invoice_table invoice_table_retailer_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.invoice_table
-    ADD CONSTRAINT invoice_table_pay_mode_fkey FOREIGN KEY (pay_mode) REFERENCES admin_schema.mode_of_payments_list(id);
+    ADD CONSTRAINT invoice_table_retailer_id_fkey FOREIGN KEY (retailer_id) REFERENCES admin_schema.business_table(bid);
 
 
 --
--- Name: invoice_table invoice_table_pay_type_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+-- Name: invoice_table invoice_table_wholeseller_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.invoice_table
-    ADD CONSTRAINT invoice_table_pay_type_fkey FOREIGN KEY (pay_type) REFERENCES admin_schema.cash_payment_list(id);
+    ADD CONSTRAINT invoice_table_wholeseller_id_fkey FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid);
+
+
+--
+-- Name: order_activity_log order_activity_log_order_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.order_activity_log
+    ADD CONSTRAINT order_activity_log_order_id_fkey FOREIGN KEY (order_id) REFERENCES business_schema.order_table(order_id) ON DELETE CASCADE;
 
 
 --
@@ -5613,27 +6540,27 @@ ALTER TABLE ONLY business_schema.order_item_table
 
 
 --
--- Name: order_table order_table_location_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
---
-
-ALTER TABLE ONLY business_schema.order_table
-    ADD CONSTRAINT order_table_location_id_fkey FOREIGN KEY (location_id) REFERENCES admin_schema.master_location(id) ON DELETE SET NULL;
-
-
---
--- Name: order_table order_table_state_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
---
-
-ALTER TABLE ONLY business_schema.order_table
-    ADD CONSTRAINT order_table_state_id_fkey FOREIGN KEY (state_id) REFERENCES admin_schema.master_states(id) ON DELETE SET NULL;
-
-
---
 -- Name: stock_table stock_table_product_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.stock_table
     ADD CONSTRAINT stock_table_product_id_fkey FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id) ON DELETE CASCADE;
+
+
+--
+-- Name: wholeseller_offers wholeseller_offers_order_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_offers
+    ADD CONSTRAINT wholeseller_offers_order_id_fkey FOREIGN KEY (order_id) REFERENCES business_schema.order_table(order_id) ON DELETE CASCADE;
+
+
+--
+-- Name: wholeseller_offers wholeseller_offers_wholeseller_id_fkey; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_offers
+    ADD CONSTRAINT wholeseller_offers_wholeseller_id_fkey FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid) ON DELETE CASCADE;
 
 
 --
@@ -5731,12 +6658,6 @@ ALTER TABLE ONLY public.product_reviews
 ALTER TABLE admin_schema.business_user_table ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: cash_payment_list; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
---
-
-ALTER TABLE admin_schema.cash_payment_list ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: master_driver_table; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
 --
 
@@ -5795,6 +6716,12 @@ ALTER TABLE admin_schema.mode_of_payments_list ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE admin_schema.order_status_table ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: payment_type_list; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
+--
+
+ALTER TABLE admin_schema.payment_type_list ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: roles_table; Type: ROW SECURITY; Schema: admin_schema; Owner: admin
@@ -5897,10 +6824,10 @@ GRANT ALL ON TABLE admin_schema.business_type_table TO admin;
 
 
 --
--- Name: TABLE cash_payment_list; Type: ACL; Schema: admin_schema; Owner: admin
+-- Name: TABLE payment_type_list; Type: ACL; Schema: admin_schema; Owner: admin
 --
 
-GRANT SELECT ON TABLE admin_schema.cash_payment_list TO retailer;
+GRANT SELECT ON TABLE admin_schema.payment_type_list TO retailer;
 
 
 --
