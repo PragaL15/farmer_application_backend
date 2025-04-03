@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"log"
+	"time"
 	"strconv"
   "database/sql"
 	"github.com/gofiber/fiber/v2"
@@ -119,109 +120,175 @@ func CreateRetailerOrderHandler(c *fiber.Ctx) error {
 	})
 }
 
-
-
 func GetOrderDetailsHandler(c *fiber.Ctx) error {
 	orderIDStr := c.Params("id")
 	if orderIDStr == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
-			Status:  "error",
-			Message: "Order ID is required",
-		})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Order ID is required",
+			})
 	}
 
 	orderID, err := strconv.ParseInt(orderIDStr, 10, 64)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
-			Status:  "error",
-			Message: "Invalid order ID format",
-		})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Invalid order ID format",
+			})
 	}
 
-	var order Order
+	// Define our response structure
+	type ProductDetail struct {
+			ProductID    int64   `json:"product_id"`
+			ProductName string  `json:"product_name"`
+			CategoryID   int     `json:"category_id"`
+			CategoryName string  `json:"category_name"`
+			Quantity     float64 `json:"quantity"`
+			UnitID       int     `json:"unit_id"`
+			UnitName     string  `json:"unit_name"`
+			MaxPrice     float64 `json:"max_price"`
+	}
+
+	type OrderResponse struct {
+			OrderID             int64          `json:"order_id"`
+			DateOfOrder        time.Time      `json:"date_of_order"`
+			OrderStatus        int            `json:"order_status"`
+			ActualDeliveryDate *time.Time     `json:"actual_delivery_date,omitempty"`
+			RetailerID         int            `json:"retailer_id"`
+			ShopName           string         `json:"shop_name"`
+			WholesellerIDs     []int          `json:"wholeseller_ids,omitempty"`
+			TotalOrderAmount   float64        `json:"total_order_amount"`
+			DiscountAmount     float64        `json:"discount_amount"`
+			TaxAmount          float64        `json:"tax_amount"`
+			FinalAmount        float64        `json:"final_amount"`
+			Products          []ProductDetail `json:"products"`
+	}
+
+	// First get the basic order information
+	var order struct {
+			OrderID             int64
+			DateOfOrder        time.Time
+			OrderStatus        int
+			ActualDeliveryDate *time.Time
+			RetailerID         int
+			TotalOrderAmount   float64
+			DiscountAmount     float64
+			TaxAmount          float64
+			FinalAmount        float64
+	    
+	}
+
 	orderQuery := `
-		SELECT 
-			order_id, date_of_order, order_status, 
-			expected_delivery_date, actual_delivery_date,
-			retailer_id, wholeseller_offer_id, location_id,
-			state_id, address, pincode, total_order_amount,
-			discount_amount, tax_amount, final_amount,
-			desired_delivery_date, delivery_deadline, max_price_limit,
-			retailer_contact
-		FROM business_schema.order_table
-		WHERE order_id = $1`
+			SELECT 
+					order_id, date_of_order, order_status, 
+					actual_delivery_date,
+					retailer_id, total_order_amount,
+					discount_amount, tax_amount, final_amount
+			FROM business_schema.order_table
+			WHERE order_id = $1`
 
 	err = db.Pool.QueryRow(context.Background(), orderQuery, orderID).Scan(
-		&order.OrderID, &order.DateOfOrder, &order.OrderStatus,
-		&order.ExpectedDeliveryDate, &order.ActualDeliveryDate,
-		&order.RetailerID, &order.SelectedOfferID, &order.LocationID,
-		&order.StateID, &order.Address, &order.Pincode, &order.TotalOrderAmount,
-		&order.DiscountAmount, &order.TaxAmount, &order.FinalAmount,
-		&order.DesiredDeliveryDate, &order.DeliveryDeadline, &order.MaxPriceLimit,
-		&order.RetailerContact,
+			&order.OrderID, &order.DateOfOrder, &order.OrderStatus,
+			&order.ActualDeliveryDate,
+			&order.RetailerID, &order.TotalOrderAmount,
+			&order.DiscountAmount, &order.TaxAmount, &order.FinalAmount,
 	)
 
 	if err == pgx.ErrNoRows {
-		return c.Status(fiber.StatusNotFound).JSON(OrderResponse{
-			Status:  "error",
-			Message: "Order not found",
-		})
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Order not found",
+			})
 	} else if err != nil {
-		log.Printf("Failed to fetch order: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(OrderResponse{
-			Status:  "error",
-			Message: "Failed to fetch order details",
-		})
+			log.Printf("Failed to fetch order: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Failed to fetch order details",
+			})
 	}
 
+	// Get shop name
+	var shopName string
+	err = db.Pool.QueryRow(context.Background(), 
+			"SELECT b_shop_name FROM admin_schema.business_branch_table WHERE bid = $1", 
+			order.RetailerID).Scan(&shopName)
+	if err != nil {
+			log.Printf("Failed to fetch shop name: %v", err)
+			shopName = ""
+	}
+
+	var wholesellerIDs []int
 	wholesellerQuery := `
-		SELECT wholeseller_id 
-		FROM business_schema.order_wholeseller_mapping
-		WHERE order_id = $1 AND status = 1`
+			SELECT wholeseller_id 
+			FROM business_schema.order_wholeseller_mapping
+			WHERE order_id = $1 AND status = 1`
 
 	rows, err := db.Pool.Query(context.Background(), wholesellerQuery, orderID)
 	if err != nil {
-		log.Printf("Failed to fetch wholesellers: %v", err)
+			log.Printf("Failed to fetch wholesellers: %v", err)
 	} else {
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			if err := rows.Scan(&id); err == nil {
-				order.WholesellerIDs = append(order.WholesellerIDs, id)
+			defer rows.Close()
+			for rows.Next() {
+					var id int
+					if err := rows.Scan(&id); err == nil {
+							wholesellerIDs = append(wholesellerIDs, id)
+					}
 			}
-		}
-		if err = rows.Err(); err != nil {
-			log.Printf("Error processing wholeseller rows: %v", err)
-		}
+			if err = rows.Err(); err != nil {
+					log.Printf("Error processing wholeseller rows: %v", err)
+			}
 	}
 
+	var products []ProductDetail
 	productQuery := `
-		SELECT product_id, quantity, unit_id, max_item_price
-		FROM business_schema.order_item_table
-		WHERE order_id = $1`
+			SELECT 
+					oi.product_id, 
+					mp.product_name,
+					mp.category_id,
+					mpc.category_name,
+					oi.quantity, 
+					oi.unit_id,
+					ut.unit_name,
+					oi.max_item_price
+			FROM business_schema.order_item_table oi
+			JOIN admin_schema.master_product mp ON oi.product_id = mp.product_id
+			LEFT JOIN admin_schema.master_product_category_table mpc ON mp.category_id = mpc.category_id
+			LEFT JOIN admin_schema.units_table ut ON oi.unit_id = ut.id
+			WHERE oi.order_id = $1`
 
 	productRows, err := db.Pool.Query(context.Background(), productQuery, orderID)
 	if err != nil {
-		log.Printf("Failed to fetch order items: %v", err)
+			log.Printf("Failed to fetch order items: %v", err)
 	} else {
-		defer productRows.Close()
-		for productRows.Next() {
-			var productID int64
-			var quantity float64
-			var unitID int
-			var maxItemPrice float64
-
-			if err := productRows.Scan(&productID, &quantity, &unitID, &maxItemPrice); err == nil {
-				order.ProductIDs = append(order.ProductIDs, productID)
-				order.Quantities = append(order.Quantities, quantity)
-				order.UnitIDs = append(order.UnitIDs, unitID)
-				order.MaxItemPrices = append(order.MaxItemPrices, maxItemPrice)
+			defer productRows.Close()
+			for productRows.Next() {
+					var p ProductDetail
+					if err := productRows.Scan(
+							&p.ProductID, &p.ProductName, &p.CategoryID, &p.CategoryName,
+							&p.Quantity, &p.UnitID, &p.UnitName, &p.MaxPrice,
+					); err == nil {
+							products = append(products, p)
+					}
 			}
-		}
-		if err = productRows.Err(); err != nil {
-			log.Printf("Error processing product rows: %v", err)
-		}
+			if err = productRows.Err(); err != nil {
+					log.Printf("Error processing product rows: %v", err)
+			}
 	}
 
-	return c.JSON(order)
+	response := OrderResponse{
+			OrderID:             order.OrderID,
+			DateOfOrder:        order.DateOfOrder,
+			OrderStatus:        order.OrderStatus,
+			ActualDeliveryDate: order.ActualDeliveryDate,
+			RetailerID:         order.RetailerID,
+			ShopName:           shopName,
+			WholesellerIDs:     wholesellerIDs,
+			TotalOrderAmount:   order.TotalOrderAmount,
+			DiscountAmount:     order.DiscountAmount,
+			TaxAmount:          order.TaxAmount,
+			FinalAmount:        order.FinalAmount,
+			Products:          products,
+	}
+
+	return c.JSON(response)
 }
