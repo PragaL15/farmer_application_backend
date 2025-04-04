@@ -290,19 +290,86 @@ ALTER FUNCTION admin_schema.get_all_payment_modes() OWNER TO postgres;
 -- Name: get_all_product_categories(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_all_product_categories() RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, img_path text, active_status integer, category_regional_id integer)
-    LANGUAGE plpgsql
+CREATE FUNCTION admin_schema.get_all_product_categories() RETURNS json
+    LANGUAGE plpgsql STABLE
     AS $$
+DECLARE
+  result JSON;
 BEGIN
-    RETURN QUERY 
+  WITH RECURSIVE category_hierarchy AS (
     SELECT 
-        mpct.category_id, 
-        mpct.category_name, 
-        mpct.super_cat_id, 
-        mpct.img_path, 
-        mpct.active_status, 
-        mpct.category_regional_id
-    FROM admin_schema.master_product_category_table AS mpct;
+      category_id,
+      category_name,
+      img_path,
+      active_status,
+      category_regional_id,
+      super_cat_id
+    FROM admin_schema.master_product_category_table
+    WHERE super_cat_id IS NULL
+
+    UNION ALL
+
+    SELECT 
+      c.category_id,
+      c.category_name,
+      c.img_path,
+      c.active_status,
+      c.category_regional_id,
+      c.super_cat_id
+    FROM admin_schema.master_product_category_table c
+    INNER JOIN category_hierarchy ch ON c.super_cat_id = ch.category_id
+  ),
+  category_json AS (
+    SELECT 
+      ch.category_id,
+      ch.category_name,
+      ch.img_path,
+      ch.active_status,
+      ch.category_regional_id,
+      ch.super_cat_id,
+      (
+        SELECT COALESCE(json_agg(child_cat), '[]'::json) 
+        FROM (
+          SELECT 
+            c2.category_id,
+            c2.category_name,
+            c2.img_path,
+            c2.active_status,
+            c2.category_regional_id,
+            (
+              SELECT COALESCE(json_agg(grandchild), '[]'::json)
+              FROM (
+                SELECT 
+                  gc.category_id,
+                  gc.category_name,
+                  gc.img_path,
+                  gc.active_status,
+                  gc.category_regional_id,
+                  '{}'::json AS children
+                FROM admin_schema.master_product_category_table gc
+                WHERE gc.super_cat_id = c2.category_id
+              ) AS grandchild
+            ) AS children
+          FROM admin_schema.master_product_category_table c2
+          WHERE c2.super_cat_id = ch.category_id
+        ) AS child_cat
+      ) AS children
+    FROM category_hierarchy ch
+    WHERE ch.super_cat_id IS NULL
+  )
+  SELECT json_agg(
+    json_build_object(
+      'category_id', category_id,
+      'category_name', category_name,
+      'img_path', img_path,
+      'active_status', active_status,
+      'category_regional_id', category_regional_id,
+      'children', children
+    )
+  ) INTO result
+  FROM category_json;
+
+  RETURN result;
 END;
 $$;
 
@@ -1683,6 +1750,45 @@ $$;
 ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_proposed_delivery_date date, p_notes text, p_decision_notes text, p_invoice_number character varying) OWNER TO postgres;
 
 --
+-- Name: create_and_send_invoice(bigint, integer, numeric, numeric, numeric, numeric, date, date, jsonb); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_final_amount numeric, p_invoice_date date, p_due_date date, p_order_items jsonb) RETURNS void
+    LANGUAGE plpgsql
+    AS $$  -- No JSON return
+DECLARE
+    v_invoice_id BIGINT;
+    v_order_item JSONB;
+    v_order_item_id BIGINT;
+BEGIN
+    -- Insert into invoice_table
+    INSERT INTO business_schema.invoice_table (
+        order_id, wholeseller_id, total_amount, discount_amount, tax_amount,
+        final_amount, invoice_date, due_date
+    ) VALUES (
+        p_order_id, p_wholeseller_id, p_total_amount, p_discount_amount, p_tax_amount,
+        p_final_amount, p_invoice_date, p_due_date
+    ) RETURNING id INTO v_invoice_id; 
+
+    -- Insert into order_item_table
+    FOR v_order_item IN SELECT * FROM jsonb_array_elements(p_order_items)
+    LOOP
+        INSERT INTO business_schema.order_item_table (
+            order_id, product_id, unit_id, quantity
+        ) VALUES (
+            p_order_id,
+            (v_order_item->>'product_id')::BIGINT,
+            (v_order_item->>'unit_id')::INTEGER,
+            (v_order_item->>'quantity')::NUMERIC(10,2)
+        ) RETURNING order_item_id INTO v_order_item_id;
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_final_amount numeric, p_invoice_date date, p_due_date date, p_order_items jsonb) OWNER TO postgres;
+
+--
 -- Name: create_and_send_invoice(bigint, integer, character varying, numeric, numeric, numeric, date, text, text); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -1835,6 +1941,115 @@ $$;
 
 
 ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id integer, p_invoice_number character varying, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_proposed_delivery_date date, p_notes text, p_decision_notes text) OWNER TO postgres;
+
+--
+-- Name: create_and_send_invoice(bigint, bigint, numeric, numeric, numeric, date, date, integer[], numeric[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id bigint, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_invoice_date date, p_due_date date, p_unit_ids integer[], p_quantities numeric[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_invoice_id BIGINT;
+    v_order_item_id BIGINT;
+    v_product_id BIGINT;
+    v_product_name TEXT;
+    v_counter INT;
+BEGIN
+    -- Step 1: Insert into invoice_table (without final_amount)
+    INSERT INTO business_schema.invoice_table (
+        order_id, wholeseller_id, total_amount, discount_amount, tax_amount,
+        invoice_date, due_date
+    ) VALUES (
+        p_order_id, p_wholeseller_id, p_total_amount, p_discount_amount, p_tax_amount,
+        p_invoice_date, p_due_date
+    ) RETURNING id INTO v_invoice_id;
+
+    -- Step 2: Loop through each order item in order_item_table for the given order_id
+    FOR v_order_item_id, v_product_id IN
+        SELECT oi.order_item_id, oi.product_id
+        FROM business_schema.order_item_table AS oi
+        WHERE oi.order_id = p_order_id
+    LOOP
+        -- Step 3: Fetch product_name from master_product using product_id
+        SELECT m.product_name INTO v_product_name
+        FROM admin_schema.master_product AS m
+        WHERE m.product_id = v_product_id;  -- Fixed column name
+
+        -- Step 4: Insert into invoice_details_table
+        FOR v_counter IN 1 .. array_length(p_unit_ids, 1) LOOP
+            INSERT INTO business_schema.invoice_details_table (
+                invoice_id, order_item_id, quantity, unit_price, original_price, negotiated_price
+            ) VALUES (
+                v_invoice_id, v_order_item_id, p_quantities[v_counter], NULL, NULL, NULL
+            );
+        END LOOP;
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id bigint, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_invoice_date date, p_due_date date, p_unit_ids integer[], p_quantities numeric[]) OWNER TO postgres;
+
+--
+-- Name: create_and_send_invoice(bigint, bigint, numeric, numeric, numeric, date, date, bigint[], integer[], numeric[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id bigint, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_invoice_date date, p_due_date date, p_product_ids bigint[], p_unit_ids integer[], p_quantities numeric[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_invoice_id BIGINT;
+    v_product_name TEXT;
+BEGIN
+    -- Ensure the wholeseller exists in admin_schema.business_table
+    IF NOT EXISTS (
+        SELECT 1 FROM admin_schema.business_table WHERE bid = p_wholeseller_id
+    ) THEN
+        RAISE EXCEPTION 'Wholeseller ID % does not exist in admin_schema.business_table', p_wholeseller_id;
+    END IF;
+
+    -- Ensure the order exists in order_item_table
+    IF NOT EXISTS (
+        SELECT 1 FROM business_schema.order_item_table WHERE order_id = p_order_id
+    ) THEN
+        RAISE EXCEPTION 'Order ID % does not exist in business_schema.order_item_table', p_order_id;
+    END IF;
+
+    -- Insert into invoice_table
+    INSERT INTO business_schema.invoice_table (
+        order_id, wholeseller_id, total_amount, discount_amount, tax_amount, invoice_date, due_date
+    ) VALUES (
+        p_order_id, p_wholeseller_id, p_total_amount, p_discount_amount, p_tax_amount, p_invoice_date, p_due_date
+    ) RETURNING id INTO v_invoice_id;
+
+    -- Insert invoice details for each product
+    FOR i IN 1..array_length(p_product_ids, 1) LOOP
+        -- Ensure the product exists in order_item_table for this order
+        IF NOT EXISTS (
+            SELECT 1 FROM business_schema.order_item_table 
+            WHERE order_id = p_order_id AND product_id = p_product_ids[i]
+        ) THEN
+            RAISE EXCEPTION 'Product ID % is not associated with Order ID %', p_product_ids[i], p_order_id;
+        END IF;
+
+        -- Fetch product name from admin_schema.master_product
+        SELECT mp.product_name INTO v_product_name
+        FROM admin_schema.master_product AS mp
+        WHERE mp.product_id = p_product_ids[i];
+
+        -- Insert into invoice_details_table
+        INSERT INTO business_schema.invoice_details_table (
+            invoice_id, product_id, unit_id, quantity, product_name
+        ) VALUES (
+            v_invoice_id, p_product_ids[i], p_unit_ids[i], p_quantities[i], v_product_name
+        );
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.create_and_send_invoice(p_order_id bigint, p_wholeseller_id bigint, p_total_amount numeric, p_discount_amount numeric, p_tax_amount numeric, p_invoice_date date, p_due_date date, p_product_ids bigint[], p_unit_ids integer[], p_quantities numeric[]) OWNER TO postgres;
 
 --
 -- Name: create_invoice_on_offer(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -2014,6 +2229,30 @@ $$;
 ALTER FUNCTION business_schema.get_order_details(p_order_id bigint) OWNER TO postgres;
 
 --
+-- Name: insert_daily_price(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_daily_price() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO business_schema.daily_price_update (
+        product_id, price, unit_id, wholeseller_id, b_branch_id, currency, created_at, updated_at, remarks
+    )
+    SELECT 
+        NEW.product_id, NEW.price, NEW.unit_id, NEW.wholeseller_id, bb.b_branch_id, 
+        NEW.currency, NEW.created_at, NEW.updated_at, NEW.remarks
+    FROM admin_schema.business_branch_table AS bb
+    WHERE bb.bid = NEW.wholeseller_id;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_daily_price() OWNER TO postgres;
+
+--
 -- Name: insert_order(date, integer, date, date, integer, integer, integer, integer, text, text, numeric, numeric, numeric, numeric); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2080,6 +2319,47 @@ $$;
 
 
 ALTER FUNCTION business_schema.log_order_activity() OWNER TO postgres;
+
+--
+-- Name: update_daily_price(integer, integer, integer, numeric, character varying); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.update_daily_price(p_wholeseller_id integer, p_product_id integer, p_unit_id integer, p_price numeric, p_remarks character varying) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_b_branch_id INTEGER;
+BEGIN
+    -- Get the branch ID for the given wholeseller
+    SELECT b_branch_id INTO v_b_branch_id
+    FROM admin_schema.business_branch_table
+    WHERE bid = p_wholeseller_id
+    LIMIT 1; -- Assuming a wholesaler has multiple branches, update one at a time
+
+    -- If no branch found, return error
+    IF v_b_branch_id IS NULL THEN
+        RETURN 'Error: No branch found for this wholesaler!';
+    END IF;
+
+    -- Update the price in the daily price update table
+    UPDATE business_schema.daily_price_update
+    SET price = p_price, remarks = p_remarks, updated_at = NOW()
+    WHERE wholeseller_id = p_wholeseller_id 
+      AND product_id = p_product_id 
+      AND unit_id = p_unit_id 
+      AND b_branch_id = v_b_branch_id;
+
+    -- Check if any row was updated
+    IF NOT FOUND THEN
+        RETURN 'Error: No matching price entry found!';
+    END IF;
+
+    RETURN 'Success: Price updated successfully!';
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.update_daily_price(p_wholeseller_id integer, p_product_id integer, p_unit_id integer, p_price numeric, p_remarks character varying) OWNER TO postgres;
 
 --
 -- Name: update_item_prices(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -3418,7 +3698,8 @@ CREATE TABLE business_schema.daily_price_update (
     currency character varying(10) DEFAULT 'INR'::character varying,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    remarks character varying(255)
+    remarks character varying(255),
+    b_branch_id integer
 );
 
 
@@ -4996,9 +5277,10 @@ INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
 -- Data for Name: daily_price_update; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.daily_price_update VALUES (1, 100.50, 1, 5, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL);
-INSERT INTO business_schema.daily_price_update VALUES (2, 250.00, 2, 6, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL);
-INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL);
+INSERT INTO business_schema.daily_price_update VALUES (1, 100.50, 1, 5, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL, NULL);
+INSERT INTO business_schema.daily_price_update VALUES (2, 250.00, 2, 6, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL, NULL);
+INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL, NULL);
+INSERT INTO business_schema.daily_price_update VALUES (1, 1500.00, 2, 103, 'INR', '2025-04-03 18:04:41.442396', '2025-04-03 18:04:41.442396', 'Updated price for wheat', NULL);
 
 
 --
@@ -5008,6 +5290,10 @@ INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '
 INSERT INTO business_schema.invoice_details_table VALUES (1, 2, 6, 5.00, 0, '2025-03-25 23:01:40.615709', '2025-03-25 23:01:40.615709', NULL, NULL, NULL, false, NULL);
 INSERT INTO business_schema.invoice_details_table VALUES (3, 5, 14, 0.00, 1, '2025-04-02 06:55:28.383207', '2025-04-02 06:55:28.383207', NULL, NULL, NULL, false, NULL);
 INSERT INTO business_schema.invoice_details_table VALUES (4, 5, 15, 0.00, 1, '2025-04-02 06:55:28.383207', '2025-04-02 06:55:28.383207', NULL, NULL, NULL, false, NULL);
+INSERT INTO business_schema.invoice_details_table VALUES (9, 39, 20, 10.00, 0, '2025-04-03 16:37:24.587299', '2025-04-03 16:37:24.587299', NULL, NULL, NULL, false, NULL);
+INSERT INTO business_schema.invoice_details_table VALUES (10, 39, 20, 5.00, 0, '2025-04-03 16:37:24.587299', '2025-04-03 16:37:24.587299', NULL, NULL, NULL, false, NULL);
+INSERT INTO business_schema.invoice_details_table VALUES (11, 39, 21, 10.00, 0, '2025-04-03 16:37:24.587299', '2025-04-03 16:37:24.587299', NULL, NULL, NULL, false, NULL);
+INSERT INTO business_schema.invoice_details_table VALUES (12, 39, 21, 5.00, 0, '2025-04-03 16:37:24.587299', '2025-04-03 16:37:24.587299', NULL, NULL, NULL, false, NULL);
 
 
 --
@@ -5017,9 +5303,8 @@ INSERT INTO business_schema.invoice_details_table VALUES (4, 5, 15, 0.00, 1, '20
 INSERT INTO business_schema.invoice_table VALUES (2, 'INV-20250224-0001', 1, 590.00, 500.00, '2025-02-24 18:25:44.460827', '2025-03-01', NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-02 07:17:54.19438', NULL, 1, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.invoice_table VALUES (3, 'INV-20250225-00003', 3, 1500.00, 100.00, '2025-02-25 14:14:21.29295', '2025-03-02', NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-02 07:17:54.19438', NULL, 1, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.invoice_table VALUES (5, 'INV-10', 8, 9200.00, 0.00, '2025-04-02 06:49:33.705601', '2025-04-25', 0.00, NULL, 'INR', DEFAULT, 103, 2, '2025-04-02 07:22:09.722567', NULL, 1, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.invoice_table VALUES (7, 'INV-2025022500007', 12, 14500.00, 0.00, '2025-04-02 00:00:00', '2025-04-12', NULL, NULL, 'INR', DEFAULT, 101, 3, '2025-04-02 07:31:18.740848', NULL, 1, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.invoice_table VALUES (23, 'INV-18', NULL, 1500.00, 0.00, '2025-04-03 11:31:05.940004', NULL, NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-03 11:31:05.940004', NULL, 1, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.invoice_table VALUES (9, 'INV-2025022500006', 12, 1500.00, 50.00, '2025-04-02 00:00:00', '2025-04-11', 100.00, NULL, 'INR', DEFAULT, 103, 2, '2025-04-03 12:19:11.825932', NULL, 1, 'Urgent delivery requested', '2025-04-05', NULL, 'Approved by retailer');
+INSERT INTO business_schema.invoice_table VALUES (39, NULL, 12, 1500.50, 50.00, '2025-04-02 00:00:00', '2025-04-15', 75.25, NULL, 'INR', DEFAULT, 103, 1, '2025-04-03 16:37:24.587299', NULL, 1, NULL, NULL, NULL, NULL);
 
 
 --
@@ -5440,7 +5725,7 @@ SELECT pg_catalog.setval('admin_schema.vehicle_model_id_seq', 3, true);
 -- Name: invoice_details_table_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.invoice_details_table_id_seq', 4, true);
+SELECT pg_catalog.setval('business_schema.invoice_details_table_id_seq', 12, true);
 
 
 --
@@ -5454,7 +5739,7 @@ SELECT pg_catalog.setval('business_schema.invoice_number_seq', 18, true);
 -- Name: invoice_table_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 23, true);
+SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 39, true);
 
 
 --
@@ -6401,6 +6686,14 @@ ALTER TABLE ONLY admin_schema.master_vehicle_table
 
 ALTER TABLE ONLY admin_schema.permission_audit_log
     ADD CONSTRAINT permission_audit_log_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES admin_schema.roles_table(role_id);
+
+
+--
+-- Name: daily_price_update fk_branch; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.daily_price_update
+    ADD CONSTRAINT fk_branch FOREIGN KEY (b_branch_id) REFERENCES admin_schema.business_branch_table(b_branch_id) ON DELETE CASCADE;
 
 
 --
