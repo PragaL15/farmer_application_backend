@@ -76,40 +76,14 @@ func UpdateCategory(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Category updated successfully"})
 }
 
-func GetCategories(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_product_categories();")
-	if err != nil {
-		log.Printf("Failed to fetch categories: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch categories"})
-	}
-	defer rows.Close()
-	type Category struct {
-		CategoryID         int     `json:"category_id"`
-		CategoryName       string  `json:"category_name"`
-		SuperCatID         *int    `json:"super_cat_id"`
-		ImgPath            *string `json:"img_path"`
-		ActiveStatus       *int    `json:"active_status"`
-		CategoryRegionalID *int    `json:"category_regional_id"`
-	}
-	
-	categories := make([]Category, 0)
-	for rows.Next() {
-		var category Category
-		if err := rows.Scan(&category.CategoryID, &category.CategoryName, &category.SuperCatID, &category.ImgPath, &category.ActiveStatus, &category.CategoryRegionalID); err != nil {
-			log.Printf("Failed to scan category: %v", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process categories"})
-		}
-		categories = append(categories, category)
-	}
-	return c.JSON(categories)
-}
-
 func GetCategoryByID(c *fiber.Ctx) error {
 	categoryID := c.Params("category_id")
 	if categoryID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Category ID is required"})
 	}
+
 	row := db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_product_category_by_id($1);", categoryID)
+
 	type Category struct {
 		CategoryID         int     `json:"category_id"`
 		CategoryName       string  `json:"category_name"`
@@ -118,11 +92,21 @@ func GetCategoryByID(c *fiber.Ctx) error {
 		ActiveStatus       *int    `json:"active_status"`
 		CategoryRegionalID *int    `json:"category_regional_id"`
 	}
+
 	var category Category
-	err := row.Scan(&category.CategoryID, &category.CategoryName, &category.SuperCatID, &category.ImgPath, &category.ActiveStatus, &category.CategoryRegionalID)
+	err := row.Scan(
+		&category.CategoryID,
+		&category.CategoryName,
+		&category.SuperCatID,
+		&category.ImgPath,
+		&category.ActiveStatus,
+		&category.CategoryRegionalID,
+	)
+
 	if err != nil {
 		log.Printf("Failed to fetch category: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch category"})
 	}
+
 	return c.JSON(category)
 }

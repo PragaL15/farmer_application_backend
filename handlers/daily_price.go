@@ -21,6 +21,7 @@ type PriceData struct {
 	Remarks       string  `json:"remarks"`
 }
 
+// Fetch price data based on product, unit, and wholesaler
 func fetchPriceData(productID, unitID, wholesellerID string) (*PriceData, error) {
 	query := `SELECT * FROM business_schema.fetch_price_data($1, $2, $3)`
 
@@ -42,25 +43,29 @@ func fetchPriceData(productID, unitID, wholesellerID string) (*PriceData, error)
 	return &priceData, nil
 }
 
+// Insert price data with branch mapping
 func insertPriceData(req PriceData) error {
-	query := `SELECT business_schema.insert_price_data($1, $2, $3, $4, $5, $6, $7, $8)`
+	query := `SELECT business_schema.insert_daily_price($1, $2, $3, $4, $5, $6)`
 
 	_, err := db.Pool.Exec(context.Background(), query,
-		req.ProductID, req.Price, req.UnitID, req.WholesellerID,
-		req.Currency, time.Now(), time.Now(), req.Remarks,
+		req.WholesellerID, req.ProductID, req.UnitID,
+		req.Price, req.Currency, req.Remarks,
 	)
 	return err
 }
 
+// Update price data for a wholesaler in a specific branch
 func updatePriceData(req PriceData) error {
-	query := `SELECT business_schema.update_price_data($1, $2, $3, $4, $5, $6, $7)`
+	query := `SELECT business_schema.update_daily_price($1, $2, $3, $4, $5, $6, $7)`
 
 	_, err := db.Pool.Exec(context.Background(), query,
-		req.Price, req.Currency, time.Now(), req.Remarks, req.ProductID, req.UnitID, req.WholesellerID,
+		req.WholesellerID, req.ProductID, req.UnitID,
+		req.Price, req.Currency, time.Now(), req.Remarks,
 	)
 	return err
 }
 
+// Get Price Handler
 func GetPriceHandler(c *fiber.Ctx) error {
 	productID := c.Query("product_id")
 	unitID := c.Query("unit_id")
@@ -81,6 +86,7 @@ func GetPriceHandler(c *fiber.Ctx) error {
 	return c.JSON(priceData)
 }
 
+// Insert Price Handler
 func InsertPriceHandler(c *fiber.Ctx) error {
 	var req PriceData
 	if err := c.BodyParser(&req); err != nil {
@@ -95,6 +101,7 @@ func InsertPriceHandler(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Price inserted successfully"})
 }
 
+// Update Price Handler
 func UpdatePriceHandler(c *fiber.Ctx) error {
 	var req PriceData
 	if err := c.BodyParser(&req); err != nil {

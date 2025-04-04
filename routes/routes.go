@@ -10,7 +10,7 @@ func RegisterRoutes(app *fiber.App) {
 
 	// GET Routes
 	app.Get("/getUsers", Masterhandlers.GetAllUsers)
-	app.Get("/getCategories", Masterhandlers.GetCategories)
+	//app.Get("/getCategories", Masterhandlers.GetCategories)
 	app.Get("/getDrivers", Masterhandlers.GetDrivers)
 	app.Get("/getLocations", Masterhandlers.GetLocations)
 	app.Get("/getMandiDetails", Masterhandlers.GetAllMandiDetails)
@@ -40,7 +40,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getUsers/:id", Masterhandlers.GetUserByID)
 	app.Get("/getBusinesses/:id", Masterhandlers.GetBusinessByID)
 	app.Get("/getMandiDetails/:id", Masterhandlers.GetMandiDetailsByID)
-	app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
   app.Get("/getCategories/:category_id", Masterhandlers.GetCategoryByID)
   app.Get("/getStates/:state_id", Masterhandlers.GetStateByID)
   app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
