@@ -82,7 +82,7 @@ func GetCategoryByID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Category ID is required"})
 	}
 
-	row := db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_product_category_by_id($1);", categoryID)
+	row := db.Pool.QueryRow(context.Background(), "SELECT admin_schema.get_category_with_subcategories($1);", categoryID)
 
 	type Category struct {
 		CategoryID         int     `json:"category_id"`
