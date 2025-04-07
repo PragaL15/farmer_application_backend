@@ -3,6 +3,7 @@ package Masterhandlers
 import (
 	"context"
 	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
@@ -13,8 +14,9 @@ type BusinessType struct {
 	Remarks   string `json:"remarks"`
 }
 
+// Get all business types
 func GetBusinessTypes(c *fiber.Ctx) error {
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_business_types()")
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_business_types()")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -31,6 +33,7 @@ func GetBusinessTypes(c *fiber.Ctx) error {
 	return c.JSON(businessTypes)
 }
 
+// Get business type by ID
 func GetBusinessTypeByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 	idInt, err := strconv.Atoi(id)
@@ -38,52 +41,55 @@ func GetBusinessTypeByID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 	}
 
-	var businessTypeName string
+	var bTypeName string
 	var remarks string
 
-	err = db.Pool.QueryRow(context.Background(), "SELECT b_typename, remarks FROM get_business_type_by_id($1)", idInt).Scan(&businessTypeName, &remarks)
+	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_business_type_by_id($1)", idInt).Scan(&bTypeName, &remarks)
 	if err != nil {
-		
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
 	return c.JSON(fiber.Map{
-		"id":         idInt,
-		"b_typename": businessTypeName,
+		"b_typeid":   idInt,
+		"b_typename": bTypeName,
 		"remarks":    remarks,
 	})
 }
 
-
+// Insert new business type
 func InsertBusinessType(c *fiber.Ctx) error {
-	type Request struct {
-		BTypeName string `json:"b_typename"`
-		Remarks   string `json:"remarks"`
-	}
-	var req Request
+	var req BusinessType
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
-	_, err := db.Pool.Exec(context.Background(), "SELECT insert_business_type($1, $2)", req.BTypeName, req.Remarks)
+
+	var inserted BusinessType
+	err := db.Pool.QueryRow(
+		context.Background(),
+		"SELECT * FROM admin_schema.insert_business_type($1, $2)",
+		req.BTypeName, req.Remarks,
+	).Scan(&inserted.BTypeID, &inserted.BTypeName, &inserted.Remarks)
+
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert", "details": err.Error()})
 	}
-	return c.JSON(fiber.Map{"message": "Business type inserted successfully"})
+
+	return c.Status(fiber.StatusCreated).JSON(inserted)
 }
 
 
 func UpdateBusinessType(c *fiber.Ctx) error {
-	type Request struct {
-		BTypeID   int    `json:"b_typeid"`
-		BTypeName string `json:"b_typename"`
-		Remarks   string `json:"remarks"`
-	}
-	var req Request
+	var req BusinessType
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
-	_, err := db.Pool.Exec(context.Background(), "SELECT update_business_type($1, $2, $3)", req.BTypeID, req.BTypeName, req.Remarks)
+
+	_, err := db.Pool.Exec(context.Background(), "CALL admin_schema.update_business_type($1, $2, $3)", req.BTypeID, req.BTypeName, req.Remarks)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update", "details": err.Error()})
 	}
-	return c.JSON(fiber.Map{"message": "Business type updated successfully"})
+
+	return c.JSON(fiber.Map{
+		"message": "Business type updated successfully",
+	})
 }
