@@ -244,11 +244,29 @@ ALTER FUNCTION admin_schema.get_all_languages() OWNER TO postgres;
 -- Name: get_all_mandi(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_all_mandi() RETURNS TABLE(mandi_id integer, mandi_location character varying, mandi_incharge character varying, mandi_incharge_num character varying, mandi_pincode character varying, mandi_address text, mandi_state integer, mandi_name character varying, mandi_shortnames character varying)
+CREATE FUNCTION admin_schema.get_all_mandi() RETURNS TABLE(mandi_id integer, mandi_location character varying, mandi_incharge character varying, mandi_incharge_num character varying, mandi_pincode character varying, mandi_address text, mandi_state_id integer, state_name character varying, state_shortnames character varying, mandi_name character varying, mandi_shortnames character varying, mandi_city_id integer, city_name character varying, city_shortnames character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY SELECT * FROM admin_schema.master_mandi_table;
+    RETURN QUERY
+    SELECT
+        m.mandi_id,
+        m.mandi_location,
+        m.mandi_incharge,
+        m.mandi_incharge_num,
+        m.mandi_pincode,
+        m.mandi_address,
+        s.id AS mandi_state_id,
+        s.state AS state_name,
+        s.state_shortnames,
+        m.mandi_name,
+        m.mandi_shortnames,
+        c.id AS mandi_city_id,
+        c.city_name,
+        c.city_shortnames
+    FROM admin_schema.master_mandi_table m
+    LEFT JOIN admin_schema.master_states s ON m.mandi_state = s.id
+    LEFT JOIN admin_schema.master_city c ON m.mandi_city = c.id;
 END;
 $$;
 
@@ -275,16 +293,39 @@ ALTER FUNCTION admin_schema.get_all_order_statuses() OWNER TO postgres;
 -- Name: get_all_payment_modes(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_all_payment_modes() RETURNS TABLE(id integer, payment_mode character varying)
+CREATE FUNCTION admin_schema.get_all_payment_modes() RETURNS TABLE(id integer, payment_mode character varying, is_active integer)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY SELECT id, payment_mode FROM admin_schema.mode_of_payments_list ORDER BY id;
+    RETURN QUERY
+    SELECT id, payment_mode, is_active
+    FROM admin_schema.mode_of_payments_list
+    ORDER BY id;
 END;
 $$;
 
 
 ALTER FUNCTION admin_schema.get_all_payment_modes() OWNER TO postgres;
+
+--
+-- Name: get_all_payment_types(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_payment_types() RETURNS TABLE(id integer, payment_type character varying, is_active boolean)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        payment_type_list.id, 
+        payment_type_list.payment_type, 
+        payment_type_list.is_active
+    FROM admin_schema.payment_type_list;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_payment_types() OWNER TO postgres;
 
 --
 -- Name: get_all_product_categories(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -563,6 +604,47 @@ $$;
 
 
 ALTER FUNCTION admin_schema.get_business_category(p_b_category_id integer) OWNER TO postgres;
+
+--
+-- Name: get_business_type_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_business_type_by_id(_id integer) RETURNS TABLE(b_typename character varying, remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        type_name,
+        NULL::TEXT AS remarks  -- Replace if remarks exists in table
+    FROM admin_schema.business_type_table
+    WHERE type_id = _id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_business_type_by_id(_id integer) OWNER TO postgres;
+
+--
+-- Name: get_business_types(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_business_types() RETURNS TABLE(b_typeid integer, b_typename character varying, remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        bt.type_id,
+        bt.type_name,
+        bt.remarks
+    FROM admin_schema.business_type_table bt
+    ORDER BY bt.type_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_business_types() OWNER TO postgres;
 
 --
 -- Name: get_business_user_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -970,6 +1052,24 @@ $$;
 ALTER FUNCTION admin_schema.insert_business_category(p_b_category_name character varying) OWNER TO postgres;
 
 --
+-- Name: insert_business_type(character varying, text); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_business_type(p_type_name character varying, p_remarks text) RETURNS TABLE(b_typeid integer, b_typename character varying, remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.business_type_table (type_name, remarks)
+    VALUES (p_type_name, p_remarks)
+    RETURNING type_id, type_name, remarks INTO b_typeid, b_typename, remarks;
+    RETURN NEXT;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_business_type(p_type_name character varying, p_remarks text) OWNER TO postgres;
+
+--
 -- Name: insert_business_user(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -1082,6 +1182,51 @@ $$;
 ALTER FUNCTION admin_schema.insert_mandi(p_mandi_location character varying, p_mandi_incharge character varying, p_mandi_incharge_num character varying, p_mandi_pincode character varying, p_mandi_address text, p_mandi_state integer, p_mandi_name character varying, p_mandi_shortnames character varying) OWNER TO postgres;
 
 --
+-- Name: insert_mandi(character varying, character varying, character varying, character varying, text, integer, character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_mandi(_mandi_location character varying, _mandi_incharge character varying, _mandi_incharge_num character varying, _mandi_pincode character varying, _mandi_address text, _mandi_state integer, _mandi_name character varying, _mandi_shortnames character varying, _mandi_city integer) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM admin_schema.master_mandi_table
+        WHERE mandi_incharge_num = _mandi_incharge_num
+    ) THEN
+        RETURN 'Mandi Incharge Phone Number already exists.';
+    END IF;
+
+    INSERT INTO admin_schema.master_mandi_table (
+        mandi_location,
+        mandi_incharge,
+        mandi_incharge_num,
+        mandi_pincode,
+        mandi_address,
+        mandi_state,
+        mandi_name,
+        mandi_shortnames,
+        mandi_city
+    )
+    VALUES (
+        _mandi_location,
+        _mandi_incharge,
+        _mandi_incharge_num,
+        _mandi_pincode,
+        _mandi_address,
+        _mandi_state,
+        _mandi_name,
+        _mandi_shortnames,
+        _mandi_city
+    );
+
+    RETURN 'Mandi inserted successfully.';
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_mandi(_mandi_location character varying, _mandi_incharge character varying, _mandi_incharge_num character varying, _mandi_pincode character varying, _mandi_address text, _mandi_state integer, _mandi_name character varying, _mandi_shortnames character varying, _mandi_city integer) OWNER TO postgres;
+
+--
 -- Name: insert_order_status(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -1111,6 +1256,38 @@ $$;
 
 
 ALTER FUNCTION admin_schema.insert_payment_mode(p_payment_mode character varying) OWNER TO postgres;
+
+--
+-- Name: insert_payment_mode(text, integer); Type: PROCEDURE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE PROCEDURE admin_schema.insert_payment_mode(IN payment_mode text, IN is_active integer DEFAULT 1)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.mode_of_payments_list (payment_mode, is_active)
+    VALUES (payment_mode, is_active);
+END;
+$$;
+
+
+ALTER PROCEDURE admin_schema.insert_payment_mode(IN payment_mode text, IN is_active integer) OWNER TO postgres;
+
+--
+-- Name: insert_payment_type(text); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_payment_type(p_type text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.payment_type_list (payment_type, is_active)
+    VALUES (p_type, TRUE);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_payment_type(p_type text) OWNER TO postgres;
 
 --
 -- Name: insert_product_category(character varying, integer, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -1332,6 +1509,25 @@ $$;
 ALTER FUNCTION admin_schema.update_business_category(p_b_category_id integer, p_b_category_name character varying) OWNER TO postgres;
 
 --
+-- Name: update_business_type(integer, character varying, text); Type: PROCEDURE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE PROCEDURE admin_schema.update_business_type(IN p_type_id integer, IN p_type_name character varying, IN p_remarks text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.business_type_table
+    SET
+        type_name = p_type_name,
+        remarks = p_remarks
+    WHERE type_id = p_type_id;
+END;
+$$;
+
+
+ALTER PROCEDURE admin_schema.update_business_type(IN p_type_id integer, IN p_type_name character varying, IN p_remarks text) OWNER TO postgres;
+
+--
 -- Name: update_business_user(integer, character varying, integer, boolean); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -1490,6 +1686,34 @@ $$;
 ALTER FUNCTION admin_schema.update_mandi(p_mandi_id integer, p_mandi_location character varying, p_mandi_incharge character varying, p_mandi_incharge_num character varying, p_mandi_pincode character varying, p_mandi_address text, p_mandi_state integer, p_mandi_name character varying, p_mandi_shortnames character varying) OWNER TO postgres;
 
 --
+-- Name: update_mandi(integer, character varying, character varying, character varying, character varying, text, integer, character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_mandi(_id integer, _mandi_location character varying, _mandi_incharge character varying, _mandi_incharge_num character varying, _mandi_pincode character varying, _mandi_address text, _mandi_state integer, _mandi_name character varying, _mandi_shortnames character varying, _mandi_city integer) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_mandi_table
+    SET
+        mandi_location = _mandi_location,
+        mandi_incharge = _mandi_incharge,
+        mandi_incharge_num = _mandi_incharge_num,
+        mandi_pincode = _mandi_pincode,
+        mandi_address = _mandi_address,
+        mandi_state = _mandi_state,
+        mandi_name = _mandi_name,
+        mandi_shortnames = _mandi_shortnames,
+        mandi_city = _mandi_city
+    WHERE mandi_id = _id; -- ✅ corrected this line
+
+    RETURN 'Mandi updated successfully.';
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_mandi(_id integer, _mandi_location character varying, _mandi_incharge character varying, _mandi_incharge_num character varying, _mandi_pincode character varying, _mandi_address text, _mandi_state integer, _mandi_name character varying, _mandi_shortnames character varying, _mandi_city integer) OWNER TO postgres;
+
+--
 -- Name: update_order_status(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -1520,6 +1744,44 @@ $$;
 
 
 ALTER FUNCTION admin_schema.update_payment_mode(p_id integer, p_payment_mode character varying) OWNER TO postgres;
+
+--
+-- Name: update_payment_mode(integer, text, integer); Type: PROCEDURE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE PROCEDURE admin_schema.update_payment_mode(IN mode_id integer, IN new_payment_mode text, IN new_is_active integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.mode_of_payments_list
+    SET
+        payment_mode = new_payment_mode,
+        is_active = new_is_active
+    WHERE id = mode_id;
+END;
+$$;
+
+
+ALTER PROCEDURE admin_schema.update_payment_mode(IN mode_id integer, IN new_payment_mode text, IN new_is_active integer) OWNER TO postgres;
+
+--
+-- Name: update_payment_type(integer, text, boolean); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_payment_type(p_id integer, p_type text DEFAULT NULL::text, p_is_active boolean DEFAULT NULL::boolean) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.payment_type_list
+    SET
+        payment_type = COALESCE(p_type, payment_type),
+        is_active = COALESCE(p_is_active, is_active)
+    WHERE id = p_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_payment_type(p_id integer, p_type text, p_is_active boolean) OWNER TO postgres;
 
 --
 -- Name: update_product(bigint, integer, character varying, character varying, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -2175,6 +2437,46 @@ $$;
 ALTER FUNCTION business_schema.fetch_price_data(p_product_id integer, p_unit_id integer, p_wholeseller_id integer) OWNER TO postgres;
 
 --
+-- Name: get_all_daily_price_updates(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_all_daily_price_updates() RETURNS TABLE(daily_price_id integer, product_id integer, product_name character varying, category_id integer, category_name character varying, price numeric, unit_id integer, unit_name character varying, wholeseller_id integer, currency character varying, created_at timestamp without time zone, updated_at timestamp without time zone, remarks character varying, b_branch_id integer, b_shop_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        dpu.daily_price_id,
+        dpu.product_id,
+        mp.product_name,
+        mp.category_id,
+        mpc.category_name,
+        dpu.price,
+        dpu.unit_id,
+        u.unit_name,
+        dpu.wholeseller_id,
+        dpu.currency,
+        dpu.created_at,
+        dpu.updated_at,
+        dpu.remarks,
+        dpu.b_branch_id,
+        bbt.b_shop_name
+    FROM business_schema.daily_price_update dpu
+    LEFT JOIN admin_schema.units_table u
+        ON dpu.unit_id = u.id
+    LEFT JOIN admin_schema.master_product mp
+        ON dpu.product_id = mp.product_id
+    LEFT JOIN admin_schema.master_product_category_table mpc
+        ON mp.category_id = mpc.category_id
+    LEFT JOIN admin_schema.business_branch_table bbt
+        ON dpu.b_branch_id = bbt.b_branch_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_all_daily_price_updates() OWNER TO postgres;
+
+--
 -- Name: get_invoice_with_items(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2271,6 +2573,142 @@ $$;
 ALTER FUNCTION business_schema.get_order_details(p_order_id bigint) OWNER TO postgres;
 
 --
+-- Name: get_order_history(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_history() RETURNS TABLE(history_id integer, order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, delivery_completed_date timestamp without time zone, retailer_id integer, retailer_name text, wholeseller_id integer, wholeseller_name text, delivery_location_id integer, city_name text, delivery_state_id integer, pincode character varying, delivery_address text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        oh.history_id,
+        oh.order_id,
+        oh.date_of_order,
+        oh.order_status,
+        oh.expected_delivery_date,
+        oh.actual_delivery_date,
+        oh.delivery_completed_date,
+        oh.retailer_id,
+        retailer.b_owner_name AS retailer_name,
+        oh.wholeseller_id,
+        wholeseller.b_owner_name AS wholeseller_name,
+        oh.delivery_location_id,
+        mc.city_name,
+        oh.delivery_state_id,
+        oh.pincode,
+        oh.delivery_address
+    FROM
+        business_schema.order_history_table oh
+    LEFT JOIN admin_schema.master_location ml
+        ON oh.delivery_location_id = ml.id
+    LEFT JOIN admin_schema.master_city mc
+        ON ml.city_shortnames = mc.id
+    LEFT JOIN admin_schema.business_table retailer
+        ON oh.retailer_id = retailer.b_id
+    LEFT JOIN admin_schema.business_table wholeseller
+        ON oh.wholeseller_id = wholeseller.b_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_history() OWNER TO postgres;
+
+--
+-- Name: get_order_history_with_city(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_history_with_city() RETURNS TABLE(history_id integer, order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, retailer_id integer, wholeseller_id integer, location_id integer, state_id integer, pincode character varying, address text, delivery_completed_date timestamp without time zone, location character varying, city_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        oh.history_id,
+        oh.order_id,
+        oh.date_of_order,
+        oh.order_status,
+        oh.expected_delivery_date,
+        oh.actual_delivery_date,
+        oh.retailer_id,
+        oh.wholeseller_id,
+        oh.location_id,
+        oh.state_id,
+        oh.pincode,
+        oh.address,
+        oh.delivery_completed_date,
+        ml.location,
+        mc.city_name
+    FROM business_schema.order_history_table oh
+    LEFT JOIN admin_schema.master_location ml ON oh.location_id = ml.id
+    LEFT JOIN admin_schema.master_city mc ON ml.city_shortnames = mc.id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_history_with_city() OWNER TO postgres;
+
+--
+-- Name: get_order_history_with_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_history_with_details() RETURNS TABLE(history_id integer, order_id integer, date_of_order timestamp without time zone, order_status integer, expected_delivery_date timestamp without time zone, actual_delivery_date timestamp without time zone, delivery_completed_date timestamp without time zone, retailer_id integer, retailer_name text, wholeseller_id integer, wholeseller_name text, delivery_location_id integer, location_name text, city_name text, delivery_state_id integer, state text, pincode character varying, delivery_address text, retailer_contact_mobile character varying, total_order_amount numeric, discount_amount numeric, tax_amount numeric, final_amount numeric, delivery_deadline date, desired_delivery_date date, wholeseller_offer_id bigint, cancellation_reason text, max_price_limit numeric, user_id integer, command text, created_by timestamp without time zone, updated_by timestamp without time zone)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        oh.history_id,
+        oh.order_id,
+        oh.date_of_order,
+        oh.order_status,
+        oh.expected_delivery_date,
+        oh.actual_delivery_date,
+        oh.delivery_completed_date,
+        oh.retailer_id,
+        retailer.b_owner_name::TEXT,
+        oh.wholeseller_id,
+        wholeseller.b_owner_name::TEXT,
+        oh.delivery_location_id,
+        ml.location::TEXT,
+        mc.city_name::TEXT,
+        oh.delivery_state_id,
+        ms.state::TEXT,
+        oh.pincode,
+        oh.delivery_address,
+        oh.retailer_contact_mobile,
+        oh.total_order_amount,
+        oh.discount_amount,
+        oh.tax_amount,
+        oh.final_amount,
+        oh.delivery_deadline,
+        oh.desired_delivery_date,
+        oh.wholeseller_offer_id,
+        oh.cancellation_reason,
+        oh.max_price_limit,
+        oh.user_id,
+        oh.command,
+        oh.created_by,
+        oh.updated_by
+    FROM
+        business_schema.order_history_table oh
+    LEFT JOIN admin_schema.business_table retailer
+        ON oh.retailer_id = retailer.bid
+    LEFT JOIN admin_schema.business_table wholeseller
+        ON oh.wholeseller_id = wholeseller.bid
+    LEFT JOIN admin_schema.master_location ml
+        ON oh.delivery_location_id = ml.id
+    LEFT JOIN admin_schema.master_city mc
+        ON ml.city_shortnames = mc.id
+    LEFT JOIN admin_schema.master_states ms
+        ON oh.delivery_state_id = ms.id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_history_with_details() OWNER TO postgres;
+
+--
 -- Name: insert_daily_price(); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2293,6 +2731,39 @@ $$;
 
 
 ALTER FUNCTION business_schema.insert_daily_price() OWNER TO postgres;
+
+--
+-- Name: insert_daily_price(integer, integer, integer, numeric, text, text); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_daily_price(wholeseller_id integer, product_id integer, unit_id integer, price numeric, currency text, remarks text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO business_schema.daily_price_update (
+        wholeseller_id,
+        product_id,
+        unit_id,
+        price,
+        currency,
+        remarks,
+        created_at,
+        updated_at
+    ) VALUES (
+        wholeseller_id,
+        product_id,
+        unit_id,
+        price,
+        currency,
+        remarks,
+        NOW(),
+        NOW()
+    );
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_daily_price(wholeseller_id integer, product_id integer, unit_id integer, price numeric, currency text, remarks text) OWNER TO postgres;
 
 --
 -- Name: insert_order(date, integer, date, date, integer, integer, integer, integer, text, text, numeric, numeric, numeric, numeric); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -2361,6 +2832,76 @@ $$;
 
 
 ALTER FUNCTION business_schema.log_order_activity() OWNER TO postgres;
+
+--
+-- Name: log_order_changes(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.log_order_changes() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO business_schema.order_history_table (
+        order_id,
+        date_of_order,
+        order_status,
+        expected_delivery_date,
+        actual_delivery_date,
+        retailer_id,
+        wholeseller_id,
+        delivery_pincode,
+        delivery_address,
+        delivery_deadline,
+        desired_delivery_date,
+        total_order_amount,
+        discount_amount,
+        tax_amount,
+        final_amount,
+        created_by,
+        updated_by,
+        retailer_contact_mobile,
+        wholeseller_offer_id,
+        cancellation_reason,
+        max_price_limit,
+        delivery_location_id,
+        delivery_state_id,
+        user_id,
+        command
+    )
+    VALUES (
+        NEW.order_id,
+        NEW.date_of_order,
+        NEW.order_status,
+        NEW.desired_delivery_date, -- mapping to expected_delivery_date in history
+        NEW.actual_delivery_date,
+        NEW.retailer_id,
+        NEW.wholeseller_id[1], -- assuming first wholeseller for history
+        NEW.delivery_pincode,
+        NEW.delivery_address,
+        NEW.delivery_deadline,
+        NEW.desired_delivery_date,
+        NEW.total_order_amount,
+        NEW.discount_amount,
+        NEW.tax_amount,
+        NEW.final_amount,
+        NEW.created_by,
+        NEW.updated_by,
+        NEW.retailer_contact_mobile,
+        NEW.wholeseller_offer_id,
+        NEW.cancellation_reason,
+        NEW.max_price_limit,
+        NULL, -- delivery_location_id if available separately
+        NULL, -- delivery_state_id if available separately
+        COALESCE(current_setting('app.user_id', true)::INTEGER, 1), -- from session or default 1
+        TG_ARGV[0] -- command passed to trigger
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.log_order_changes() OWNER TO postgres;
 
 --
 -- Name: update_daily_price(integer, integer, integer, numeric, character varying); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -2519,6 +3060,31 @@ $$;
 ALTER FUNCTION public.get_businesses() OWNER TO postgres;
 
 --
+-- Name: get_master_locations(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_master_locations() RETURNS TABLE(id integer, location character varying, city_id integer, city_name character varying, state_id integer, state_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        ml.id,
+        ml.location,
+        mc.id AS city_id,
+        mc.city_name,
+        ms.id AS state_id,
+        ms.state
+    FROM admin_schema.master_location ml
+    JOIN admin_schema.master_city mc ON ml.city_shortnames = mc.id
+    JOIN admin_schema.master_states ms ON ml.state = ms.id;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_master_locations() OWNER TO postgres;
+
+--
 -- Name: insert_business(text, text, text, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -2568,6 +3134,22 @@ $$;
 
 
 ALTER FUNCTION public.insert_business_user() OWNER TO postgres;
+
+--
+-- Name: insert_location(integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_location(_city_shortnames integer, _state integer, _location character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_location (location, city_shortnames, state)
+    VALUES (_location, _city_shortnames, _state);
+END;
+$$;
+
+
+ALTER FUNCTION public.insert_location(_city_shortnames integer, _state integer, _location character varying) OWNER TO postgres;
 
 --
 -- Name: insert_master_product(integer, character varying, integer, character varying, character varying, character varying, character varying, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -2634,6 +3216,30 @@ $$;
 
 
 ALTER FUNCTION public.update_business(p_bid bigint, p_b_person_name text, p_b_registration_num text, p_b_owner_name text, p_active_status integer, p_b_category_id integer, p_b_type_id integer) OWNER TO postgres;
+
+--
+-- Name: update_location(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_location(_id integer, _city_shortnames integer, _state integer, _location character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM admin_schema.master_location WHERE id = _id) THEN
+        RAISE EXCEPTION 'Location with id % does not exist', _id;
+    END IF;
+
+    UPDATE admin_schema.master_location
+    SET
+        city_shortnames = _city_shortnames,
+        state = _state,
+        location = _location
+    WHERE id = _id;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_location(_id integer, _city_shortnames integer, _state integer, _location character varying) OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -2728,7 +3334,6 @@ ALTER SEQUENCE admin_schema.business_category_table_b_category_id_seq OWNED BY a
 
 CREATE TABLE admin_schema.business_table (
     bid bigint NOT NULL,
-    b_person_name character varying(255),
     b_registration_num character varying(50),
     b_owner_name character varying(255),
     active_status integer,
@@ -2748,7 +3353,8 @@ ALTER TABLE admin_schema.business_table OWNER TO postgres;
 
 CREATE TABLE admin_schema.business_type_table (
     type_id integer NOT NULL,
-    type_name character varying(50) NOT NULL
+    type_name character varying(50) NOT NULL,
+    remarks text
 );
 
 
@@ -2800,7 +3406,8 @@ ALTER TABLE admin_schema.business_user_table OWNER TO admin;
 
 CREATE TABLE admin_schema.payment_type_list (
     id integer NOT NULL,
-    payment_type character varying(50) NOT NULL
+    payment_type character varying(50) NOT NULL,
+    is_active boolean DEFAULT true
 );
 
 
@@ -3102,7 +3709,8 @@ CREATE TABLE admin_schema.master_mandi_table (
     mandi_address text,
     mandi_state integer,
     mandi_name character varying(255),
-    mandi_shortnames character varying(10)
+    mandi_shortnames character varying(10),
+    mandi_city integer
 );
 
 
@@ -3296,7 +3904,8 @@ ALTER SEQUENCE admin_schema.master_violation_table_new_id_seq OWNED BY admin_sch
 
 CREATE TABLE admin_schema.mode_of_payments_list (
     id integer NOT NULL,
-    payment_mode character varying(50) NOT NULL
+    payment_mode character varying(50) NOT NULL,
+    is_active integer DEFAULT 1
 );
 
 
@@ -3741,11 +4350,35 @@ CREATE TABLE business_schema.daily_price_update (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     remarks character varying(255),
-    b_branch_id integer
+    b_branch_id integer,
+    category_id integer,
+    daily_price_id integer NOT NULL
 );
 
 
 ALTER TABLE business_schema.daily_price_update OWNER TO postgres;
+
+--
+-- Name: daily_price_update_daily_price_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.daily_price_update_daily_price_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.daily_price_update_daily_price_id_seq OWNER TO postgres;
+
+--
+-- Name: daily_price_update_daily_price_id_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.daily_price_update_daily_price_id_seq OWNED BY business_schema.daily_price_update.daily_price_id;
+
 
 --
 -- Name: invoice_details_table; Type: TABLE; Schema: business_schema; Owner: postgres
@@ -3953,12 +4586,26 @@ CREATE TABLE business_schema.order_history_table (
     actual_delivery_date timestamp without time zone,
     retailer_id integer,
     wholeseller_id integer,
-    location_id integer,
-    state_id integer,
-    pincode character varying(10),
-    address text,
+    delivery_location_id integer,
+    delivery_state_id integer,
+    delivery_pincode character varying(10),
+    delivery_address text,
     delivery_completed_date timestamp without time zone,
-    history_id integer NOT NULL
+    history_id integer NOT NULL,
+    total_order_amount numeric(10,2),
+    discount_amount numeric(10,2),
+    tax_amount numeric(10,2),
+    final_amount numeric(10,2),
+    created_by timestamp without time zone,
+    updated_by timestamp without time zone,
+    retailer_contact_mobile character varying(15),
+    delivery_deadline date,
+    desired_delivery_date date,
+    wholeseller_offer_id bigint,
+    cancellation_reason text,
+    max_price_limit numeric(10,2),
+    user_id integer DEFAULT 1,
+    command text
 );
 
 
@@ -4914,6 +5561,13 @@ ALTER TABLE ONLY admin_schema.vehicle_model ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: daily_price_update daily_price_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.daily_price_update ALTER COLUMN daily_price_id SET DEFAULT nextval('business_schema.daily_price_update_daily_price_id_seq'::regclass);
+
+
+--
 -- Name: invoice_details_table id; Type: DEFAULT; Schema: business_schema; Owner: postgres
 --
 
@@ -5077,21 +5731,23 @@ INSERT INTO admin_schema.business_branch_table VALUES (4, 104, 'JohnShop', 1, 1,
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (5, 'FreshMarket', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (6, 'TradeHub', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (12, 'SuperMart', NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (101, 'John Doe', 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (103, 'John Doe', 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (104, 'John Doe', 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (5, NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (6, NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (12, NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', NULL, NULL, true);
 
 
 --
 -- Data for Name: business_type_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_type_table VALUES (1, 'retailer');
-INSERT INTO admin_schema.business_type_table VALUES (2, 'wholeseller_admin');
-INSERT INTO admin_schema.business_type_table VALUES (3, 'wholeseller_user');
+INSERT INTO admin_schema.business_type_table VALUES (1, 'Retailer', 'Can place orders and negotiate prices');
+INSERT INTO admin_schema.business_type_table VALUES (2, 'Wholeseller Admin', 'Can update product prices and access invoices');
+INSERT INTO admin_schema.business_type_table VALUES (3, 'Wholeseller User', 'Can view orders and send invoices');
+INSERT INTO admin_schema.business_type_table VALUES (5, 'users', 'General user with limited access');
+INSERT INTO admin_schema.business_type_table VALUES (6, 'users-pro', 'End-user with preminum');
 
 
 --
@@ -5107,6 +5763,7 @@ INSERT INTO admin_schema.business_user_table VALUES (104, 'JohnShop', '987654321
 
 INSERT INTO admin_schema.category_regional_name VALUES (3, 2, 'Test Name');
 INSERT INTO admin_schema.category_regional_name VALUES (2, 2, 'नया नाम');
+INSERT INTO admin_schema.category_regional_name VALUES (4, 2, 'नया नाम');
 
 
 --
@@ -5119,6 +5776,9 @@ INSERT INTO admin_schema.category_regional_name VALUES (2, 2, 'नया ना�
 -- Data for Name: master_city; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
+INSERT INTO admin_schema.master_city VALUES (1, 'er', 'Erode');
+INSERT INTO admin_schema.master_city VALUES (2, 'ch', 'Chennai');
+INSERT INTO admin_schema.master_city VALUES (3, 'co', 'Coimbatore');
 
 
 --
@@ -5140,15 +5800,20 @@ INSERT INTO admin_schema.master_language VALUES (2, 'Tamil');
 -- Data for Name: master_location; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.master_location VALUES (1, 'Chennai', NULL, NULL);
 INSERT INTO admin_schema.master_location VALUES (2, 'coimbatore', NULL, NULL);
+INSERT INTO admin_schema.master_location VALUES (7, 'Erode North', 1, 2);
+INSERT INTO admin_schema.master_location VALUES (8, 'Erode North', 1, 2);
+INSERT INTO admin_schema.master_location VALUES (9, 'Erode North', 1, 2);
+INSERT INTO admin_schema.master_location VALUES (1, 'Erode North', 1, 1);
 
 
 --
 -- Data for Name: master_mandi_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.master_mandi_table VALUES (2, 'Location 1', 'John Doe', '9876543210', '123456', 'Address 1', 1, NULL, NULL);
+INSERT INTO admin_schema.master_mandi_table VALUES (4, 'Location X', 'Alice', '9879543210', '123456', 'Some address', 1, 'Alice Mandi', 'AMC', 1);
+INSERT INTO admin_schema.master_mandi_table VALUES (2, 'Updated Location', 'Jane Doe', '9123456789', '638002', 'Updated Address', 2, 'Updated Mandi', 'UPD', 2);
+INSERT INTO admin_schema.master_mandi_table VALUES (5, 'Koyambedu', 'Ravi Kumar', '9876543210', '600107', 'Chennai, Tamil Nadu', 1, 'Koyambedu Mandi', 'KYM', 2);
 
 
 --
@@ -5177,9 +5842,10 @@ INSERT INTO admin_schema.master_product_category_table VALUES (11, 'Organic Frui
 -- Data for Name: master_states; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.master_states VALUES (1, 'tamilnadu', NULL);
-INSERT INTO admin_schema.master_states VALUES (2, 'kerla', NULL);
-INSERT INTO admin_schema.master_states VALUES (3, 'West bengal', NULL);
+INSERT INTO admin_schema.master_states VALUES (1, 'tamilnadu', 'TN');
+INSERT INTO admin_schema.master_states VALUES (3, 'West bengal', 'WB');
+INSERT INTO admin_schema.master_states VALUES (4, 'Karnataka', 'KA');
+INSERT INTO admin_schema.master_states VALUES (2, 'Kerala', 'KL');
 
 
 --
@@ -5202,8 +5868,9 @@ INSERT INTO admin_schema.master_violation_table VALUES ('drunk and drive', 'medi
 -- Data for Name: mode_of_payments_list; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.mode_of_payments_list VALUES (1, 'credit_payment');
-INSERT INTO admin_schema.mode_of_payments_list VALUES (2, 'cash_payment');
+INSERT INTO admin_schema.mode_of_payments_list VALUES (1, 'credit_payment', 1);
+INSERT INTO admin_schema.mode_of_payments_list VALUES (2, 'cash_payment', 1);
+INSERT INTO admin_schema.mode_of_payments_list VALUES (3, 'UPI', 1);
 
 
 --
@@ -5225,11 +5892,12 @@ INSERT INTO admin_schema.order_status_table VALUES (9, 'return');
 -- Data for Name: payment_type_list; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.payment_type_list VALUES (1, 'Online Banking');
-INSERT INTO admin_schema.payment_type_list VALUES (2, 'UPI Payment');
-INSERT INTO admin_schema.payment_type_list VALUES (3, 'Mobile Wallets');
-INSERT INTO admin_schema.payment_type_list VALUES (4, 'Credit/Debit Cards');
-INSERT INTO admin_schema.payment_type_list VALUES (5, 'Credit/Pay after delivery');
+INSERT INTO admin_schema.payment_type_list VALUES (1, 'Online Banking', true);
+INSERT INTO admin_schema.payment_type_list VALUES (2, 'UPI Payment', true);
+INSERT INTO admin_schema.payment_type_list VALUES (3, 'Mobile Wallets', true);
+INSERT INTO admin_schema.payment_type_list VALUES (4, 'Credit/Debit Cards', true);
+INSERT INTO admin_schema.payment_type_list VALUES (5, 'Credit/Pay after delivery', true);
+INSERT INTO admin_schema.payment_type_list VALUES (6, 'QR Code Payment', true);
 
 
 --
@@ -5243,6 +5911,7 @@ INSERT INTO admin_schema.permission_audit_log VALUES (2, 1, '2025-03-18 17:48:53
 -- Data for Name: product_regional_name; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
+INSERT INTO admin_schema.product_regional_name VALUES (1, 1, 3, 'தக்காளி');
 
 
 --
@@ -5319,10 +5988,11 @@ INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
 -- Data for Name: daily_price_update; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.daily_price_update VALUES (1, 100.50, 1, 5, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL, NULL);
-INSERT INTO business_schema.daily_price_update VALUES (2, 250.00, 2, 6, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL, NULL);
-INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', NULL, NULL);
-INSERT INTO business_schema.daily_price_update VALUES (1, 1500.00, 2, 103, 'INR', '2025-04-03 18:04:41.442396', '2025-04-03 18:04:41.442396', 'Updated price for wheat', NULL);
+INSERT INTO business_schema.daily_price_update VALUES (1, 1500.00, 2, 103, 'INR', '2025-04-03 18:04:41.442396', '2025-04-03 18:04:41.442396', 'maybe negotiable', 4, 4, 4);
+INSERT INTO business_schema.daily_price_update VALUES (2, 250.00, 2, 6, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', 'maybe negotiable', 4, 5, 2);
+INSERT INTO business_schema.daily_price_update VALUES (1, 100.50, 1, 5, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', 'not negotiable', 4, 4, 1);
+INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', 'seasonal', 4, 6, 3);
+INSERT INTO business_schema.daily_price_update VALUES (2, 75.50, 2, 103, 'INR', '2025-04-07 22:40:58.125852', '2025-04-07 22:40:58.125852', 'Fresh stock update', NULL, NULL, 6);
 
 
 --
@@ -5390,22 +6060,24 @@ INSERT INTO business_schema.order_activity_log VALUES (36, 25, 103, 'retailer', 
 INSERT INTO business_schema.order_activity_log VALUES (37, 25, 103, 'retailer', 'order_placed', '2025-04-02 17:48:45.911071', NULL, NULL, 'Created order with 2 items totaling ₹9000.00', NULL, '2025-04-02 17:48:45.911071');
 INSERT INTO business_schema.order_activity_log VALUES (38, 26, 103, 'retailer', 'order_placed', '2025-04-02 18:36:12.502775', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.order_activity_log VALUES (39, 27, 103, 'retailer', 'order_placed', '2025-04-02 18:36:17.787677', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.order_activity_log VALUES (42, 30, 101, 'retailer', 'order_placed', '2025-04-07 21:43:17.273763', NULL, NULL, NULL, NULL, NULL);
 
 
 --
 -- Data for Name: order_history_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 4, '2025-02-27 09:55:59.551139', '2025-02-22 09:58:54.219252', 5, 6, 1, 2, '123456', '123 Street, City', NULL, 1);
-INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-22 10:01:52.229039', 2);
-INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 11:29:28.140697', 3);
-INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 11:59:18.925182', 4);
-INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 12:09:45.416871', 5);
-INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 21:12:04.580976', 6);
-INSERT INTO business_schema.order_history_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', NULL, 8);
-INSERT INTO business_schema.order_history_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', NULL, 9);
-INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 10);
-INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 11);
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 4, '2025-02-27 09:55:59.551139', '2025-02-22 09:58:54.219252', 5, 6, 1, 2, '123456', '123 Street, City', NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-22 10:01:52.229039', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 11:29:28.140697', 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 11:59:18.925182', 4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 12:09:45.416871', 5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-27 09:55:59.551139', '2025-02-22 10:01:52.229039', 5, 6, 1, 2, '123456', '123 Street, City', '2025-02-24 21:12:04.580976', 6, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', NULL, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (3, '2025-02-23 10:30:00', 2, '2025-02-26 10:30:00', NULL, 12, 6, 1, 2, '987654', '789 Road, City', NULL, 9, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 10, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 11, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
+INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 1, '2025-04-10 00:00:00', NULL, 101, NULL, NULL, NULL, '638001', '123, College Road, Erode', NULL, 12, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
 
 
 --
@@ -5460,6 +6132,7 @@ INSERT INTO business_schema.order_table VALUES (24, '2025-04-02 17:45:52.079056'
 INSERT INTO business_schema.order_table VALUES (25, '2025-04-02 17:48:45.911071', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (26, '2025-04-02 18:36:12.502775', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:12.502775', '2025-04-02 18:36:12.502775', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (27, '2025-04-02 18:36:17.787677', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:17.787677', '2025-04-02 18:36:17.787677', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (30, '2025-04-07 21:43:17.273763', 1, NULL, 101, '{}', 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '638001', '123, College Road, Erode', 10000.00, '2025-04-10', '2025-04-12', NULL, NULL, 1);
 
 
 --
@@ -5585,21 +6258,21 @@ SELECT pg_catalog.setval('admin_schema.business_category_table_b_category_id_seq
 -- Name: business_type_table_type_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.business_type_table_type_id_seq', 3, true);
+SELECT pg_catalog.setval('admin_schema.business_type_table_type_id_seq', 6, true);
 
 
 --
 -- Name: cash_payment_list_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.cash_payment_list_id_seq', 5, true);
+SELECT pg_catalog.setval('admin_schema.cash_payment_list_id_seq', 6, true);
 
 
 --
 -- Name: category_regional_name_category_regional_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.category_regional_name_category_regional_id_seq', 3, true);
+SELECT pg_catalog.setval('admin_schema.category_regional_name_category_regional_id_seq', 4, true);
 
 
 --
@@ -5620,7 +6293,7 @@ SELECT pg_catalog.setval('admin_schema.master_category_table_category_id_seq', 1
 -- Name: master_city_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.master_city_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.master_city_id_seq', 3, true);
 
 
 --
@@ -5641,14 +6314,14 @@ SELECT pg_catalog.setval('admin_schema.master_language_id_seq', 1, false);
 -- Name: master_location_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.master_location_id_seq', 5, true);
+SELECT pg_catalog.setval('admin_schema.master_location_id_seq', 9, true);
 
 
 --
 -- Name: master_mandi_table_mandi_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.master_mandi_table_mandi_id_seq', 2, true);
+SELECT pg_catalog.setval('admin_schema.master_mandi_table_mandi_id_seq', 5, true);
 
 
 --
@@ -5662,7 +6335,7 @@ SELECT pg_catalog.setval('admin_schema.master_product_utf8_product_id_seq', 1, f
 -- Name: master_states_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.master_states_id_seq', 3, true);
+SELECT pg_catalog.setval('admin_schema.master_states_id_seq', 4, true);
 
 
 --
@@ -5683,7 +6356,7 @@ SELECT pg_catalog.setval('admin_schema.master_violation_table_new_id_seq', 2, tr
 -- Name: mode_of_payments_list_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.mode_of_payments_list_id_seq', 2, true);
+SELECT pg_catalog.setval('admin_schema.mode_of_payments_list_id_seq', 3, true);
 
 
 --
@@ -5704,7 +6377,7 @@ SELECT pg_catalog.setval('admin_schema.permission_audit_log_log_id_seq', 2, true
 -- Name: product_regional_name_product_regional_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.product_regional_name_product_regional_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.product_regional_name_product_regional_id_seq', 1, true);
 
 
 --
@@ -5764,6 +6437,13 @@ SELECT pg_catalog.setval('admin_schema.vehicle_model_id_seq', 3, true);
 
 
 --
+-- Name: daily_price_update_daily_price_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.daily_price_update_daily_price_id_seq', 6, true);
+
+
+--
 -- Name: invoice_details_table_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
@@ -5795,14 +6475,14 @@ SELECT pg_catalog.setval('business_schema.mode_of_payment_id_seq', 3, true);
 -- Name: order_activity_log_log_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_activity_log_log_id_seq', 39, true);
+SELECT pg_catalog.setval('business_schema.order_activity_log_log_id_seq', 42, true);
 
 
 --
 -- Name: order_history_table_history_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 11, true);
+SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 12, true);
 
 
 --
@@ -5816,7 +6496,7 @@ SELECT pg_catalog.setval('business_schema.order_item_table_product_order_id_seq'
 -- Name: order_table_order_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_table_order_id_seq', 27, true);
+SELECT pg_catalog.setval('business_schema.order_table_order_id_seq', 30, true);
 
 
 --
@@ -6269,6 +6949,14 @@ ALTER TABLE ONLY admin_schema.vehicle_model
 
 
 --
+-- Name: daily_price_update daily_price_update_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.daily_price_update
+    ADD CONSTRAINT daily_price_update_pkey PRIMARY KEY (daily_price_id);
+
+
+--
 -- Name: invoice_details_table invoice_details_table_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
@@ -6579,6 +7267,13 @@ CREATE TRIGGER trg_order_created AFTER INSERT ON business_schema.order_table FOR
 
 
 --
+-- Name: order_table trigger_order_insert_update; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trigger_order_insert_update AFTER INSERT OR UPDATE ON business_schema.order_table FOR EACH ROW EXECUTE FUNCTION business_schema.log_order_changes('INSERT_OR_UPDATE');
+
+
+--
 -- Name: business_table fk_b_cat; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
 --
 
@@ -6664,6 +7359,14 @@ ALTER TABLE ONLY admin_schema.product_regional_name
 
 ALTER TABLE ONLY admin_schema.master_driver_table
     ADD CONSTRAINT fk_license_type FOREIGN KEY (driver_license_type) REFERENCES admin_schema.indian_driver_licenses_type(license_type_id) ON DELETE CASCADE;
+
+
+--
+-- Name: master_mandi_table fk_mandi_city; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
+--
+
+ALTER TABLE ONLY admin_schema.master_mandi_table
+    ADD CONSTRAINT fk_mandi_city FOREIGN KEY (mandi_city) REFERENCES admin_schema.master_city(id) ON DELETE SET NULL;
 
 
 --

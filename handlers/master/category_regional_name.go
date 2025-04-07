@@ -9,9 +9,9 @@ import (
 )
 
 type CategoryRegionalLanguage struct {
-	ID           int64  `json:"category_regional_id"`
-	LanguageID   int64  `json:"language_id"`
-	RegionalName string `json:"category_regional_name"`
+	ID           int64  `json:"id"`
+	LanguageName string `json:"language_name"` 
+	RegionalName string `json:"regional_name"`
 }
 
 func GetProductCategoryRegional(c *fiber.Ctx) error {
@@ -27,7 +27,7 @@ func GetProductCategoryRegional(c *fiber.Ctx) error {
 	var categories []CategoryRegionalLanguage
 	for rows.Next() {
 		var category CategoryRegionalLanguage
-		if err := rows.Scan(&category.ID, &category.LanguageID, &category.RegionalName); err != nil {
+		if err := rows.Scan(&category.ID, &category.RegionalName, &category.LanguageName); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   "Error scanning category regional data",
 				"details": err.Error(),
@@ -46,7 +46,7 @@ func GetProductCategoryRegionalByID(c *fiber.Ctx) error {
 
 	var category CategoryRegionalLanguage
 	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_category_regional_name_by_id($1)", id).
-		Scan(&category.ID, &category.LanguageID, &category.RegionalName)
+		Scan(&category.ID, &category.RegionalName, &category.LanguageName)
 
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -58,7 +58,12 @@ func GetProductCategoryRegionalByID(c *fiber.Ctx) error {
 }
 
 func InsertProductCategoryRegional(c *fiber.Ctx) error {
-	var req CategoryRegionalLanguage
+	type insertRequest struct {
+		LanguageID   int64  `json:"language_id"`
+		RegionalName string `json:"regional_name"`
+	}
+
+	var req insertRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request format"})
 	}
@@ -75,7 +80,13 @@ func InsertProductCategoryRegional(c *fiber.Ctx) error {
 }
 
 func UpdateProductCategoryRegional(c *fiber.Ctx) error {
-	var req CategoryRegionalLanguage
+	type updateRequest struct {
+		ID           int64  `json:"id"`
+		LanguageID   int64  `json:"language_id"`
+		RegionalName string `json:"regional_name"`
+	}
+
+	var req updateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request format"})
 	}

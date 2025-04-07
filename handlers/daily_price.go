@@ -43,7 +43,6 @@ func fetchPriceData(productID, unitID, wholesellerID string) (*PriceData, error)
 	return &priceData, nil
 }
 
-// Insert price data with branch mapping
 func insertPriceData(req PriceData) error {
 	query := `SELECT business_schema.insert_daily_price($1, $2, $3, $4, $5, $6)`
 

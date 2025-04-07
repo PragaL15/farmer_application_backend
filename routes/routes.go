@@ -33,7 +33,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessBranches", Masterhandlers.GetAllBusinessBranches)
 	app.Get("/getAllOrderDetails/:id", handlers.GetOrderDetailsHandler)
   app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
-  app.Get("/getProductCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
+  app.Get("/getCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
+  app.Get("/getProductRegionalName", Masterhandlers.GetAllProductRegionalNames)
 
 	// GET each by id's
 	app.Get("/getProducts/:id", Masterhandlers.GetProductByID)
@@ -75,7 +76,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/business-branches", Masterhandlers.InsertBusinessBranch)
 	app.Post("/InsertDailyPrice", handlers.InsertPriceHandler)
 	app.Post("/InsertInvoiceDetails", handlers.InsertInvoiceDetails)
-	app.Post("/PostProductCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
+	app.Post("/PostCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
+	app.Post("/PostProductRegional", Masterhandlers.InsertProductRegionalName)
 
 	
 	// PUT Routes (Updating)
@@ -100,7 +102,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/businessCategoryUpdate", Masterhandlers.UpdateBusinessCategory)
 	app.Put("/branch/:id", Masterhandlers.UpdateBusinessBranch)
 	app.Put("/businessUserDetailesUpdate", Masterhandlers.UpdateBusinessUser) 
-	app.Put("/productCategoryRegionalUpdate", Masterhandlers.UpdateProductCategoryRegional) 
+	app.Put("/CategoryRegionalUpdate", Masterhandlers.UpdateProductCategoryRegional) 
+	app.Put("/ProductRegionalUpdate", Masterhandlers. UpdateProductRegionalName) 
 
 }
 
