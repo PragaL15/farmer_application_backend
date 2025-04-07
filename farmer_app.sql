@@ -624,6 +624,48 @@ $$;
 ALTER FUNCTION admin_schema.get_category_regional_name_by_id(p_category_regional_id integer) OWNER TO postgres;
 
 --
+-- Name: get_category_with_subcategories(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_category_with_subcategories(p_category_id integer) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN (
+        SELECT json_build_object(
+            'category_id', parent.category_id,
+            'category_name', parent.category_name,
+            'super_cat_id', parent.super_cat_id,
+            'img_path', parent.img_path,
+            'active_status', parent.active_status,
+            'category_regional_id', parent.category_regional_id,
+            'subcategories', COALESCE(
+                json_agg(
+                    json_build_object(
+                        'category_id', child.category_id,
+                        'category_name', child.category_name,
+                        'super_cat_id', child.super_cat_id,
+                        'img_path', child.img_path,
+                        'active_status', child.active_status,
+                        'category_regional_id', child.category_regional_id
+                    )
+                ) FILTER (WHERE child.category_id IS NOT NULL),
+                '[]'
+            )
+        )
+        FROM admin_schema.master_product_category_table parent
+        LEFT JOIN admin_schema.master_product_category_table child
+            ON child.super_cat_id = parent.category_id
+        WHERE parent.category_id = p_category_id
+        GROUP BY parent.category_id
+    );
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_category_with_subcategories(p_category_id integer) OWNER TO postgres;
+
+--
 -- Name: get_city_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
