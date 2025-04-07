@@ -12,7 +12,9 @@ import (
 
 func InsertLocation(c *fiber.Ctx) error {
 	type Request struct {
-		Location string `json:"location" validate:"required,max=50"`
+		Location        string `json:"location" validate:"required,max=50"`
+		CityShortnames  int    `json:"city_shortnames" validate:"required"`
+		State           int    `json:"state" validate:"required"`
 	}
 
 	var req Request
@@ -26,8 +28,8 @@ func InsertLocation(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(), `
-		CALL insert_location($1);
-	`, req.Location)
+		SELECT insert_location($1, $2, $3);
+	`, req.CityShortnames, req.State, req.Location)
 
 	if err != nil {
 		log.Printf("Failed to insert location: %v", err)
@@ -39,8 +41,10 @@ func InsertLocation(c *fiber.Ctx) error {
 
 func UpdateLocation(c *fiber.Ctx) error {
 	type Request struct {
-		ID       int    `json:"id" validate:"required,min=1"`
-		Location string `json:"location" validate:"required,max=50"`
+		ID             int    `json:"id" validate:"required"`
+		Location       string `json:"location" validate:"required,max=50"`
+		CityShortnames int    `json:"city_shortnames" validate:"required"`
+		State          int    `json:"state" validate:"required"`
 	}
 
 	var req Request
@@ -53,9 +57,10 @@ func UpdateLocation(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	_, err := db.Pool.Exec(context.Background(), `
-		CALL update_location($1, $2);
-	`, req.ID, req.Location)
+	_, err := db.Pool.Exec(context.Background(),
+		`SELECT update_location($1, $2, $3, $4)`,
+		req.ID, req.CityShortnames, req.State, req.Location,
+	)
 
 	if err != nil {
 		log.Printf("Failed to update location: %v", err)
@@ -64,6 +69,7 @@ func UpdateLocation(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Location updated successfully"})
 }
+
 
 func DeleteLocation(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -100,17 +106,27 @@ func GetLocations(c *fiber.Ctx) error {
 	var locations []map[string]interface{}
 
 	for rows.Next() {
-		var id int
-		var location *string
+		var (
+			id         int
+			location   *string
+			cityID     int
+			cityName   *string
+			stateID    int
+			stateName  *string
+		)
 
-		if err := rows.Scan(&id, &location); err != nil {
+		if err := rows.Scan(&id, &location, &cityID, &cityName, &stateID, &stateName); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
 		locations = append(locations, map[string]interface{}{
-			"id":       id,
-			"location": location,
+			"id":           id,
+			"location":     location,
+			"city_id":      cityID,
+			"city_name":    cityName,
+			"state_id":     stateID,
+			"state_name":   stateName,
 		})
 	}
 
