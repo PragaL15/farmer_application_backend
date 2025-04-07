@@ -31,7 +31,7 @@ func RegisterRoutes(app *fiber.App) {
  app.Get("/getCashPaymentTypes", Masterhandlers.GetAllCashPaymentsType)
 	app.Get("/getBusinessCategory", Masterhandlers.GetBusinessCategories)
 	app.Get("/getBusinessBranches", Masterhandlers.GetAllBusinessBranches)
-	app.Get("/getAllOrderDetails1", handlers.GetOrderDetailsHandler)
+	app.Get("/getAllOrderDetails/:id", handlers.GetOrderDetailsHandler)
   app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
   app.Get("/getProductCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
 
