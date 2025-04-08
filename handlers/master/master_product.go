@@ -3,8 +3,10 @@ package Masterhandlers
 import (
 	"context"
 	"strconv"
-	"github.com/gofiber/fiber/v2"
+
 	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"github.com/gofiber/fiber/v2"
+	"github.com/guregu/null/v5"
 )
 
 type Productget struct {
@@ -12,10 +14,10 @@ type Productget struct {
 	CategoryID        int64  `json:"category_id"`
 	CategoryName      string `json:"category_name"`
 	ProductName       string `json:"product_name"`
-	ImagePath         string `json:"image_path"`
+	ImagePath         null.String `json:"image_path"`
 	ActiveStatus      int    `json:"active_status"`
-	ProductRegionalID int64  `json:"product_regional_id"`
-	ProductRegionalName string `json:"product_regional_name"`
+	ProductRegionalID null.Int64  `json:"product_regional_id"`
+	ProductRegionalName null.String `json:"product_regional_name"`
 }
 
 func GetAllProducts(c *fiber.Ctx) error {
