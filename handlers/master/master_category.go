@@ -6,6 +6,7 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
 	"log"
+"strconv"
 	"github.com/guregu/null/v5"
 )
 
@@ -109,4 +110,50 @@ func GetCategoryByID(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(category)
+}
+
+func GetCategoriesBySuperCatID(c *fiber.Ctx) error {
+	superCatIDParam := c.Params("super_cat_id")
+	if superCatIDParam == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "super_cat_id is required"})
+	}
+
+	id, err := strconv.Atoi(superCatIDParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid super_cat_id"})
+	}
+
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_categories_by_super_cat_id($1);", id)
+	if err != nil {
+		log.Printf("DB query failed: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch categories"})
+	}
+	defer rows.Close()
+
+	type Category struct {
+		CategoryID   int    `json:"category_id"`
+		CategoryName string `json:"category_name"`
+	}
+
+	var categories []Category
+
+	for rows.Next() {
+		var (
+			categoryID   int
+			categoryName string
+		)
+
+		err := rows.Scan(&categoryID, &categoryName)
+		if err != nil {
+			log.Printf("Row scan error: %v", err)
+			continue
+		}
+
+		categories = append(categories, Category{
+			CategoryID:   categoryID,
+			CategoryName: categoryName,
+		})
+	}
+
+	return c.JSON(categories)
 }

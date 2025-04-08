@@ -11,6 +11,7 @@ func RegisterRoutes(app *fiber.App) {
 	// GET Routes
 	app.Get("/getUsers", Masterhandlers.GetAllUsers)
 	//app.Get("/getCategories", Masterhandlers.GetCategories)
+	app.Get("/getCategoriesBySupID/:super_cat_id", Masterhandlers.GetCategoriesBySuperCatID)
 	app.Get("/getDrivers", Masterhandlers.GetDrivers)
 	app.Get("/getLocations", Masterhandlers.GetLocations)
 	app.Get("/getMandiDetails", Masterhandlers.GetAllMandiDetails)

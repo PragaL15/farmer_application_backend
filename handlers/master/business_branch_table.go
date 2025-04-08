@@ -15,7 +15,6 @@ type BusinessBranch struct {
 	TypeID          int    `json:"b_type_id"`
 	Location        int    `json:"b_location"`
 	State           int    `json:"b_state"`
-	MandiID         int    `json:"b_mandi_id"`
 	Address         string `json:"b_address"`
 	Email           string `json:"b_email"`
 	Number          string `json:"b_number"`
@@ -36,7 +35,7 @@ func GetAllBusinessBranches(c *fiber.Ctx) error {
 	var branches []BusinessBranch
 	for rows.Next() {
 		var b BusinessBranch
-		if err := rows.Scan(&b.BranchID, &b.BID, &b.ShopName, &b.TypeID, &b.Location, &b.State, &b.MandiID, &b.Address, &b.Email, &b.Number, &b.GSTNum, &b.PANNum, &b.PrivilegeUser, &b.EstablishedYear, &b.ActiveStatus); err != nil {
+		if err := rows.Scan(&b.BranchID, &b.BID, &b.ShopName, &b.TypeID, &b.Location, &b.State, &b.Address, &b.Email, &b.Number, &b.GSTNum, &b.PANNum, &b.PrivilegeUser, &b.EstablishedYear, &b.ActiveStatus); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error scanning branch data", "details": err.Error()})
 		}
 		branches = append(branches, b)
@@ -52,7 +51,7 @@ func GetBusinessBranchByID(c *fiber.Ctx) error {
 
 	var b BusinessBranch
 	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_business_branch_by_id($1)", id).
-		Scan(&b.BranchID, &b.BID, &b.ShopName, &b.TypeID, &b.Location, &b.State, &b.MandiID, &b.Address, &b.Email, &b.Number, &b.GSTNum, &b.PANNum, &b.PrivilegeUser, &b.EstablishedYear, &b.ActiveStatus)
+		Scan(&b.BranchID, &b.BID, &b.ShopName, &b.TypeID, &b.Location, &b.State, &b.Address, &b.Email, &b.Number, &b.GSTNum, &b.PANNum, &b.PrivilegeUser, &b.EstablishedYear, &b.ActiveStatus)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Business branch not found"})
 	}
@@ -67,7 +66,7 @@ func InsertBusinessBranch(c *fiber.Ctx) error {
 
 	var newID int
 	err := db.Pool.QueryRow(context.Background(), "SELECT admin_schema.insert_business_branch($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING b_branch_id",
-		req.BID, req.ShopName, req.TypeID, req.Location, req.State, req.MandiID, req.Address, req.Email, req.Number, req.GSTNum, req.PANNum, req.PrivilegeUser, req.EstablishedYear, req.ActiveStatus).Scan(&newID)
+		req.BID, req.ShopName, req.TypeID, req.Location, req.State, req.Address, req.Email, req.Number, req.GSTNum, req.PANNum, req.PrivilegeUser, req.EstablishedYear, req.ActiveStatus).Scan(&newID)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert business branch", "details": err.Error()})
@@ -82,7 +81,7 @@ func UpdateBusinessBranch(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(), "SELECT admin_schema.update_business_branch($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
-		req.BranchID, req.BID, req.ShopName, req.TypeID, req.Location, req.State, req.MandiID, req.Address, req.Email, req.Number, req.GSTNum, req.PANNum, req.PrivilegeUser, req.EstablishedYear, req.ActiveStatus)
+		req.BranchID, req.BID, req.ShopName, req.TypeID, req.Location, req.State, req.Address, req.Email, req.Number, req.GSTNum, req.PANNum, req.PrivilegeUser, req.EstablishedYear, req.ActiveStatus)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update business branch", "details": err.Error()})
