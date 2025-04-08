@@ -111,19 +111,52 @@ $$;
 ALTER FUNCTION admin_schema.create_business_branch(p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) OWNER TO postgres;
 
 --
--- Name: get_all_business_branches(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: get_all_branches_of_registered_businesses(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_all_business_branches() RETURNS TABLE(b_branch_id integer, bid integer, b_shop_name character varying, b_type_id integer, b_location integer, b_state integer, b_mandi_id integer, b_address character varying, b_email character varying, b_number character varying, b_gst_num character varying, b_pan_num character varying, b_privilege_user integer, b_established_year character varying, active_status integer)
+CREATE FUNCTION admin_schema.get_all_branches_of_registered_businesses() RETURNS TABLE(b_branch_id integer, bid integer, b_shop_name character varying, b_type_id integer, b_location integer, b_state integer, b_address character varying, b_email character varying, b_number character varying, b_gst_num character varying, b_pan_num character varying, b_privilege_user integer, created_at timestamp without time zone, updated_at timestamp without time zone, active_status integer)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY 
-    SELECT 
-        b_branch_id, bid, b_shop_name, b_type_id, b_location, b_state, 
-        b_mandi_id, b_address, b_email, b_number, b_gst_num, 
-        b_pan_num, b_privilege_user, b_established_year, active_status
-    FROM admin_schema.business_branch_table;
+    RETURN QUERY
+    SELECT
+        bb.b_branch_id,
+        bb.bid,
+        bb.b_shop_name,
+        bb.b_type_id,
+        bb.b_location,
+        bb.b_state,
+        bb.b_address,
+        bb.b_email,
+        bb.b_number,
+        bb.b_gst_num,
+        bb.b_pan_num,
+        bb.b_privilege_user,
+        bb.created_at,
+        bb.updated_at,
+        bb.active_status
+    FROM admin_schema.business_branch_table bb
+    INNER JOIN admin_schema.business_table b ON bb.bid = b.bid;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_branches_of_registered_businesses() OWNER TO postgres;
+
+--
+-- Name: get_all_business_branches(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_business_branches() RETURNS TABLE(b_branch_id integer, bid integer, b_shop_name character varying, b_type_id integer, b_location integer, b_state integer, b_address character varying, b_email character varying, b_number character varying, b_gst_num character varying, b_pan_num character varying, b_privilege_user integer, b_established_year character varying, active_status integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        bb.b_branch_id, bb.bid, bb.b_shop_name, bb.b_type_id, bb.b_location, bb.b_state,
+        bb.b_address, bb.b_email, bb.b_number, bb.b_gst_num,
+        bb.b_pan_num, bb.b_privilege_user, bb.b_established_year, bb.active_status
+    FROM admin_schema.business_branch_table AS bb;
 END;
 $$;
 
@@ -151,15 +184,19 @@ ALTER FUNCTION admin_schema.get_all_business_users() OWNER TO postgres;
 -- Name: get_all_businesses(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_all_businesses() RETURNS TABLE(bid bigint, b_person_name character varying, b_registration_num character varying, b_owner_name character varying, active_status integer, created_at timestamp with time zone, updated_at timestamp with time zone)
+CREATE FUNCTION admin_schema.get_all_businesses() RETURNS TABLE(bid bigint, b_registration_num character varying, b_owner_name character varying, b_category_id integer, b_type_id integer, is_active boolean)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
-        bid, b_person_name, b_registration_num, b_owner_name, 
-        active_status, created_at, updated_at 
-    FROM admin_schema.business_table;
+    SELECT
+        b.bid,
+        b.b_registration_num,
+        b.b_owner_name,
+        b.b_category_id,
+        b.b_type_id,
+        b.is_active
+    FROM admin_schema.business_table b;
 END;
 $$;
 
@@ -444,8 +481,8 @@ CREATE FUNCTION admin_schema.get_all_products() RETURNS TABLE(product_id bigint,
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY 
-    SELECT 
+    RETURN QUERY
+    SELECT
         p.product_id,
         p.category_id,
         c.category_name,
@@ -455,10 +492,8 @@ BEGIN
         p.product_regional_id,
         prn.product_regional_name
     FROM admin_schema.master_product p
-    LEFT JOIN admin_schema.master_product_category_table c 
-        ON p.category_id = c.category_id
-    LEFT JOIN admin_schema.product_regional_name prn 
-        ON p.product_regional_id = prn.product_regional_id;
+    LEFT JOIN admin_schema.master_product_category_table c ON p.category_id = c.category_id
+    LEFT JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id;
 END;
 $$;
 
@@ -683,6 +718,26 @@ $$;
 ALTER FUNCTION admin_schema.get_cash_payment_by_id(p_id integer) OWNER TO postgres;
 
 --
+-- Name: get_categories_by_super_cat_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_categories_by_super_cat_id(_super_cat_id integer) RETURNS TABLE(category_id integer, category_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        m.category_id, 
+        m.category_name
+    FROM admin_schema.master_product_category_table m
+    WHERE m.super_cat_id = _super_cat_id AND m.active_status = 1;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_categories_by_super_cat_id(_super_cat_id integer) OWNER TO postgres;
+
+--
 -- Name: get_category_regional_name_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -835,23 +890,23 @@ ALTER FUNCTION admin_schema.get_payment_mode_by_id(p_id integer) OWNER TO postgr
 -- Name: get_product_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_product_by_id(p_product_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
+CREATE FUNCTION admin_schema.get_product_by_id(p_product_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name text, product_name text, image_path text, active_status integer, product_regional_id integer, product_regional_name text)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY 
+    RETURN QUERY
     SELECT 
-        p.product_id, 
-        p.category_id, 
-        c.category_name, 
-        p.product_name, 
-        p.image_path, 
-        p.active_status, 
-        p.product_regional_id, 
+        p.product_id,
+        p.category_id,
+        c.category_name,
+        p.product_name,
+        p.image_path,
+        p.active_status,
+        p.product_regional_id,
         prn.product_regional_name
     FROM admin_schema.master_product p
-    JOIN admin_schema.master_category c ON p.category_id = c.category_id
-    JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
+    LEFT JOIN admin_schema.master_product_category c ON p.category_id = c.category_id
+    LEFT JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
     WHERE p.product_id = p_product_id;
 END;
 $$;
@@ -902,23 +957,23 @@ ALTER FUNCTION admin_schema.get_product_regional_name_by_id(p_product_regional_i
 -- Name: get_products_by_category(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_products_by_category(p_category_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
+CREATE FUNCTION admin_schema.get_products_by_category(p_category_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name text, product_name text, image_path text, active_status integer, product_regional_id integer, product_regional_name text)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY 
+    RETURN QUERY
     SELECT 
-        p.product_id, 
-        p.category_id, 
-        c.category_name, 
-        p.product_name, 
-        p.image_path, 
-        p.active_status, 
-        p.product_regional_id, 
+        p.product_id,
+        p.category_id,
+        c.category_name,
+        p.product_name,
+        p.image_path,
+        p.active_status,
+        p.product_regional_id,
         prn.product_regional_name
     FROM admin_schema.master_product p
-    JOIN admin_schema.master_category c ON p.category_id = c.category_id
-    JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
+    LEFT JOIN admin_schema.master_product_category c ON p.category_id = c.category_id
+    LEFT JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
     WHERE p.category_id = p_category_id;
 END;
 $$;
@@ -1288,6 +1343,34 @@ $$;
 
 
 ALTER FUNCTION admin_schema.insert_payment_type(p_type text) OWNER TO postgres;
+
+--
+-- Name: insert_product(integer, text, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_product(p_category_id integer, p_product_name text, p_image_path text, p_active_status integer, p_product_regional_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.master_product (
+        category_id,
+        product_name,
+        image_path,
+        active_status,
+        product_regional_id
+    )
+    VALUES (
+        p_category_id,
+        p_product_name,
+        p_image_path,
+        p_active_status,
+        p_product_regional_id
+    );
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_product(p_category_id integer, p_product_name text, p_image_path text, p_active_status integer, p_product_regional_id integer) OWNER TO postgres;
 
 --
 -- Name: insert_product_category(character varying, integer, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -1784,15 +1867,15 @@ $$;
 ALTER FUNCTION admin_schema.update_payment_type(p_id integer, p_type text, p_is_active boolean) OWNER TO postgres;
 
 --
--- Name: update_product(bigint, integer, character varying, character varying, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: update_product(integer, integer, text, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.update_product(p_product_id bigint, p_category_id integer, p_product_name character varying, p_image_path character varying, p_active_status integer, p_product_regional_id integer) RETURNS void
+CREATE FUNCTION admin_schema.update_product(p_product_id integer, p_category_id integer, p_product_name text, p_image_path text, p_active_status integer, p_product_regional_id integer) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
     UPDATE admin_schema.master_product
-    SET 
+    SET
         category_id = p_category_id,
         product_name = p_product_name,
         image_path = p_image_path,
@@ -1803,7 +1886,29 @@ END;
 $$;
 
 
-ALTER FUNCTION admin_schema.update_product(p_product_id bigint, p_category_id integer, p_product_name character varying, p_image_path character varying, p_active_status integer, p_product_regional_id integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.update_product(p_product_id integer, p_category_id integer, p_product_name text, p_image_path text, p_active_status integer, p_product_regional_id integer) OWNER TO postgres;
+
+--
+-- Name: update_product(bigint, integer, text, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.update_product(_product_id bigint, _category_id integer, _product_name text, _image_path text, _active_status integer, _product_regional_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE admin_schema.master_product
+    SET
+        category_id = COALESCE(_category_id, category_id),
+        product_name = COALESCE(_product_name, product_name),
+        image_path = COALESCE(NULLIF(_image_path, ''), image_path),
+        active_status = COALESCE(NULLIF(_active_status, 0), active_status),
+        product_regional_id = COALESCE(NULLIF(_product_regional_id, 0), product_regional_id)
+    WHERE product_id = _product_id;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.update_product(_product_id bigint, _category_id integer, _product_name text, _image_path text, _active_status integer, _product_regional_id integer) OWNER TO postgres;
 
 --
 -- Name: update_product_category(integer, character varying, integer, text, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -3256,7 +3361,6 @@ CREATE TABLE admin_schema.business_branch_table (
     b_type_id integer NOT NULL,
     b_location integer NOT NULL,
     b_state integer NOT NULL,
-    b_mandi_id integer,
     b_address character varying(255) NOT NULL,
     b_email character varying(50) NOT NULL,
     b_number character varying(10) NOT NULL,
@@ -5718,25 +5822,25 @@ ALTER TABLE ONLY public.wholeseller_rating_table ALTER COLUMN id SET DEFAULT nex
 -- Data for Name: business_branch_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_branch_table VALUES (4, 104, 'JohnShop', 1, 1, 1, NULL, '123 Street', 'john@example.com', '9876543210', NULL, NULL, NULL, NULL, '2025-03-27 11:55:01.194804', '2025-03-27 11:55:01.194804', 0);
+INSERT INTO admin_schema.business_branch_table VALUES (4, 104, 'JohnShop', 1, 1, 1, '123 Street', 'john@example.com', '9876543210', '29ABCDE1234FZ1Z', 'ABCDE1234F', 1, '2020', '2025-03-27 11:55:01.194804', '2025-03-27 11:55:01.194804', 0);
 
 
 --
 -- Data for Name: business_category_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
+INSERT INTO admin_schema.business_category_table VALUES (1, 'Premium');
+INSERT INTO admin_schema.business_category_table VALUES (2, 'Normal');
+INSERT INTO admin_schema.business_category_table VALUES (3, 'Basic');
 
 
 --
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (5, NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (6, NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (12, NULL, 'UNKNOWN', 1, '2025-03-25 20:55:46.181233+05:30', '2025-03-25 20:55:46.181233+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', NULL, NULL, true);
-INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', NULL, NULL, true);
+INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true);
+INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true);
+INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true);
 
 
 --
@@ -5823,6 +5927,7 @@ INSERT INTO admin_schema.master_mandi_table VALUES (5, 'Koyambedu', 'Ravi Kumar'
 INSERT INTO admin_schema.master_product VALUES (1, 4, 'New Product', NULL, 1, NULL);
 INSERT INTO admin_schema.master_product VALUES (2, 5, 'product 2', NULL, 1, NULL);
 INSERT INTO admin_schema.master_product VALUES (3, 6, 'product 2', NULL, 1, NULL);
+INSERT INTO admin_schema.master_product VALUES (4, 5, 'Fresh Tomatoes', 'images/tomatoes.jpg', 1, 1);
 
 
 --
@@ -5989,9 +6094,6 @@ INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
 --
 
 INSERT INTO business_schema.daily_price_update VALUES (1, 1500.00, 2, 103, 'INR', '2025-04-03 18:04:41.442396', '2025-04-03 18:04:41.442396', 'maybe negotiable', 4, 4, 4);
-INSERT INTO business_schema.daily_price_update VALUES (2, 250.00, 2, 6, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', 'maybe negotiable', 4, 5, 2);
-INSERT INTO business_schema.daily_price_update VALUES (1, 100.50, 1, 5, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', 'not negotiable', 4, 4, 1);
-INSERT INTO business_schema.daily_price_update VALUES (3, 75.75, 3, 12, 'INR', '2025-03-25 22:18:27.268885', '2025-03-25 22:18:27.268885', 'seasonal', 4, 6, 3);
 INSERT INTO business_schema.daily_price_update VALUES (2, 75.50, 2, 103, 'INR', '2025-04-07 22:40:58.125852', '2025-04-07 22:40:58.125852', 'Fresh stock update', NULL, NULL, 6);
 
 
@@ -6244,7 +6346,7 @@ INSERT INTO public.retailer_status VALUES (3, 'negotiation');
 -- Name: business_branch_table_b_branch_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.business_branch_table_b_branch_id_seq', 4, true);
+SELECT pg_catalog.setval('admin_schema.business_branch_table_b_branch_id_seq', 5, true);
 
 
 --
@@ -6328,7 +6430,7 @@ SELECT pg_catalog.setval('admin_schema.master_mandi_table_mandi_id_seq', 5, true
 -- Name: master_product_utf8_product_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.master_product_utf8_product_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.master_product_utf8_product_id_seq', 4, true);
 
 
 --
@@ -7282,11 +7384,19 @@ ALTER TABLE ONLY admin_schema.business_table
 
 
 --
+-- Name: business_table fk_b_category; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.business_table
+    ADD CONSTRAINT fk_b_category FOREIGN KEY (b_category_id) REFERENCES admin_schema.business_category_table(b_category_id);
+
+
+--
 -- Name: business_table fk_b_type; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY admin_schema.business_table
-    ADD CONSTRAINT fk_b_type FOREIGN KEY (b_type_id) REFERENCES admin_schema.business_table(bid);
+    ADD CONSTRAINT fk_b_type FOREIGN KEY (b_type_id) REFERENCES admin_schema.business_type_table(type_id);
 
 
 --
