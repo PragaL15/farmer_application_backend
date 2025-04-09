@@ -101,7 +101,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/businessTypeUpdate", Masterhandlers.UpdateBusinessType)
 	app.Put("/CashPaymentTypeUpdate", Masterhandlers.UpdateCashPaymentType)
 	app.Put("/businessCategoryUpdate", Masterhandlers.UpdateBusinessCategory)
-	app.Put("/branch/:id", Masterhandlers.UpdateBusinessBranch)
+	app.Put("/branchDetailsUpdate", Masterhandlers.UpdateBusinessBranch)
 	app.Put("/businessUserDetailesUpdate", Masterhandlers.UpdateBusinessUser) 
 	app.Put("/CategoryRegionalUpdate", Masterhandlers.UpdateProductCategoryRegional) 
 	app.Put("/ProductRegionalUpdate", Masterhandlers. UpdateProductRegionalName) 
