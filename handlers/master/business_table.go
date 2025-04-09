@@ -64,7 +64,7 @@ func InsertBusiness(c *fiber.Ctx) error {
 		BOwnerName       string `json:"b_owner_name"`
 		BCategoryID      int64  `json:"b_category_id"`
 		BTypeID          int64  `json:"b_type_id"`
-		ActiveStatus     bool   `json:"active_status"` // Assuming is_active is BOOLEAN
+		IsActive         bool   `json:"is_active"` // Ensure this matches the function
 	}
 
 	var req Request
@@ -77,7 +77,7 @@ func InsertBusiness(c *fiber.Ctx) error {
 	var newID int64
 	err := db.Pool.QueryRow(context.Background(),
 		`SELECT admin_schema.insert_business($1, $2, $3, $4, $5)`,
-		req.BRegistrationNum, req.BOwnerName, req.BCategoryID, req.BTypeID, req.ActiveStatus,
+		req.BRegistrationNum, req.BOwnerName, req.BCategoryID, req.BTypeID, req.IsActive,
 	).Scan(&newID)
 
 	if err != nil {
@@ -97,23 +97,32 @@ func InsertBusiness(c *fiber.Ctx) error {
 func UpdateBusiness(c *fiber.Ctx) error {
 	type Request struct {
 		BID              int64  `json:"bid"`
-		BPersonName      string `json:"b_person_name"`
 		BRegistrationNum string `json:"b_registration_num"`
 		BOwnerName       string `json:"b_owner_name"`
 		BCategoryID      int64  `json:"b_category_id"`
 		BTypeID          int64  `json:"b_type_id"`
-		ActiveStatus     int    `json:"active_status"`
+		ActiveStatus     bool   `json:"active_status"` // changed to bool
 	}
 
 	var req Request
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request format"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request format",
+		})
 	}
 
-	_, err := db.Pool.Exec(context.Background(), "SELECT admin_schema.update_business($1, $2, $3, $4, $5, $6, $7)",
-		req.BID, req.BPersonName, req.BRegistrationNum, req.BOwnerName, req.BCategoryID, req.BTypeID, req.ActiveStatus)
+	_, err := db.Pool.Exec(context.Background(), `
+		SELECT admin_schema.update_business($1, $2, $3, $4, $5, $6)
+	`, req.BID, req.BRegistrationNum, req.BOwnerName, req.BCategoryID, req.BTypeID, req.ActiveStatus)
+
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update business", "details": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Failed to update business",
+			"details": err.Error(),
+		})
 	}
-	return c.JSON(fiber.Map{"message": "Business updated successfully"})
+
+	return c.JSON(fiber.Map{
+		"message": "Business updated successfully",
+	})
 }

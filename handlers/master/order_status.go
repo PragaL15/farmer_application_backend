@@ -63,7 +63,6 @@ func InsertOrderStatus(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "Order status created successfully"})
 }
 
-// UpdateOrderStatus updates an existing order status
 func UpdateOrderStatus(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var os OrderStatus

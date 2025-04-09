@@ -72,9 +72,10 @@ func InsertUser(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(),
-		"CALL admin_schema.insert_user($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-		u.Name, u.MobileNum, u.Email, u.Address, u.Pincode,
-		u.Location, u.State, u.ActiveStatus, u.RoleID,
+    "SELECT admin_schema.insert_user($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    u.Name, u.MobileNum, u.Email, u.Address, u.Pincode,
+    u.Location, u.State, u.ActiveStatus, u.RoleID,
+
 	)
 	if err != nil {
 		log.Println("Error inserting user:", err)
@@ -85,24 +86,41 @@ func InsertUser(c *fiber.Ctx) error {
 }
 
 func UpdateUser(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid user ID"})
+	type UpdateUser struct {
+		Name         string `json:"name"`
+		MobileNum    string `json:"mobile_num"`
+		Email        string `json:"email"`
+		Address      string `json:"address"`
+		Pincode      string `json:"pincode"`
+		Location     int    `json:"location"` // FIXED: was string
+		State        int    `json:"state"`    // FIXED: was string
+		ActiveStatus bool   `json:"active_status"`
+		RoleID       int64  `json:"role_id"`
 	}
 
-	var u User
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	var u UpdateUser
 	if err := c.BodyParser(&u); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	activeInt := 0
+	if u.ActiveStatus {
+		activeInt = 1
 	}
 
 	_, err = db.Pool.Exec(context.Background(),
-		"CALL admin_schema.update_user($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		"SELECT admin_schema.update_user($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
 		id, u.Name, u.MobileNum, u.Email, u.Address, u.Pincode,
-		u.Location, u.State, u.ActiveStatus, u.RoleID,
+		u.Location, u.State, activeInt, u.RoleID,
 	)
 	if err != nil {
 		log.Println("Error updating user:", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}
 
 	return c.JSON(fiber.Map{"message": "User updated successfully"})
