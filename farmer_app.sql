@@ -1065,25 +1065,42 @@ $$;
 ALTER FUNCTION admin_schema.get_vehicle_by_id(p_vehicle_id integer) OWNER TO postgres;
 
 --
--- Name: insert_business(character varying, character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: insert_business(text, text, integer, integer, boolean); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.insert_business(p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) RETURNS bigint
+CREATE FUNCTION admin_schema.insert_business(_b_registration_num text, _b_owner_name text, _b_category_id integer, _b_type_id integer, _is_active boolean) RETURNS bigint
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    new_bid BIGINT;
+    new_id BIGINT;
 BEGIN
-    INSERT INTO admin_schema.business_table (b_person_name, b_registration_num, b_owner_name, active_status)
-    VALUES (p_b_person_name, p_b_registration_num, p_b_owner_name, p_active_status)
-    RETURNING bid INTO new_bid;
+    -- manually generate id
+    new_id := nextval('admin_schema.business_table_bid_seq');
 
-    RETURN new_bid;
+    INSERT INTO admin_schema.business_table (
+        bid,
+        b_registration_num,
+        b_owner_name,
+        b_category_id,
+        b_type_id,
+        is_active,
+        created_at
+    ) VALUES (
+        new_id,
+        _b_registration_num,
+        _b_owner_name,
+        _b_category_id,
+        _b_type_id,
+        _is_active,
+        CURRENT_TIMESTAMP
+    );
+
+    RETURN new_id;
 END;
 $$;
 
 
-ALTER FUNCTION admin_schema.insert_business(p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.insert_business(_b_registration_num text, _b_owner_name text, _b_category_id integer, _b_type_id integer, _is_active boolean) OWNER TO postgres;
 
 --
 -- Name: insert_business_category(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -1480,43 +1497,43 @@ $$;
 ALTER FUNCTION admin_schema.insert_vehicle(p_vehicle_name character varying, p_vehicle_registration_no character varying, p_vehicle_manufacture_year character varying, p_vehicle_warranty character varying, p_vehicle_make integer, p_vehicle_model integer, p_vehicle_engine_type integer, p_vehicle_purchase_date date, p_vehicle_color character varying) OWNER TO postgres;
 
 --
--- Name: update_business(bigint, character varying, character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: update_business(bigint, text, text, integer, integer, boolean); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.update_business(p_bid bigint, p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) RETURNS boolean
+CREATE FUNCTION admin_schema.update_business(_bid bigint, _b_registration_num text, _b_owner_name text, _b_category_id integer, _b_type_id integer, _active_status boolean) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
     UPDATE admin_schema.business_table
-    SET b_person_name = p_b_person_name,
-        b_registration_num = p_b_registration_num,
-        b_owner_name = p_b_owner_name,
-        active_status = p_active_status,
-        updated_at = NOW()
-    WHERE bid = p_bid;
-
-    RETURN FOUND;
+    SET
+        b_registration_num = _b_registration_num,
+        b_owner_name = _b_owner_name,
+        b_category_id = _b_category_id,
+        b_type_id = _b_type_id,
+        updated_at = CURRENT_TIMESTAMP,
+        is_active = _active_status
+    WHERE bid = _bid;
 END;
 $$;
 
 
-ALTER FUNCTION admin_schema.update_business(p_bid bigint, p_b_person_name character varying, p_b_registration_num character varying, p_b_owner_name character varying, p_active_status integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.update_business(_bid bigint, _b_registration_num text, _b_owner_name text, _b_category_id integer, _b_type_id integer, _active_status boolean) OWNER TO postgres;
 
 --
--- Name: update_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, integer, character varying, character varying, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+-- Name: update_business_branch(integer, integer, character varying, integer, integer, integer, character varying, character varying, character varying, character varying, character varying, integer, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_active_status integer DEFAULT 0, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying) RETURNS boolean
+CREATE FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
     UPDATE admin_schema.business_branch_table
     SET
+        bid = p_bid,
         b_shop_name = p_b_shop_name,
         b_type_id = p_b_type_id,
         b_location = p_b_location,
         b_state = p_b_state,
-        b_mandi_id = p_b_mandi_id,
         b_address = p_b_address,
         b_email = p_b_email,
         b_number = p_b_number,
@@ -1524,53 +1541,13 @@ BEGIN
         b_pan_num = p_b_pan_num,
         b_privilege_user = p_b_privilege_user,
         b_established_year = p_b_established_year,
-        active_status = p_active_status,
-        updated_at = CURRENT_TIMESTAMP
+        active_status = p_active_status
     WHERE b_branch_id = p_b_branch_id;
-
-    RETURN FOUND;
 END;
 $$;
 
 
-ALTER FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_active_status integer, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying) OWNER TO postgres;
-
---
--- Name: update_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, character varying, character varying, integer, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
---
-
-CREATE FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer DEFAULT NULL::integer, p_b_gst_num character varying DEFAULT NULL::character varying, p_b_pan_num character varying DEFAULT NULL::character varying, p_b_privilege_user integer DEFAULT NULL::integer, p_b_established_year character varying DEFAULT NULL::character varying, p_active_status integer DEFAULT 0) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE admin_schema.business_branch_table
-    SET
-        b_shop_name = p_b_shop_name,
-        b_type_id = p_b_type_id,
-        b_location = p_b_location,
-        b_state = p_b_state,
-        b_mandi_id = p_b_mandi_id,
-        b_address = p_b_address,
-        b_email = p_b_email,
-        b_number = p_b_number,
-        b_gst_num = p_b_gst_num,
-        b_pan_num = p_b_pan_num,
-        b_privilege_user = p_b_privilege_user,
-        b_established_year = p_b_established_year,
-        active_status = p_active_status,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE b_branch_id = p_b_branch_id;
-
-    IF FOUND THEN
-        RETURN TRUE;
-    ELSE
-        RETURN FALSE;
-    END IF;
-END;
-$$;
-
-
-ALTER FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) OWNER TO postgres;
+ALTER FUNCTION admin_schema.update_business_branch(p_b_branch_id integer, p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) OWNER TO postgres;
 
 --
 -- Name: update_business_category(integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -1993,18 +1970,18 @@ CREATE FUNCTION admin_schema.update_user(p_user_id integer, p_name character var
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    UPDATE admin_schema.user_table 
-    SET 
-        name = p_name, 
-        mobile_num = p_mobile_num, 
-        email = p_email, 
-        address = p_address, 
-        pincode = p_pincode, 
-        location = p_location, 
-        state = p_state, 
-        active_status = p_active_status, 
-        role_id = p_role_id
-    WHERE user_id = p_user_id;
+  UPDATE admin_schema.user_table
+  SET
+    name = p_name,
+    mobile_num = p_mobile_num,
+    email = p_email,
+    address = p_address,
+    pincode = p_pincode,
+    location = p_location,
+    state = p_state,
+    active_status = p_active_status,
+    role_id = p_role_id
+  WHERE user_id = p_user_id;
 END;
 $$;
 
@@ -3440,7 +3417,6 @@ CREATE TABLE admin_schema.business_table (
     bid bigint NOT NULL,
     b_registration_num character varying(50),
     b_owner_name character varying(255),
-    active_status integer,
     created_at timestamp with time zone,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     b_category_id integer,
@@ -3450,6 +3426,20 @@ CREATE TABLE admin_schema.business_table (
 
 
 ALTER TABLE admin_schema.business_table OWNER TO postgres;
+
+--
+-- Name: business_table_bid_seq; Type: SEQUENCE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE SEQUENCE admin_schema.business_table_bid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE admin_schema.business_table_bid_seq OWNER TO postgres;
 
 --
 -- Name: business_type_table; Type: TABLE; Schema: admin_schema; Owner: postgres
@@ -5831,16 +5821,17 @@ INSERT INTO admin_schema.business_branch_table VALUES (4, 104, 'JohnShop', 1, 1,
 
 INSERT INTO admin_schema.business_category_table VALUES (1, 'Premium');
 INSERT INTO admin_schema.business_category_table VALUES (2, 'Normal');
-INSERT INTO admin_schema.business_category_table VALUES (3, 'Basic');
+INSERT INTO admin_schema.business_category_table VALUES (3, 'Retail Business');
 
 
 --
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', 1, NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true);
-INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', 1, NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true);
-INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', 1, NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true);
+INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true);
+INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true);
+INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true);
+INSERT INTO admin_schema.business_table VALUES (1, 'REG-98213', 'Madhan Enterprises', '2025-04-09 09:50:55.872491+05:30', '2025-04-09 10:01:55.544163+05:30', 3, 2, true);
 
 
 --
@@ -5898,6 +5889,7 @@ INSERT INTO admin_schema.master_driver_table VALUES (2, 'John Updated', 'DL12345
 
 INSERT INTO admin_schema.master_language VALUES (1, 'Hindi');
 INSERT INTO admin_schema.master_language VALUES (2, 'Tamil');
+INSERT INTO admin_schema.master_language VALUES (3, 'Telugu');
 
 
 --
@@ -5941,6 +5933,7 @@ INSERT INTO admin_schema.master_product_category_table VALUES (4, 'Leafy', 0, NU
 INSERT INTO admin_schema.master_product_category_table VALUES (9, 'Organic', NULL, NULL, 1, NULL);
 INSERT INTO admin_schema.master_product_category_table VALUES (10, 'Organic Vegetables', 9, NULL, 1, NULL);
 INSERT INTO admin_schema.master_product_category_table VALUES (11, 'Organic Fruits', 9, NULL, 1, NULL);
+INSERT INTO admin_schema.master_product_category_table VALUES (13, 'Organic Vegetables', 9, 'images/organic_veg.png', 1, 2);
 
 
 --
@@ -5985,24 +5978,26 @@ INSERT INTO admin_schema.mode_of_payments_list VALUES (3, 'UPI', 1);
 INSERT INTO admin_schema.order_status_table VALUES (1, 'Processing');
 INSERT INTO admin_schema.order_status_table VALUES (2, 'Confirmed');
 INSERT INTO admin_schema.order_status_table VALUES (3, 'Payment');
-INSERT INTO admin_schema.order_status_table VALUES (4, 'Out for Delivery');
 INSERT INTO admin_schema.order_status_table VALUES (5, 'Successful');
 INSERT INTO admin_schema.order_status_table VALUES (6, 'Cancellation');
 INSERT INTO admin_schema.order_status_table VALUES (7, 'Returned');
 INSERT INTO admin_schema.order_status_table VALUES (8, 'Processing');
 INSERT INTO admin_schema.order_status_table VALUES (9, 'return');
+INSERT INTO admin_schema.order_status_table VALUES (10, 'rejected');
+INSERT INTO admin_schema.order_status_table VALUES (4, 'rejected');
 
 
 --
 -- Data for Name: payment_type_list; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.payment_type_list VALUES (1, 'Online Banking', true);
 INSERT INTO admin_schema.payment_type_list VALUES (2, 'UPI Payment', true);
 INSERT INTO admin_schema.payment_type_list VALUES (3, 'Mobile Wallets', true);
 INSERT INTO admin_schema.payment_type_list VALUES (4, 'Credit/Debit Cards', true);
 INSERT INTO admin_schema.payment_type_list VALUES (5, 'Credit/Pay after delivery', true);
 INSERT INTO admin_schema.payment_type_list VALUES (6, 'QR Code Payment', true);
+INSERT INTO admin_schema.payment_type_list VALUES (7, 'UPI', true);
+INSERT INTO admin_schema.payment_type_list VALUES (1, 'Card', true);
 
 
 --
@@ -6045,9 +6040,10 @@ INSERT INTO admin_schema.units_table VALUES (5, 'grams');
 -- Data for Name: user_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.user_table VALUES (12, 'John Doe', '9876543210', 'johndoe@example.com', '123 Main St, City', '123456', 1, 1, 1, 1);
 INSERT INTO admin_schema.user_table VALUES (13, 'Jane Smith', '9123456789', 'janesmith@example.com', '456 Market St, Town', '654321', 2, 2, 0, 1);
 INSERT INTO admin_schema.user_table VALUES (14, 'John Doe', '9876543210', 'john.doe@example.com', '123 Street', '123456', 1, 2, 0, 1);
+INSERT INTO admin_schema.user_table VALUES (16, 'Pragalya Kanakaraj', '9876543210', 'pragalya@example.com', '123 Anna Nagar, Erode', '638001', 1, 1, 1, 2);
+INSERT INTO admin_schema.user_table VALUES (12, 'Madhan Kumar', '9876543210', 'madhan.kumar@example.com', '23B Gandhi Road, Erode', '638001', 2, 1, 1, 3);
 
 
 --
@@ -6357,6 +6353,13 @@ SELECT pg_catalog.setval('admin_schema.business_category_table_b_category_id_seq
 
 
 --
+-- Name: business_table_bid_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('admin_schema.business_table_bid_seq', 1, true);
+
+
+--
 -- Name: business_type_table_type_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
@@ -6367,7 +6370,7 @@ SELECT pg_catalog.setval('admin_schema.business_type_table_type_id_seq', 6, true
 -- Name: cash_payment_list_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.cash_payment_list_id_seq', 6, true);
+SELECT pg_catalog.setval('admin_schema.cash_payment_list_id_seq', 7, true);
 
 
 --
@@ -6388,7 +6391,7 @@ SELECT pg_catalog.setval('admin_schema.indian_driver_licenses_type_license_type_
 -- Name: master_category_table_category_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.master_category_table_category_id_seq', 11, true);
+SELECT pg_catalog.setval('admin_schema.master_category_table_category_id_seq', 13, true);
 
 
 --
@@ -6409,7 +6412,7 @@ SELECT pg_catalog.setval('admin_schema.master_driver_table_driver_id_seq', 2, tr
 -- Name: master_language_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.master_language_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.master_language_id_seq', 3, true);
 
 
 --
@@ -6465,7 +6468,7 @@ SELECT pg_catalog.setval('admin_schema.mode_of_payments_list_id_seq', 3, true);
 -- Name: order_status_table_order_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.order_status_table_order_id_seq', 9, true);
+SELECT pg_catalog.setval('admin_schema.order_status_table_order_id_seq', 10, true);
 
 
 --
@@ -6500,7 +6503,7 @@ SELECT pg_catalog.setval('admin_schema.units_table_id_seq', 5, true);
 -- Name: user_table_user_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.user_table_user_id_seq', 14, true);
+SELECT pg_catalog.setval('admin_schema.user_table_user_id_seq', 16, true);
 
 
 --
