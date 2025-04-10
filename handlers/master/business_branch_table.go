@@ -3,7 +3,6 @@ package Masterhandlers
 import (
 	"context"
 	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
