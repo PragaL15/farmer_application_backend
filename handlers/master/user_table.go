@@ -2,26 +2,31 @@ package Masterhandlers
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v4"
 )
 
 type User struct {
-	UserID       int64  `json:"user_id"`
+	UserID       int    `json:"user_id"`
 	Name         string `json:"name"`
 	MobileNum    string `json:"mobile_num"`
 	Email        string `json:"email"`
 	Address      string `json:"address"`
 	Pincode      string `json:"pincode"`
-	Location     int64  `json:"location"`
-	State        int64  `json:"state"`
-	ActiveStatus int64  `json:"active_status"`
-	RoleID       int64  `json:"role_id"`
+	Location     int    `json:"location_id"`
+	LocationName string `json:"location_name"`
+	State        int    `json:"state_id"`
+	StateName    string `json:"state_name"`
+	ActiveStatus int    `json:"active_status"`
+	RoleID       int    `json:"role_id"`
 }
+
 
 func GetAllUsers(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_users()")
@@ -53,17 +58,34 @@ func GetUserByID(c *fiber.Ctx) error {
 	}
 
 	var u User
+
 	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_user_by_id($1)", id).
 		Scan(
-			&u.UserID, &u.Name, &u.MobileNum, &u.Email, &u.Address, &u.Pincode,
-			&u.Location, &u.State, &u.ActiveStatus, &u.RoleID,
+			&u.UserID,
+			&u.Name,
+			&u.MobileNum,
+			&u.Email,
+			&u.Address,
+			&u.Pincode,
+			&u.Location,
+			&u.LocationName,
+			&u.State,
+			&u.StateName,
+			&u.ActiveStatus,
+			&u.RoleID,
 		)
+
 	if err != nil {
 		log.Println("Error fetching user:", err)
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		if err == pgx.ErrNoRows || err == sql.ErrNoRows {
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Internal Server Error"})
 	}
+
 	return c.JSON(u)
 }
+
 
 func InsertUser(c *fiber.Ctx) error {
 	var u User
