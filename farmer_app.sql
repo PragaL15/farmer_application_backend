@@ -606,16 +606,20 @@ ALTER FUNCTION admin_schema.get_business_branch_by_id(p_b_branch_id integer) OWN
 -- Name: get_business_by_id(bigint); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_business_by_id(p_bid bigint) RETURNS TABLE(bid bigint, b_person_name character varying, b_registration_num character varying, b_owner_name character varying, active_status integer, created_at timestamp with time zone, updated_at timestamp with time zone)
+CREATE FUNCTION admin_schema.get_business_by_id(p_bid bigint) RETURNS TABLE(bid bigint, b_registration_num character varying, b_owner_name character varying, b_category_id integer, b_type_id integer, is_active boolean)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
-        bid, b_person_name, b_registration_num, b_owner_name, 
-        active_status, created_at, updated_at 
-    FROM admin_schema.business_table
-    WHERE bid = p_bid;
+    SELECT
+        bt.bid,
+        bt.b_registration_num,
+        bt.b_owner_name,
+        bt.b_category_id,
+        bt.b_type_id,
+        bt.is_active
+    FROM admin_schema.business_table bt
+    WHERE bt.bid = p_bid;
 END;
 $$;
 
@@ -890,12 +894,12 @@ ALTER FUNCTION admin_schema.get_payment_mode_by_id(p_id integer) OWNER TO postgr
 -- Name: get_product_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_product_by_id(p_product_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name text, product_name text, image_path text, active_status integer, product_regional_id integer, product_regional_name text)
+CREATE FUNCTION admin_schema.get_product_by_id(p_product_id integer) RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         p.product_id,
         p.category_id,
         c.category_name,
@@ -905,7 +909,7 @@ BEGIN
         p.product_regional_id,
         prn.product_regional_name
     FROM admin_schema.master_product p
-    LEFT JOIN admin_schema.master_product_category c ON p.category_id = c.category_id
+    LEFT JOIN admin_schema.master_product_category_table c ON p.category_id = c.category_id
     LEFT JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
     WHERE p.product_id = p_product_id;
 END;
@@ -957,12 +961,12 @@ ALTER FUNCTION admin_schema.get_product_regional_name_by_id(p_product_regional_i
 -- Name: get_products_by_category(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_products_by_category(p_category_id integer) RETURNS TABLE(product_id integer, category_id integer, category_name text, product_name text, image_path text, active_status integer, product_regional_id integer, product_regional_name text)
+CREATE FUNCTION admin_schema.get_products_by_category(p_category_id integer) RETURNS TABLE(product_id bigint, category_id integer, category_name character varying, product_name character varying, image_path character varying, active_status integer, product_regional_id integer, product_regional_name character varying)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         p.product_id,
         p.category_id,
         c.category_name,
@@ -972,7 +976,7 @@ BEGIN
         p.product_regional_id,
         prn.product_regional_name
     FROM admin_schema.master_product p
-    LEFT JOIN admin_schema.master_product_category c ON p.category_id = c.category_id
+    LEFT JOIN admin_schema.master_product_category_table c ON p.category_id = c.category_id
     LEFT JOIN admin_schema.product_regional_name prn ON p.product_regional_id = prn.product_regional_id
     WHERE p.category_id = p_category_id;
 END;
@@ -1020,14 +1024,28 @@ ALTER FUNCTION admin_schema.get_unit_by_id(p_id integer) OWNER TO postgres;
 -- Name: get_user_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.get_user_by_id(p_user_id integer) RETURNS TABLE(user_id integer, name character varying, mobile_num character varying, email character varying, address text, pincode character varying, location integer, state integer, active_status integer, role_id integer)
+CREATE FUNCTION admin_schema.get_user_by_id(p_user_id integer) RETURNS TABLE(user_id integer, name character varying, mobile_num character varying, email character varying, address text, pincode character varying, location_id integer, location_name character varying, state_id integer, state_name character varying, active_status integer, role_id integer)
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY 
-    SELECT user_id, name, mobile_num, email, address, pincode, location, state, active_status, role_id 
-    FROM admin_schema.user_table 
-    WHERE user_id = p_user_id;
+    RETURN QUERY
+    SELECT
+        u.user_id,
+        u.name,
+        u.mobile_num,
+        u.email,
+        u.address,
+        u.pincode,
+        u.location,
+        ml.location,
+        u.state,
+        ms.state,
+        u.active_status,
+        u.role_id
+    FROM admin_schema.user_table u
+    LEFT JOIN admin_schema.master_location ml ON u.location = ml.id
+    LEFT JOIN admin_schema.master_states ms ON u.state = ms.id
+    WHERE u.user_id = p_user_id;
 END;
 $$;
 

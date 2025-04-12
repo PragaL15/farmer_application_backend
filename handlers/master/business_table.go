@@ -3,7 +3,7 @@ package Masterhandlers
 import (
 	"context"
 	"strconv"
-
+"log"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/gofiber/fiber/v2"
 )
@@ -51,12 +51,21 @@ func GetBusinessByID(c *fiber.Ctx) error {
 
 	var b Business
 	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_business_by_id($1)", id).
-		Scan(&b.BID, &b.BRegistrationNum, &b.BOwnerName, &b.BCategoryID, &b.BTypeID,  &b.IsActive)
+		Scan(
+			&b.BID,
+			&b.BRegistrationNum,
+			&b.BOwnerName,
+			&b.BCategoryID,
+			&b.BTypeID,
+			&b.IsActive,
+		)
 	if err != nil {
+		log.Println("Error fetching business:", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Business not found"})
 	}
 	return c.JSON(b)
 }
+
 
 func InsertBusiness(c *fiber.Ctx) error {
 	type Request struct {
@@ -64,7 +73,7 @@ func InsertBusiness(c *fiber.Ctx) error {
 		BOwnerName       string `json:"b_owner_name"`
 		BCategoryID      int64  `json:"b_category_id"`
 		BTypeID          int64  `json:"b_type_id"`
-		IsActive         bool   `json:"is_active"` // Ensure this matches the function
+		IsActive         bool   `json:"is_active"`
 	}
 
 	var req Request
