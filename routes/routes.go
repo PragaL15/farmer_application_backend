@@ -95,7 +95,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/userUpdate/:id", Masterhandlers.UpdateUser)
 	app.Put("/businessUpdate", Masterhandlers.UpdateBusiness)
 	app.Put("/orderStatusUpdate/:id", Masterhandlers.UpdateOrderStatus)
-	app.Put("/ordersUpdate", handlers.UpdateOrderHandler)
+	//app.Put("/ordersUpdate", handlers.UpdateOrderHandler)
 	app.Put("/dailyPriceUpdate", handlers.UpdatePriceHandler)
 	app.Put("/paymentModeUpdate", Masterhandlers.UpdatePaymentMode)
 	app.Put("/businessTypeUpdate", Masterhandlers.UpdateBusinessType)
