@@ -135,11 +135,25 @@ func GetProductByID(c *fiber.Ctx) error {
 	}
 
 	var product Productget
-	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM admin_schema.get_product_by_id($1)", productID).
-		Scan(&product.ProductID, &product.CategoryID, &product.CategoryName, &product.ProductName, &product.ImagePath, &product.ActiveStatus, &product.ProductRegionalID, &product.ProductRegionalName)
+	query := `SELECT * FROM admin_schema.get_product_by_id($1)`
+	err = db.Pool.QueryRow(context.Background(), query, productID).
+		Scan(
+			&product.ProductID,
+			&product.CategoryID,
+			&product.CategoryName,
+			&product.ProductName,
+			&product.ImagePath,
+			&product.ActiveStatus,
+			&product.ProductRegionalID,
+			&product.ProductRegionalName,
+		)
 
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Product not found"})
+		if err.Error() == "no rows in result set" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Product not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error", "details": err.Error()})
 	}
+
 	return c.JSON(product)
 }
