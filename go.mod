@@ -6,7 +6,7 @@ require (
 	github.com/go-playground/validator/v10 v10.24.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/guregu/null/v5 v5.0.0
-	
+
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.10.0
 )
@@ -18,6 +18,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/uuid v1.5.0 // indirect
+	github.com/guregu/null v4.0.0+incompatible
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
