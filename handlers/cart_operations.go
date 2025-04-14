@@ -5,89 +5,135 @@ import (
     "encoding/json"
     "log"
     "strconv"
-    "time"
-
+  "database/sql"
     "github.com/gofiber/fiber/v2"
-   "github.com/PragaL15/go_newBackend/go_backend/db"
+    "github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 // Structs
-type Cart struct {
-    CartID         int64           `json:"cart_id"`
-    RetailerID     int64           `json:"retailer_id"`
-    WholesellerID  *int64          `json:"wholeseller_id,omitempty"`
-    Products       json.RawMessage `json:"products"`
-    DeviceInfo     json.RawMessage `json:"device_info,omitempty"`
-    CartStatus     int             `json:"cart_status"`
-    CreatedAt      time.Time       `json:"created_at"`
-    UpdatedAt      time.Time       `json:"updated_at"`
+type CartDetails struct {
+	CartID                 int64  `json:"cart_id"`
+	RetailerID             int64  `json:"retailer_id"`
+	RetailerName           string `json:"retailer_name"`
+	RetailerAddress        string `json:"retailer_address"`
+	RetailerStateName      string `json:"retailer_state_name"`
+	RetailerStateShortname string `json:"retailer_state_shortname"`
+	RetailerLocationName   string `json:"retailer_location_name"`
+	WholesellerID          *int64 `json:"wholeseller_id"`
+	WholesellerName        string `json:"wholeseller_name"`
+	CartStatus             int    `json:"cart_status"`
 }
 
 type CartProduct struct {
-    ProductID             int64     `json:"product_id"`
-    Quantity              float64   `json:"quantity"`
-    UnitID                int       `json:"unit_id"`
-    PriceWhileAdded       float64   `json:"price_while_added"`
-    LatestWholesalerPrice float64   `json:"latest_wholesaler_price"`
-    PriceUpdatedAt        time.Time `json:"price_updated_at"`
-    WholesellerID         *int64    `json:"wholeseller_id,omitempty"`
-    IsActive              bool      `json:"is_active"`
+	ProductID             int64          `json:"product_id"`
+	ProductName           string         `json:"product_name"`
+	Quantity              int            `json:"quantity"`
+	UnitID                int64          `json:"unit_id"`
+	UnitName              string         `json:"unit_name"`
+	PriceWhileAdded       float64        `json:"price_while_added"`
+	LatestWholesalerPrice float64        `json:"latest_wholesaler_price"`
+	PriceUpdatedAt        sql.NullString `json:"price_updated_at"`
+	IsActive              bool           `json:"is_active"`
 }
 
 type CartResponse struct {
-    Status  string      `json:"status"`
-    Message string      `json:"message"`
-    Data    interface{} `json:"data,omitempty"`
+	CartDetails CartDetails   `json:"cart_details"`
+	Products    []CartProduct `json:"products"`
 }
 
-// Handler: GetCart
 func GetCart(c *fiber.Ctx) error {
-    cartID := c.Params("id")
+	cartID := c.Params("id")
 
-    var cart Cart
-    var productsJSON []byte
+	rows, err := db.Pool.Query(
+			context.Background(),
+			"SELECT * FROM business_schema.get_cart_details($1)",
+			cartID,
+	)
+	if err != nil {
+			log.Printf("Error fetching cart: %v", err)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"status":  "error",
+					"message": "Cart not found",
+			})
+	}
+	defer rows.Close()
 
-    err := db.Pool.QueryRow(
-        context.Background(),
-        "SELECT * FROM business_schema.get_cart_details($1)",
-        cartID,
-    ).Scan(
-        &cart.CartID,
-        &cart.RetailerID,
-        &cart.WholesellerID,
-        &productsJSON,
-        &cart.CartStatus,
-        &cart.CreatedAt,
-        &cart.UpdatedAt,
-    )
+	var response CartResponse
+	var products []CartProduct
 
-    if err != nil {
-        log.Printf("Error fetching cart: %v", err)
-        return c.Status(fiber.StatusNotFound).JSON(CartResponse{
-            Status:  "error",
-            Message: "Cart not found",
-        })
-    }
+	// Nullable temp vars
+	var retailerName, retailerAddress, stateName, shortname, locationName, wholesellerName sql.NullString
+	var wholesellerID sql.NullInt64
 
-    var products []CartProduct
-    if err := json.Unmarshal(productsJSON, &products); err != nil {
-        log.Printf("Error parsing products: %v", err)
-        return c.Status(fiber.StatusInternalServerError).JSON(CartResponse{
-            Status:  "error",
-            Message: "Failed to parse cart products",
-        })
-    }
+	for rows.Next() {
+			var product CartProduct
+			err := rows.Scan(
+					&response.CartDetails.CartID,
+					&response.CartDetails.RetailerID,
+					&retailerName,
+					&retailerAddress,
+					&stateName,
+					&shortname,
+					&locationName,
+					&wholesellerID,
+					&wholesellerName,
+					&product.ProductID,
+					&product.ProductName,
+					&product.Quantity,
+					&product.UnitID,
+					&product.UnitName,
+					&product.PriceWhileAdded,
+					&product.LatestWholesalerPrice,
+					&product.PriceUpdatedAt,
+					&product.IsActive,
+					&response.CartDetails.CartStatus,
+			)
+			if err != nil {
+					log.Printf("Error scanning row: %v", err)
+					return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+							"status":  "error",
+							"message": "Failed to parse cart data",
+					})
+			}
 
-    return c.JSON(CartResponse{
-        Status:  "success",
-        Message: "Cart retrieved successfully",
-        Data: fiber.Map{
-            "cart":     cart,
-            "products": products,
-        },
-    })
+			// Assign nullable fields safely
+			response.CartDetails.RetailerName = nullToString(retailerName)
+			response.CartDetails.RetailerAddress = nullToString(retailerAddress)
+			response.CartDetails.RetailerStateName = nullToString(stateName)
+			response.CartDetails.RetailerStateShortname = nullToString(shortname)
+			response.CartDetails.RetailerLocationName = nullToString(locationName)
+			response.CartDetails.WholesellerName = nullToString(wholesellerName)
+			if wholesellerID.Valid {
+					id := wholesellerID.Int64
+					response.CartDetails.WholesellerID = &id
+			} else {
+					response.CartDetails.WholesellerID = nil
+			}
+
+			products = append(products, product)
+	}
+
+	if len(products) == 0 {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"status":  "error",
+					"message": "No cart found with that ID",
+			})
+	}
+
+	response.Products = products
+	return c.JSON(fiber.Map{
+			"status":  "success",
+			"message": "Cart retrieved successfully",
+			"data":    response,
+	})
 }
 
+func nullToString(ns sql.NullString) string {
+	if ns.Valid {
+			return ns.String
+	}
+	return ""
+}
 // Handler: InsertCart
 func InsertCart(c *fiber.Ctx) error {
     var request struct {
@@ -98,17 +144,17 @@ func InsertCart(c *fiber.Ctx) error {
     }
 
     if err := c.BodyParser(&request); err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(CartResponse{
-            Status:  "error",
-            Message: "Invalid request body",
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid request body",
         })
     }
 
     var products []CartProduct
     if err := json.Unmarshal(request.Products, &products); err != nil || len(products) == 0 {
-        return c.Status(fiber.StatusBadRequest).JSON(CartResponse{
-            Status:  "error",
-            Message: "At least one valid product is required",
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "At least one valid product is required",
         })
     }
 
@@ -124,22 +170,26 @@ func InsertCart(c *fiber.Ctx) error {
 
     if err != nil {
         log.Printf("Error inserting cart: %v", err)
-        return c.Status(fiber.StatusInternalServerError).JSON(CartResponse{
-            Status:  "error",
-            Message: "Failed to create cart",
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to create cart",
         })
     }
 
     var result CartResponse
     if err := json.Unmarshal(resultJSON, &result); err != nil {
         log.Printf("Error parsing insert result: %v", err)
-        return c.Status(fiber.StatusInternalServerError).JSON(CartResponse{
-            Status:  "error",
-            Message: "Failed to process cart creation",
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to process cart creation",
         })
     }
 
-    return c.Status(fiber.StatusCreated).JSON(result)
+    return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+        "status":  "success",
+        "message": "Cart created successfully",
+        "data":    result,
+    })
 }
 
 // Handler: DeleteCartItem
@@ -149,17 +199,17 @@ func DeleteCartItem(c *fiber.Ctx) error {
 
     cartIDInt, err := strconv.ParseInt(cartID, 10, 64)
     if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(CartResponse{
-            Status:  "error",
-            Message: "Invalid cart ID",
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid cart ID",
         })
     }
 
     productIDInt, err := strconv.ParseInt(productID, 10, 64)
     if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(CartResponse{
-            Status:  "error",
-            Message: "Invalid product ID",
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Invalid product ID",
         })
     }
 
@@ -167,9 +217,9 @@ func DeleteCartItem(c *fiber.Ctx) error {
     if wholesellerParam := c.Query("wholeseller_id"); wholesellerParam != "" {
         wholesellerIDInt, err := strconv.ParseInt(wholesellerParam, 10, 64)
         if err != nil {
-            return c.Status(fiber.StatusBadRequest).JSON(CartResponse{
-                Status:  "error",
-                Message: "Invalid wholeseller ID",
+            return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+                "status":  "error",
+                "message": "Invalid wholeseller ID",
             })
         }
         wholesellerID = &wholesellerIDInt
@@ -186,20 +236,24 @@ func DeleteCartItem(c *fiber.Ctx) error {
 
     if err != nil {
         log.Printf("Error soft deleting cart item: %v", err)
-        return c.Status(fiber.StatusInternalServerError).JSON(CartResponse{
-            Status:  "error",
-            Message: "Failed to delete cart item",
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to delete cart item",
         })
     }
 
     var result CartResponse
     if err := json.Unmarshal(resultJSON, &result); err != nil {
         log.Printf("Error parsing delete result: %v", err)
-        return c.Status(fiber.StatusInternalServerError).JSON(CartResponse{
-            Status:  "error",
-            Message: "Failed to process item deletion",
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":  "error",
+            "message": "Failed to process item deletion",
         })
     }
 
-    return c.JSON(result)
+    return c.JSON(fiber.Map{
+        "status":  "success",
+        "message": "Cart item deleted successfully",
+        "data":    result,
+    })
 }
