@@ -2577,6 +2577,59 @@ $$;
 ALTER FUNCTION business_schema.get_all_daily_price_updates() OWNER TO postgres;
 
 --
+-- Name: get_cart_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_cart_details(p_cart_id bigint) RETURNS TABLE(cart_id bigint, retailer_id bigint, retailer_name text, retailer_address text, retailer_state_name text, retailer_state_shortname text, retailer_location_name text, wholeseller_id bigint, wholeseller_name text, product_id bigint, product_name text, quantity numeric, unit_id integer, unit_name text, price_while_added numeric, latest_wholesaler_price numeric, price_updated_at timestamp with time zone, is_active boolean, cart_status integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        ct.cart_id,
+        ct.retailer_id,
+        ret.b_owner_name::TEXT AS retailer_name,
+        ret.address::TEXT AS retailer_address,
+        ms.state::TEXT AS retailer_state_name,
+        ms.state_shortnames::TEXT AS retailer_state_shortname,
+        ml.location::TEXT AS retailer_location_name,
+        ct.wholeseller_id,
+        ws.b_owner_name::TEXT AS wholeseller_name,
+        (elem->>'product_id')::BIGINT AS product_id,
+        mp.product_name::TEXT AS product_name,
+        (elem->>'quantity')::NUMERIC AS quantity,
+        (elem->>'unit_id')::INTEGER AS unit_id,
+        ut.unit_name::TEXT AS unit_name,
+        (elem->>'price_while_added')::NUMERIC AS price_while_added,
+        (elem->>'latest_wholesaler_price')::NUMERIC AS latest_wholesaler_price,
+        (elem->>'price_updated_at')::TIMESTAMP WITH TIME ZONE AS price_updated_at,
+        (elem->>'is_active')::BOOLEAN AS is_active,
+        ct.cart_status
+    FROM
+        business_schema.cart_table ct
+    CROSS JOIN LATERAL
+        jsonb_array_elements(ct.products) elem
+    LEFT JOIN
+        admin_schema.business_table ret ON ct.retailer_id = ret.bid
+    LEFT JOIN
+        admin_schema.business_table ws ON ct.wholeseller_id = ws.bid
+    LEFT JOIN
+        admin_schema.master_product mp ON (elem->>'product_id')::BIGINT = mp.product_id
+    LEFT JOIN
+        admin_schema.units_table ut ON (elem->>'unit_id')::INTEGER = ut.id
+    LEFT JOIN
+        admin_schema.master_states ms ON ret.state_id = ms.id
+    LEFT JOIN
+        admin_schema.master_location ml ON ret.location_id = ml.id
+    WHERE
+        ct.cart_id = p_cart_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_cart_details(p_cart_id bigint) OWNER TO postgres;
+
+--
 -- Name: get_invoice_with_items(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2809,6 +2862,154 @@ $$;
 ALTER FUNCTION business_schema.get_order_history_with_details() OWNER TO postgres;
 
 --
+-- Name: insert_cart(bigint, jsonb, bigint, jsonb, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_cart(p_retailer_id bigint, p_products jsonb, p_wholeseller_id bigint DEFAULT NULL::bigint, p_device_info jsonb DEFAULT NULL::jsonb, p_cart_status integer DEFAULT 0) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_cart_id BIGINT;
+    v_product_count INTEGER;
+    v_validation_result BOOLEAN;
+    v_error_message TEXT;
+BEGIN
+    -- Validate required parameters
+    IF p_retailer_id IS NULL THEN
+        RETURN jsonb_build_object('status', 'error', 'message', 'Retailer ID is required');
+    END IF;
+    
+    IF p_products IS NULL OR jsonb_typeof(p_products) != 'array' OR jsonb_array_length(p_products) = 0 THEN
+        RETURN jsonb_build_object('status', 'error', 'message', 'Products array is required and must not be empty');
+    END IF;
+    
+    -- Validate retailer exists
+    IF NOT EXISTS (SELECT 1 FROM admin_schema.business_table WHERE bid = p_retailer_id) THEN
+        RETURN jsonb_build_object('status', 'error', 'message', 'Retailer does not exist');
+    END IF;
+    
+    -- Validate wholeseller exists if provided
+    IF p_wholeseller_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM admin_schema.business_table WHERE bid = p_wholeseller_id) THEN
+        RETURN jsonb_build_object('status', 'error', 'message', 'Wholeseller does not exist');
+    END IF;
+    
+    -- Validate each product in the JSON array
+    FOR i IN 0..jsonb_array_length(p_products)-1 LOOP
+        -- Check required product fields
+        IF (p_products->i->>'product_id') IS NULL THEN
+            RETURN jsonb_build_object('status', 'error', 'message', 'Product ID is required for all items');
+        END IF;
+        
+        IF (p_products->i->>'quantity') IS NULL THEN
+            RETURN jsonb_build_object('status', 'error', 'message', 'Quantity is required for all items');
+        END IF;
+        
+        IF (p_products->i->>'unit_id') IS NULL THEN
+            RETURN jsonb_build_object('status', 'error', 'message', 'Unit ID is required for all items');
+        END IF;
+        
+        -- Validate product exists
+        IF NOT EXISTS (
+            SELECT 1 FROM admin_schema.master_product 
+            WHERE product_id = (p_products->i->>'product_id')::BIGINT
+        ) THEN
+            RETURN jsonb_build_object(
+                'status', 'error', 
+                'message', 'Product ID ' || (p_products->i->>'product_id') || ' does not exist'
+            );
+        END IF;
+        
+        -- Validate unit exists
+        IF NOT EXISTS (
+            SELECT 1 FROM admin_schema.units_table 
+            WHERE id = (p_products->i->>'unit_id')::INTEGER
+        ) THEN
+            RETURN jsonb_build_object(
+                'status', 'error', 
+                'message', 'Unit ID ' || (p_products->i->>'unit_id') || ' does not exist'
+            );
+        END IF;
+        
+        -- Set default values if not provided
+        IF (p_products->i->>'is_active') IS NULL THEN
+            p_products = jsonb_set(p_products, ARRAY[i::text, 'is_active'], 'true'::jsonb);
+        END IF;
+        
+        IF (p_products->i->>'price_while_added') IS NULL THEN
+            -- Get current price from daily_price_update if available
+            BEGIN
+                SELECT price INTO v_validation_result
+                FROM business_schema.daily_price_update
+                WHERE product_id = (p_products->i->>'product_id')::BIGINT
+                  AND (p_products->i->>'wholeseller_id') IS NULL 
+                   OR wholeseller_id = (p_products->i->>'wholeseller_id')::BIGINT
+                ORDER BY created_at DESC
+                LIMIT 1;
+                
+                IF FOUND THEN
+                    p_products = jsonb_set(p_products, ARRAY[i::text, 'price_while_added'], to_jsonb(v_validation_result));
+                    p_products = jsonb_set(p_products, ARRAY[i::text, 'latest_wholesaler_price'], to_jsonb(v_validation_result));
+                ELSE
+                    RETURN jsonb_build_object(
+                        'status', 'error', 
+                        'message', 'No price available for product ' || (p_products->i->>'product_id') || 
+                                   ' and wholeseller ' || COALESCE(p_products->i->>'wholeseller_id', 'any')
+                    );
+                END IF;
+            EXCEPTION WHEN OTHERS THEN
+                RETURN jsonb_build_object(
+                    'status', 'error', 
+                    'message', 'Error fetching price for product ' || (p_products->i->>'product_id')
+                );
+            END;
+        END IF;
+        
+        -- Set price_updated_at if not provided
+        IF (p_products->i->>'price_updated_at') IS NULL THEN
+            p_products = jsonb_set(p_products, ARRAY[i::text, 'price_updated_at'], to_jsonb(CURRENT_TIMESTAMP));
+        END IF;
+    END LOOP;
+    
+    -- Insert the cart record
+    BEGIN
+        INSERT INTO business_schema.cart_table (
+            retailer_id,
+            wholeseller_id,
+            products,
+            device_info,
+            cart_status
+        )
+        VALUES (
+            p_retailer_id,
+            p_wholeseller_id,
+            p_products,
+            p_device_info,
+            p_cart_status
+        )
+        RETURNING cart_id INTO v_cart_id;
+        
+        -- Return success response
+        RETURN jsonb_build_object(
+            'status', 'success',
+            'message', 'Cart created successfully',
+            'cart_id', v_cart_id,
+            'products', p_products
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Handle any unexpected errors
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', 'Failed to create cart: ' || v_error_message
+        );
+    END;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_cart(p_retailer_id bigint, p_products jsonb, p_wholeseller_id bigint, p_device_info jsonb, p_cart_status integer) OWNER TO postgres;
+
+--
 -- Name: insert_daily_price(); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -3004,6 +3205,124 @@ $$;
 ALTER FUNCTION business_schema.log_order_changes() OWNER TO postgres;
 
 --
+-- Name: soft_delete_cart_item(bigint, bigint, bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.soft_delete_cart_item(p_cart_id bigint, p_product_id bigint, p_wholeseller_id bigint DEFAULT NULL::bigint) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_updated_products JSONB;
+    v_updated_count INTEGER;
+    v_cart_exists BOOLEAN;
+    v_error_message TEXT;
+BEGIN
+    -- Check if cart exists
+    SELECT EXISTS(SELECT 1 FROM business_schema.cart_table WHERE cart_id = p_cart_id) INTO v_cart_exists;
+    
+    IF NOT v_cart_exists THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', 'Cart not found',
+            'cart_id', p_cart_id
+        );
+    END IF;
+    
+    -- Update the products array to set is_active=false for the specified product
+    UPDATE business_schema.cart_table
+    SET products = (
+        SELECT jsonb_agg(
+            CASE 
+                WHEN (elem->>'product_id')::BIGINT = p_product_id AND 
+                     (p_wholeseller_id IS NULL OR (elem->>'wholeseller_id')::BIGINT = p_wholeseller_id)
+                THEN elem || '{"is_active": false}'::jsonb
+                ELSE elem
+            END
+        )
+        FROM jsonb_array_elements(products) elem
+    ),
+    updated_at = CURRENT_TIMESTAMP
+    WHERE cart_id = p_cart_id
+    RETURNING products, 1 INTO v_updated_products, v_updated_count;
+    
+    -- Check if any product was actually updated
+    IF v_updated_count IS NULL OR v_updated_count = 0 THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', 'Product not found in cart or already inactive',
+            'cart_id', p_cart_id,
+            'product_id', p_product_id,
+            'wholeseller_id', p_wholeseller_id
+        );
+    END IF;
+    
+    -- Return success response
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', 'Product marked as inactive',
+        'cart_id', p_cart_id,
+        'product_id', p_product_id,
+        'wholeseller_id', p_wholeseller_id,
+        'updated_products', v_updated_products
+    );
+    
+EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+    RETURN jsonb_build_object(
+        'status', 'error',
+        'message', 'Failed to update cart: ' || v_error_message,
+        'cart_id', p_cart_id
+    );
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.soft_delete_cart_item(p_cart_id bigint, p_product_id bigint, p_wholeseller_id bigint) OWNER TO postgres;
+
+--
+-- Name: update_cart_prices(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.update_cart_prices() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Update prices when daily_price_update changes
+    UPDATE business_schema.cart_table ct
+    SET products = (
+        SELECT jsonb_agg(
+            CASE WHEN (elem->>'product_id')::bigint = NEW.product_id 
+                  AND (elem->>'wholeseller_id')::bigint = NEW.wholeseller_id
+            THEN elem || jsonb_build_object(
+                'latest_wholesaler_price', NEW.price,
+                'price_updated_at', NOW(),
+                'price_change_status', 
+                    CASE 
+                        WHEN (elem->>'price_while_added')::numeric < NEW.price THEN 'increased'
+                        WHEN (elem->>'price_while_added')::numeric > NEW.price THEN 'decreased'
+                        ELSE 'unchanged'
+                    END
+            )
+            ELSE elem
+            END
+        )
+        FROM jsonb_array_elements(ct.products) elem
+    )
+    WHERE EXISTS (
+        SELECT 1 
+        FROM jsonb_array_elements(ct.products) elem
+        WHERE (elem->>'product_id')::bigint = NEW.product_id
+          AND (elem->>'wholeseller_id')::bigint = NEW.wholeseller_id
+    );
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.update_cart_prices() OWNER TO postgres;
+
+--
 -- Name: update_daily_price(integer, integer, integer, numeric, character varying); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -3128,6 +3447,47 @@ $$;
 
 
 ALTER FUNCTION business_schema.update_price_data(p_price double precision, p_currency text, p_updated_at timestamp without time zone, p_remarks text, p_product_id integer, p_unit_id integer, p_wholeseller_id integer) OWNER TO postgres;
+
+--
+-- Name: validate_cart_products(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.validate_cart_products() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    product_exists BOOLEAN;
+    unit_exists BOOLEAN;
+BEGIN
+    -- Check each product in the cart
+    FOR i IN 0..jsonb_array_length(NEW.products)-1 LOOP
+        -- Verify product exists
+        SELECT EXISTS (
+            SELECT 1 FROM admin_schema.master_product 
+            WHERE product_id = (NEW.products->i->>'product_id')::bigint
+        ) INTO product_exists;
+        
+        -- Verify unit exists
+        SELECT EXISTS (
+            SELECT 1 FROM admin_schema.units_table 
+            WHERE id = (NEW.products->i->>'unit_id')::integer
+        ) INTO unit_exists;
+        
+        IF NOT product_exists THEN
+            RAISE EXCEPTION 'Product ID % does not exist', (NEW.products->i->>'product_id');
+        END IF;
+        
+        IF NOT unit_exists THEN
+            RAISE EXCEPTION 'Unit ID % does not exist', (NEW.products->i->>'unit_id');
+        END IF;
+    END LOOP;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.validate_cart_products() OWNER TO postgres;
 
 --
 -- Name: get_business_by_id(bigint); Type: FUNCTION; Schema: public; Owner: postgres
@@ -3439,7 +3799,10 @@ CREATE TABLE admin_schema.business_table (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     b_category_id integer,
     b_type_id integer,
-    is_active boolean DEFAULT true
+    is_active boolean DEFAULT true,
+    state_id integer,
+    location_id integer,
+    address text
 );
 
 
@@ -4447,6 +4810,67 @@ ALTER SEQUENCE admin_schema.vehicle_model_id_seq OWNER TO admin;
 --
 
 ALTER SEQUENCE admin_schema.vehicle_model_id_seq OWNED BY admin_schema.vehicle_model.id;
+
+
+--
+-- Name: cart_table; Type: TABLE; Schema: business_schema; Owner: postgres
+--
+
+CREATE TABLE business_schema.cart_table (
+    cart_id bigint NOT NULL,
+    retailer_id bigint NOT NULL,
+    wholeseller_id bigint,
+    products jsonb NOT NULL,
+    device_info jsonb,
+    cart_status integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_products CHECK (((jsonb_typeof(products) = 'array'::text) AND (jsonb_array_length(products) > 0)))
+);
+
+
+ALTER TABLE business_schema.cart_table OWNER TO postgres;
+
+--
+-- Name: cart_details; Type: VIEW; Schema: business_schema; Owner: postgres
+--
+
+CREATE VIEW business_schema.cart_details AS
+ SELECT ct.cart_id,
+    ct.retailer_id,
+    mp.product_name,
+    ((elem.value ->> 'quantity'::text))::numeric AS quantity,
+    ut.unit_name,
+    ((elem.value ->> 'price_while_added'::text))::numeric AS original_price,
+    ((elem.value ->> 'latest_wholesaler_price'::text))::numeric AS current_price,
+    ((elem.value ->> 'price_updated_at'::text))::timestamp without time zone AS price_update_time
+   FROM business_schema.cart_table ct,
+    ((LATERAL jsonb_array_elements(ct.products) elem(value)
+     JOIN admin_schema.master_product mp ON ((mp.product_id = ((elem.value ->> 'product_id'::text))::integer)))
+     JOIN admin_schema.units_table ut ON ((ut.id = ((elem.value ->> 'unit_id'::text))::integer)));
+
+
+ALTER VIEW business_schema.cart_details OWNER TO postgres;
+
+--
+-- Name: cart_table_cart_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.cart_table_cart_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.cart_table_cart_id_seq OWNER TO postgres;
+
+--
+-- Name: cart_table_cart_id_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.cart_table_cart_id_seq OWNED BY business_schema.cart_table.cart_id;
 
 
 --
@@ -5673,6 +6097,13 @@ ALTER TABLE ONLY admin_schema.vehicle_model ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: cart_table cart_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cart_table ALTER COLUMN cart_id SET DEFAULT nextval('business_schema.cart_table_cart_id_seq'::regclass);
+
+
+--
 -- Name: daily_price_update daily_price_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
 --
 
@@ -5846,10 +6277,10 @@ INSERT INTO admin_schema.business_category_table VALUES (3, 'Retail Business');
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true);
-INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true);
-INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true);
-INSERT INTO admin_schema.business_table VALUES (1, 'REG-98213', 'Madhan Enterprises', '2025-04-09 09:50:55.872491+05:30', '2025-04-09 10:01:55.544163+05:30', 3, 2, true);
+INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (1, 'REG-98213', 'Madhan Enterprises', '2025-04-09 09:50:55.872491+05:30', '2025-04-09 10:01:55.544163+05:30', 3, 2, true, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true, 1, 2, NULL);
 
 
 --
@@ -6101,6 +6532,19 @@ INSERT INTO admin_schema.vehicle_make VALUES (3, 'Ford');
 INSERT INTO admin_schema.vehicle_model VALUES (1, 'Corolla');
 INSERT INTO admin_schema.vehicle_model VALUES (2, 'Civic');
 INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
+
+
+--
+-- Data for Name: cart_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
+--
+
+INSERT INTO business_schema.cart_table VALUES (2, 1, 104, '[{"unit_id": 1, "quantity": 2, "is_active": true, "product_id": 3, "wholeseller_id": 104, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', NULL, 0, '2025-04-14 22:36:50.803568+05:30', '2025-04-14 22:36:50.803568+05:30');
+INSERT INTO business_schema.cart_table VALUES (1, 103, 101, '[{"unit_id": 1, "quantity": 2, "is_active": false, "product_id": 3, "wholeseller_id": 101, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', NULL, 0, '2025-04-14 21:34:35.595495+05:30', '2025-04-14 22:41:12.791836+05:30');
+INSERT INTO business_schema.cart_table VALUES (3, 1, 103, '[{"unit_id": 1, "quantity": 2, "is_active": true, "product_id": 3, "wholeseller_id": 103, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', '{"os": "Android", "device_id": "pixel_5", "app_version": "1.0.0"}', 0, '2025-04-14 23:47:43.96326+05:30', '2025-04-14 23:47:43.96326+05:30');
+INSERT INTO business_schema.cart_table VALUES (4, 1, 103, '[{"unit_id": 1, "quantity": 2, "is_active": true, "product_id": 3, "wholeseller_id": 103, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', 'null', 0, '2025-04-14 23:52:58.276298+05:30', '2025-04-14 23:52:58.276298+05:30');
+INSERT INTO business_schema.cart_table VALUES (5, 1, 103, '[{"unit_id": 1, "quantity": 2, "is_active": true, "product_id": 3, "wholeseller_id": 103, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', 'null', 0, '2025-04-15 00:13:21.822391+05:30', '2025-04-15 00:13:21.822391+05:30');
+INSERT INTO business_schema.cart_table VALUES (6, 1, 103, '[{"unit_id": 1, "quantity": 2, "is_active": true, "product_id": 3, "wholeseller_id": 103, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', 'null', 0, '2025-04-15 00:15:05.02634+05:30', '2025-04-15 00:15:05.02634+05:30');
+INSERT INTO business_schema.cart_table VALUES (7, 1, 103, '[{"unit_id": 1, "quantity": 2, "is_active": true, "product_id": 3, "wholeseller_id": 103, "price_updated_at": "2023-11-15T14:30:00Z", "price_while_added": 10.99, "latest_wholesaler_price": 10.99}]', 'null', 0, '2025-04-15 00:22:51.510168+05:30', '2025-04-15 00:22:51.510168+05:30');
 
 
 --
@@ -6557,6 +7001,13 @@ SELECT pg_catalog.setval('admin_schema.vehicle_make_id_seq', 3, true);
 --
 
 SELECT pg_catalog.setval('admin_schema.vehicle_model_id_seq', 3, true);
+
+
+--
+-- Name: cart_table_cart_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.cart_table_cart_id_seq', 7, true);
 
 
 --
@@ -7072,6 +7523,14 @@ ALTER TABLE ONLY admin_schema.vehicle_model
 
 
 --
+-- Name: cart_table cart_table_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cart_table
+    ADD CONSTRAINT cart_table_pkey PRIMARY KEY (cart_id);
+
+
+--
 -- Name: daily_price_update daily_price_update_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
@@ -7320,6 +7779,27 @@ ALTER TABLE ONLY public.wholeseller_rating_table
 
 
 --
+-- Name: idx_cart_retailer; Type: INDEX; Schema: business_schema; Owner: postgres
+--
+
+CREATE INDEX idx_cart_retailer ON business_schema.cart_table USING btree (retailer_id);
+
+
+--
+-- Name: idx_cart_status; Type: INDEX; Schema: business_schema; Owner: postgres
+--
+
+CREATE INDEX idx_cart_status ON business_schema.cart_table USING btree (cart_status);
+
+
+--
+-- Name: idx_cart_wholeseller; Type: INDEX; Schema: business_schema; Owner: postgres
+--
+
+CREATE INDEX idx_cart_wholeseller ON business_schema.cart_table USING btree (wholeseller_id);
+
+
+--
 -- Name: idx_order_activity; Type: INDEX; Schema: business_schema; Owner: postgres
 --
 
@@ -7387,6 +7867,20 @@ CREATE TRIGGER trg_offer_created AFTER INSERT ON business_schema.wholeseller_off
 --
 
 CREATE TRIGGER trg_order_created AFTER INSERT ON business_schema.order_table FOR EACH ROW EXECUTE FUNCTION business_schema.log_order_activity();
+
+
+--
+-- Name: daily_price_update trg_update_cart_prices; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trg_update_cart_prices AFTER INSERT OR UPDATE ON business_schema.daily_price_update FOR EACH ROW EXECUTE FUNCTION business_schema.update_cart_prices();
+
+
+--
+-- Name: cart_table trg_validate_cart_products; Type: TRIGGER; Schema: business_schema; Owner: postgres
+--
+
+CREATE TRIGGER trg_validate_cart_products BEFORE INSERT OR UPDATE ON business_schema.cart_table FOR EACH ROW EXECUTE FUNCTION business_schema.validate_cart_products();
 
 
 --
@@ -7493,6 +7987,14 @@ ALTER TABLE ONLY admin_schema.master_driver_table
 
 
 --
+-- Name: business_table fk_location; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.business_table
+    ADD CONSTRAINT fk_location FOREIGN KEY (location_id) REFERENCES admin_schema.master_location(id);
+
+
+--
 -- Name: master_mandi_table fk_mandi_city; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
@@ -7541,6 +8043,14 @@ ALTER TABLE ONLY admin_schema.master_location
 
 
 --
+-- Name: business_table fk_state; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.business_table
+    ADD CONSTRAINT fk_state FOREIGN KEY (state_id) REFERENCES admin_schema.master_states(id);
+
+
+--
 -- Name: user_table fk_user_role; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
@@ -7570,6 +8080,22 @@ ALTER TABLE ONLY admin_schema.permission_audit_log
 
 ALTER TABLE ONLY business_schema.daily_price_update
     ADD CONSTRAINT fk_branch FOREIGN KEY (b_branch_id) REFERENCES admin_schema.business_branch_table(b_branch_id) ON DELETE CASCADE;
+
+
+--
+-- Name: cart_table fk_cart_retailer; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cart_table
+    ADD CONSTRAINT fk_cart_retailer FOREIGN KEY (retailer_id) REFERENCES admin_schema.business_table(bid) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: cart_table fk_cart_wholeseller; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cart_table
+    ADD CONSTRAINT fk_cart_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
