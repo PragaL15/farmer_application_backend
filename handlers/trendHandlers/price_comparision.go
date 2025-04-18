@@ -4,15 +4,19 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
-type PriceComparison struct {
-	ProductName    string  `json:"product_name"`
-	WholesellerID  int     `json:"wholeseller_id"`
-	PricePerKg     float64 `json:"price_per_kg"`
+type WholesellerPrice struct {
+	WholesellerID int     `json:"wholeseller_id"`
+	PricePerKg    float64 `json:"price_per_kg"`
+}
+
+type GroupedPriceComparison struct {
+	ProductName string              `json:"product_name"`
+	Prices      []WholesellerPrice  `json:"prices"`
 }
 
 func GetWholesellerPriceComparisonHandler(c *fiber.Ctx) error {
@@ -23,10 +27,9 @@ func GetWholesellerPriceComparisonHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	formatted := "{" + strings.ReplaceAll(productIDsParam, ",", ",") + "}"
+	formatted := "{" + productIDsParam + "}"
 
 	query := `SELECT * FROM business_schema.wholeseller_price_comparison($1::int[]);`
-
 	rows, err := db.Pool.Query(context.Background(), query, formatted)
 	if err != nil {
 		log.Println("Error executing query:", err)
@@ -37,19 +40,46 @@ func GetWholesellerPriceComparisonHandler(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	var results []PriceComparison
+	groupedData := make(map[string][]WholesellerPrice)
 
 	for rows.Next() {
-		var data PriceComparison
-		if err := rows.Scan(&data.ProductName, &data.WholesellerID, &data.PricePerKg); err != nil {
+		var productName string
+		var wholesellerID int
+		var pricePerKg float64
+
+		if err := rows.Scan(&productName, &wholesellerID, &pricePerKg); err != nil {
 			log.Println("Row scan error:", err)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error":  "Failed to scan result row",
 				"detail": err.Error(),
 			})
 		}
-		results = append(results, data)
+
+		groupedData[productName] = append(groupedData[productName], WholesellerPrice{
+			WholesellerID: wholesellerID,
+			PricePerKg:    pricePerKg,
+		})
 	}
 
-	return c.JSON(results)
+	// If there's only one product, return it as an object
+	if len(groupedData) == 1 {
+		for productName, prices := range groupedData {
+			single := GroupedPriceComparison{
+				ProductName: productName,
+				Prices:      prices,
+			}
+			return c.JSON(single)
+		}
+	}
+
+	// Else return as array
+	var response []GroupedPriceComparison
+	for productName, prices := range groupedData {
+		response = append(response, GroupedPriceComparison{
+			ProductName: productName,
+			Prices:      prices,
+		})
+	}
+
+	return c.JSON(response)
 }

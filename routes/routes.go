@@ -33,8 +33,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
 	app.Get("/getProductRegionalName", Masterhandlers.GetAllProductRegionalNames)
 
-	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  // Route to get monthly sales data
-	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    // Route to get weekly sales data
+	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  
+	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    
 	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler) 
 	app.Get("/getTopSellingDaily", TrendHandlers.GetTopSellingDailyHandler) 
 	app.Get("/getTopSellingWeekly", TrendHandlers.GetTopSellingWeeklyHandler) 
@@ -44,7 +44,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getLowStockItems", TrendHandlers.GetLowStockItemsHandler) 
 	app.Get("/getStockAvailabilityPercentage", TrendHandlers.GetStockAvailabilityPercentageHandler) 
 	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler)
-	 
+
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
 //http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 

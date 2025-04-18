@@ -41,7 +41,7 @@ func GetSalesMonthlyHandler(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 func GetSalesWeeklyHandler(c *fiber.Ctx) error {
-	query := "SELECT * FROM get_sales_by_duration('weekly');"
+	query := "select * from get_weekday_sales();"
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
 		log.Println("Error fetching weekly sales:", err)
