@@ -43,7 +43,11 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getLeastStockedProduct", TrendHandlers.GetLeastStockedProductsHandler) 
 	app.Get("/getLowStockItems", TrendHandlers.GetLowStockItemsHandler) 
 	app.Get("/getStockAvailabilityPercentage", TrendHandlers.GetStockAvailabilityPercentageHandler) 
-	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler) 
+	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler)
+	 
+	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
+//http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
+
 
 	// Registering routes for GET methods with ID
 	app.Get("/getProducts/:product_id", Masterhandlers.GetProductByID)
