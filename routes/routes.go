@@ -36,6 +36,10 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  // Route to get monthly sales data
 	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    // Route to get weekly sales data
 	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler) 
+	app.Get("/getTopSellingDaily", TrendHandlers.GetTopSellingDailyHandler) 
+	app.Get("/getTopSellingWeekly", TrendHandlers.GetTopSellingWeeklyHandler) 
+	app.Get("/getTopSellingMonthly", TrendHandlers.GetTopSellingMonthlyHandler) 
+	app.Get("/getTopSellingYearly", TrendHandlers.GetTopSellingYearlyHandler) 
 
 	// Registering routes for GET methods with ID
 	app.Get("/getProducts/:product_id", Masterhandlers.GetProductByID)
