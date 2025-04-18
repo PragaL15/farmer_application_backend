@@ -8,10 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-
-// Structs for each query result
-
-// CurrentStockData holds the current stock information for each product in a mandi
 type CurrentStockData struct {
 	ProductID     int     `json:"product_id"`
 	ProductName   string  `json:"product_name"`
@@ -20,7 +16,6 @@ type CurrentStockData struct {
 	CurrentStock  float64 `json:"current_stock"`
 }
 
-// LeastStockedData holds the information of least stocked products across all mandis
 type LeastStockedData struct {
 	ProductID     int     `json:"product_id"`
 	ProductName   string  `json:"product_name"`
@@ -29,7 +24,6 @@ type LeastStockedData struct {
 	StockLeft     float64 `json:"stock_left"`
 }
 
-// StockAvailabilityData holds the stock availability percentage information
 type StockAvailabilityData struct {
 	StockID                    int     `json:"stock_id"`
 	ProductID                  int     `json:"product_id"`
@@ -41,7 +35,6 @@ type StockAvailabilityData struct {
 	StockAvailabilityPercentage float64 `json:"stock_availability_percentage"`
 }
 
-// LowStockItemData holds the data for low stock items
 type LowStockItemData struct {
 	ProductID       int     `json:"product_id"`
 	ProductName     string  `json:"product_name"`
@@ -50,8 +43,6 @@ type LowStockItemData struct {
 	StockLeft       float64 `json:"stock_left"`
 	MinimumStockLevel float64 `json:"minimum_stock_level"`
 }
-
-// Handler for retrieving current stock data for a specific mandi
 func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 	mandiID := c.Params("mandi_id")
 	query := `SELECT * FROM business_schema.get_current_stock_by_mandi($1);`
@@ -80,8 +71,6 @@ func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 
 	return c.JSON(results)
 }
-
-// Handler for retrieving least stocked products
 func GetLeastStockedProductsHandler(c *fiber.Ctx) error {
 	query := `SELECT * FROM business_schema.get_least_stocked_products();`
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -109,8 +98,6 @@ func GetLeastStockedProductsHandler(c *fiber.Ctx) error {
 
 	return c.JSON(results)
 }
-
-// Handler for retrieving stock availability percentage
 func GetStockAvailabilityPercentageHandler(c *fiber.Ctx) error {
 	query := `SELECT * FROM business_schema.get_stock_availability_percentage();`
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -138,8 +125,6 @@ func GetStockAvailabilityPercentageHandler(c *fiber.Ctx) error {
 
 	return c.JSON(results)
 }
-
-// Handler for retrieving low stock items
 func GetLowStockItemsHandler(c *fiber.Ctx) error {
 	query := `SELECT * FROM business_schema.get_low_stock_items();`
 	rows, err := db.Pool.Query(context.Background(), query)
