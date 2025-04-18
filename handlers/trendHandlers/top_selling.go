@@ -15,7 +15,6 @@ type TopSellingData struct {
 	TotalRevenue float64 `json:"total_revenue"`
 }
 
-// GetSalesDailyHandler fetches sales data for the current day.
 func GetTopSellingDailyHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM get_sales_by_duration('daily');"
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -39,12 +38,11 @@ func GetTopSellingDailyHandler(c *fiber.Ctx) error {
 			})
 		}
 
-		// Handle null values for TotalOrders and TotalRevenue
 		if data.TotalOrders == 0 {
-			data.TotalOrders = 0 // Default to 0 if null
+			data.TotalOrders = 0 
 		}
 		if data.TotalRevenue == 0 {
-			data.TotalRevenue = 0.0 // Default to 0.0 if null
+			data.TotalRevenue = 0.0 
 		}
 
 		results = append(results, data)
@@ -52,7 +50,6 @@ func GetTopSellingDailyHandler(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// GetSalesWeeklyHandler fetches sales data for the current week.
 func GetTopSellingWeeklyHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM get_sales_weekly();"
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -76,12 +73,11 @@ func GetTopSellingWeeklyHandler(c *fiber.Ctx) error {
 			})
 		}
 
-		// Handle null values for TotalOrders and TotalRevenue
 		if data.TotalOrders == 0 {
-			data.TotalOrders = 0 // Default to 0 if null
+			data.TotalOrders = 0 
 		}
 		if data.TotalRevenue == 0 {
-			data.TotalRevenue = 0.0 // Default to 0.0 if null
+			data.TotalRevenue = 0.0 
 		}
 
 		results = append(results, data)
@@ -89,7 +85,6 @@ func GetTopSellingWeeklyHandler(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// GetSalesMonthlyHandler fetches sales data for the current month.
 func GetTopSellingMonthlyHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM get_sales_monthly();"
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -113,12 +108,11 @@ func GetTopSellingMonthlyHandler(c *fiber.Ctx) error {
 			})
 		}
 
-		// Handle null values for TotalOrders and TotalRevenue
 		if data.TotalOrders == 0 {
-			data.TotalOrders = 0 // Default to 0 if null
+			data.TotalOrders = 0 
 		}
 		if data.TotalRevenue == 0 {
-			data.TotalRevenue = 0.0 // Default to 0.0 if null
+			data.TotalRevenue = 0.0 
 		}
 
 		results = append(results, data)
@@ -126,7 +120,6 @@ func GetTopSellingMonthlyHandler(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// GetSalesYearlyHandler fetches sales data for the current year.
 func GetTopSellingYearlyHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM get_sales_yearly();"
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -150,12 +143,11 @@ func GetTopSellingYearlyHandler(c *fiber.Ctx) error {
 			})
 		}
 
-		// Handle null values for TotalOrders and TotalRevenue
 		if data.TotalOrders == 0 {
-			data.TotalOrders = 0 // Default to 0 if null
+			data.TotalOrders = 0 
 		}
 		if data.TotalRevenue == 0 {
-			data.TotalRevenue = 0.0 // Default to 0.0 if null
+			data.TotalRevenue = 0.0 
 		}
 
 		results = append(results, data)
