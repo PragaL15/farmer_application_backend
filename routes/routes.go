@@ -3,14 +3,13 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/handlers"
-  Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+	TrendHandlers "github.com/PragaL15/go_newBackend/handlers/trendHandlers"
 )
 
 func RegisterRoutes(app *fiber.App) {
-
-	// GET Routes
+	// Registering routes for GET methods
 	app.Get("/getUsers", Masterhandlers.GetAllUsers)
-	//app.Get("/getCategories", Masterhandlers.GetCategories)
 	app.Get("/getCategoriesBySupID/:super_cat_id", Masterhandlers.GetCategoriesBySuperCatID)
 	app.Get("/getDrivers", Masterhandlers.GetDrivers)
 	app.Get("/getLocations", Masterhandlers.GetLocations)
@@ -18,54 +17,49 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getAllLanguages", Masterhandlers.GetAllLanguages)
 	app.Get("/getProducts", Masterhandlers.GetAllProducts)
 	app.Get("/getStates", Masterhandlers.GetAllStates)
-	//app.Get("/getVehicles", Masterhandlers.GetAllVehicles)
-	//app.Get("/getViolations", Masterhandlers.GetViolations)
 	app.Get("/getBusinesses", Masterhandlers.GetAllBusinesses)
-	//app.Get("/getDriverViolation", handlers.GetDriverViolations)
 	app.Get("/getOrderStatus", Masterhandlers.GetAllOrderStatuses)
 	app.Get("/getBusinessTypes", Masterhandlers.GetBusinessTypes)
 	app.Get("/getModeOfPayments", Masterhandlers.GetPaymentModes)
 	app.Get("/getListPaymentMethod", Masterhandlers.GetAllCashPaymentsType)
 	app.Get("/getOrderHistoryDetails", handlers.GetOrderHistory)
-	//app.Get("/getInvoiceDetails", handlers.GetInvoiceDetails)
 	app.Get("/getDailyPriceDetails", handlers.GetPriceHandler)
-  app.Get("/getCashPaymentTypes", Masterhandlers.GetAllCashPaymentsType)
+	app.Get("/getCashPaymentTypes", Masterhandlers.GetAllCashPaymentsType)
 	app.Get("/getBusinessCategory", Masterhandlers.GetBusinessCategories)
 	app.Get("/getBusinessBranches", Masterhandlers.GetAllBusinessBranches)
 	app.Get("/getAllOrderDetails/:id", handlers.GetOrderDetailsHandler)
-	app.Get("/getCartitems/:id", handlers. GetCart)
-  app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
-  app.Get("/getCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
-  app.Get("/getProductRegionalName", Masterhandlers.GetAllProductRegionalNames)
+	app.Get("/getCartitems/:id", handlers.GetCart)
+	app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
+	app.Get("/getCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
+	app.Get("/getProductRegionalName", Masterhandlers.GetAllProductRegionalNames)
 
-	// GET each by id's
+	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  // Route to get monthly sales data
+	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    // Route to get weekly sales data
+	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler) 
+
+	// Registering routes for GET methods with ID
 	app.Get("/getProducts/:product_id", Masterhandlers.GetProductByID)
 	app.Get("/getUsers/:id", Masterhandlers.GetUserByID)
 	app.Get("/getBusinesses/:id", Masterhandlers.GetBusinessByID)
 	app.Get("/getMandiDetails/:id", Masterhandlers.GetMandiDetailsByID)
-  app.Get("/getCategories/:category_id", Masterhandlers.GetCategoryByID)
-  app.Get("/getStates/:state_id", Masterhandlers.GetStateByID)
-  app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
-  app.Get("/getPaymentModeById/:id", Masterhandlers.GetPaymentModeByID)
-  app.Get("/getOrderStatusById/:id", Masterhandlers.GetOrderStatusByID)
-  //app.Get("/getPaymentTypeById/:id", Masterhandlers.GetCashPaymentByID)
-  app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
-  app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
-  app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
+	app.Get("/getCategories/:category_id", Masterhandlers.GetCategoryByID)
+	app.Get("/getStates/:state_id", Masterhandlers.GetStateByID)
+	app.Get("/getProductByCatId/:category_id", Masterhandlers.GetProductsByCategoryID)
+	app.Get("/getPaymentModeById/:id", Masterhandlers.GetPaymentModeByID)
+	app.Get("/getOrderStatusById/:id", Masterhandlers.GetOrderStatusByID)
+	app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
+	app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
+	app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
 	app.Get("/getBusinessUser/:id", Masterhandlers.GetBusinessUserByID) 
 	app.Get("/getProductCategoryRegional/:id", Masterhandlers.GetProductCategoryRegionalByID) 
-  app.Get("/invoice/:invoice_id", handlers.GetInvoiceDetails)
+	app.Get("/invoice/:invoice_id", handlers.GetInvoiceDetails)
 
 	// POST Routes
-	//app.Post("/user-bank-details", handlers.InsertUserBankDetail)
 	app.Post("/categoryDetails", Masterhandlers.InsertCategory)
-	//app.Post("/driverDetails", Masterhandlers.InsertDriver)
 	app.Post("/locationDetails", Masterhandlers.InsertLocation)
 	app.Post("/mandiDetails", Masterhandlers.InsertMandiDetails)
 	app.Post("/productDetails", Masterhandlers.InsertProduct)
 	app.Post("/stateDetails", Masterhandlers.InsertState)
-	//app.Post("/vehicleDetails", Masterhandlers.InsertVehicle)
-	//app.Post("/violationDetails", Masterhandlers.InsertMasterViolation)
 	app.Post("/userTableDetails", Masterhandlers.InsertUser)
 	app.Post("/businessDetails", Masterhandlers.InsertBusiness)
 	app.Post("/orderStatusDetails", Masterhandlers.InsertOrderStatus)
@@ -82,8 +76,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/PostCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
 	app.Post("/PostProductRegional", Masterhandlers.InsertProductRegionalName)
 
-	
-	// PUT Routes (Updating)
+	// PUT Routes
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)
 	app.Put("/categoryUpdate", Masterhandlers.UpdateCategory)
 	app.Put("/driverUpdate", Masterhandlers.UpdateDriver)
@@ -97,7 +90,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/userUpdate/:id", Masterhandlers.UpdateUser)
 	app.Put("/businessUpdate", Masterhandlers.UpdateBusiness)
 	app.Put("/orderStatusUpdate/:id", Masterhandlers.UpdateOrderStatus)
-	//app.Put("/ordersUpdate", handlers.UpdateOrderHandler)
 	app.Put("/dailyPriceUpdate", handlers.UpdatePriceHandler)
 	app.Put("/paymentModeUpdate", Masterhandlers.UpdatePaymentMode)
 	app.Put("/businessTypeUpdate", Masterhandlers.UpdateBusinessType)
@@ -106,9 +98,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/branchDetailsUpdate", Masterhandlers.UpdateBusinessBranch)
 	app.Put("/businessUserDetailesUpdate", Masterhandlers.UpdateBusinessUser) 
 	app.Put("/CategoryRegionalUpdate", Masterhandlers.UpdateProductCategoryRegional) 
-	app.Put("/ProductRegionalUpdate", Masterhandlers. UpdateProductRegionalName) 
+	app.Put("/ProductRegionalUpdate", Masterhandlers.UpdateProductRegionalName) 
 
-
-	app.Delete("/:cart_id/items/:product_id",handlers.DeleteCartItem) 
+	// DELETE Routes
+	app.Delete("/:cart_id/items/:product_id", handlers.DeleteCartItem) 
 }
-
