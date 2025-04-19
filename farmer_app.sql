@@ -2630,6 +2630,37 @@ $$;
 ALTER FUNCTION business_schema.get_cart_details(p_cart_id bigint) OWNER TO postgres;
 
 --
+-- Name: get_current_stock_by_mandi(integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_current_stock_by_mandi(mandi_id_param integer) RETURNS TABLE(product_id integer, product_name character varying, mandi_id integer, mandi_name character varying, current_stock numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    s.product_id,
+    p.product_name,
+    s.mandi_id,
+    m.mandi_name,
+    SUM(s.stock_left) AS current_stock
+  FROM
+    business_schema.stock_table s
+  JOIN
+    admin_schema.master_product p ON s.product_id = p.product_id
+  JOIN
+    admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
+  WHERE
+    s.mandi_id = mandi_id_param
+  GROUP BY
+    s.product_id, p.product_name, s.mandi_id, m.mandi_name;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_current_stock_by_mandi(mandi_id_param integer) OWNER TO postgres;
+
+--
 -- Name: get_invoice_with_items(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2671,6 +2702,65 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_invoice_with_items(p_order_id bigint) OWNER TO postgres;
+
+--
+-- Name: get_least_stocked_products(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_least_stocked_products() RETURNS TABLE(product_id integer, product_name character varying, mandi_id integer, mandi_name character varying, stock_left numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    s.product_id,
+    p.product_name,
+    s.mandi_id,
+    m.mandi_name,
+    s.stock_left
+  FROM
+    business_schema.stock_table s
+  JOIN
+    admin_schema.master_product p ON s.product_id = p.product_id
+  JOIN
+    admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
+  ORDER BY
+    s.stock_left ASC;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_least_stocked_products() OWNER TO postgres;
+
+--
+-- Name: get_low_stock_items(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_low_stock_items() RETURNS TABLE(product_id integer, product_name character varying, mandi_id integer, mandi_name character varying, stock_left numeric, minimum_stock_level numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    s.product_id,
+    p.product_name,
+    s.mandi_id,
+    m.mandi_name,
+    s.stock_left,
+    s.minimum_stock_level
+  FROM
+    business_schema.stock_table s
+  JOIN
+    admin_schema.master_product p ON s.product_id = p.product_id
+  JOIN
+    admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
+  WHERE
+    s.stock_left < s.minimum_stock_level;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_low_stock_items() OWNER TO postgres;
 
 --
 -- Name: get_order_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -2860,6 +2950,77 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_order_history_with_details() OWNER TO postgres;
+
+--
+-- Name: get_seasonal_demand(text[], text[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_seasonal_demand(product_names text[], month_list text[]) RETURNS TABLE(product_name text, monthly_data jsonb)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    month TEXT;
+    month_obj JSONB := '[]'::JSONB;
+BEGIN
+    FOR product_name IN 
+        SELECT DISTINCT product_name 
+        FROM business_schema.cold_storage_demand_planning 
+        WHERE product_name = ANY(product_names)
+    LOOP
+        -- Reset month_obj for each product
+        month_obj := '[]'::JSONB;
+
+        FOR month IN SELECT unnest(month_list)
+        LOOP
+            SELECT jsonb_insert(month_obj, ('{' || jsonb_array_length(month_obj) || '}')::TEXT[],
+                jsonb_build_object('month', month, 'demand',
+                    (SELECT monthly_demand_forecast ->> month 
+                     FROM business_schema.cold_storage_demand_planning 
+                     WHERE product_name = product_name LIMIT 1)
+                )
+            ) INTO month_obj;
+        END LOOP;
+
+        RETURN NEXT;
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_seasonal_demand(product_names text[], month_list text[]) OWNER TO postgres;
+
+--
+-- Name: get_stock_availability_percentage(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_stock_availability_percentage() RETURNS TABLE(stock_id integer, product_id integer, product_name character varying, mandi_id integer, mandi_name character varying, stock_left numeric, maximum_stock_level numeric, stock_availability_percentage numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    s.stock_id,
+    s.product_id,
+    p.product_name,
+    s.mandi_id,
+    m.mandi_name,
+    s.stock_left,
+    s.maximum_stock_level,
+    ROUND(
+      (s.stock_left / NULLIF(s.maximum_stock_level, 0)) * 100,
+      2
+    ) AS stock_availability_percentage
+  FROM
+    business_schema.stock_table s
+  JOIN
+    admin_schema.master_product p ON s.product_id = p.product_id
+  JOIN
+    admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_stock_availability_percentage() OWNER TO postgres;
 
 --
 -- Name: insert_cart(bigint, jsonb, bigint, jsonb, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -3205,6 +3366,34 @@ $$;
 ALTER FUNCTION business_schema.log_order_changes() OWNER TO postgres;
 
 --
+-- Name: market_price_comparison(integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.market_price_comparison(wholeseller_id_param integer) RETURNS TABLE(product_id integer, mandi_id integer, price numeric, mandi_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    dpu.product_id,
+    br.b_branch_id AS mandi_id,
+    mmt.mandi_name,
+    dpu.price
+  FROM
+    business_schema.daily_price_update dpu
+  JOIN
+    admin_schema.business_branch_table br ON dpu.b_branch_id = br.b_branch_id
+  JOIN
+    admin_schema.master_mandi_table mmt ON br.b_branch_id = mmt.mandi_id
+  WHERE
+    dpu.wholeseller_id = wholeseller_id_param;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.market_price_comparison(wholeseller_id_param integer) OWNER TO postgres;
+
+--
 -- Name: soft_delete_cart_item(bigint, bigint, bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -3490,6 +3679,33 @@ $$;
 ALTER FUNCTION business_schema.validate_cart_products() OWNER TO postgres;
 
 --
+-- Name: wholeseller_price_comparison(integer[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.wholeseller_price_comparison(product_ids integer[]) RETURNS TABLE(product_name character varying, wholeseller_id integer, price_per_kg numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    mp.product_name,
+    dpu.wholeseller_id,
+    dpu.price
+  FROM
+    business_schema.daily_price_update dpu
+  JOIN
+    admin_schema.master_product mp ON mp.product_id = dpu.product_id
+  WHERE
+    dpu.product_id = ANY(product_ids)
+  ORDER BY
+    mp.product_name, dpu.wholeseller_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.wholeseller_price_comparison(product_ids integer[]) OWNER TO postgres;
+
+--
 -- Name: get_business_by_id(bigint); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -3543,6 +3759,303 @@ $$;
 
 
 ALTER FUNCTION public.get_master_locations() OWNER TO postgres;
+
+--
+-- Name: get_sales_by_duration(text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_sales_by_duration(duration text) RETURNS TABLE(month_year text, total_orders bigint, total_revenue numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF duration = 'monthly' THEN
+        RETURN QUERY
+        SELECT
+            TO_CHAR(DATE_TRUNC('month', actual_delivery_date), 'Mon-YYYY') AS month_year,
+            COUNT(*) AS total_orders,
+            SUM(COALESCE(final_amount, 0)) AS total_revenue
+        FROM business_schema.order_table
+        WHERE order_status = 6
+            AND actual_delivery_date IS NOT NULL
+        GROUP BY DATE_TRUNC('month', actual_delivery_date)
+        ORDER BY DATE_TRUNC('month', actual_delivery_date) DESC;
+    
+    ELSIF duration = 'weekly' THEN
+        RETURN QUERY
+        SELECT
+            TO_CHAR(DATE_TRUNC('week', actual_delivery_date), 'Mon-YYYY') AS month_year,
+            COUNT(*) AS total_orders,
+            SUM(COALESCE(final_amount, 0)) AS total_revenue
+        FROM business_schema.order_table
+        WHERE order_status = 6
+            AND actual_delivery_date IS NOT NULL
+        GROUP BY DATE_TRUNC('week', actual_delivery_date)
+        ORDER BY DATE_TRUNC('week', actual_delivery_date) DESC;
+    
+    ELSIF duration = 'yearly' THEN
+        RETURN QUERY
+        SELECT
+            TO_CHAR(DATE_TRUNC('year', actual_delivery_date), 'YYYY') AS month_year,
+            COUNT(*) AS total_orders,
+            SUM(COALESCE(final_amount, 0)) AS total_revenue
+        FROM business_schema.order_table
+        WHERE order_status = 6
+            AND actual_delivery_date IS NOT NULL
+        GROUP BY DATE_TRUNC('year', actual_delivery_date)
+        ORDER BY DATE_TRUNC('year', actual_delivery_date) DESC;
+
+    ELSE
+        RAISE EXCEPTION 'Invalid duration value. Allowed values are monthly, weekly, yearly';
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_sales_by_duration(duration text) OWNER TO postgres;
+
+--
+-- Name: get_sales_daily(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_sales_daily() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, quantity numeric, price numeric, total_quantity_kg numeric, actual_delivery_date date, total_price numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    oi.product_id,
+    mp.product_name, -- Include product name
+    wm.mandi_id,
+    mt.mandi_name, -- Include mandi name
+    oi.unit_id,
+    SUM(oi.quantity) AS quantity,
+    oi.wholeseller_price AS price,
+    SUM(
+      CASE
+        WHEN oi.unit_id = 1 THEN oi.quantity / 1000.0
+        WHEN oi.unit_id = 2 THEN oi.quantity
+        WHEN oi.unit_id = 3 THEN oi.quantity * 100.0
+        ELSE 0
+      END
+    ) AS total_quantity_kg,
+    ot.actual_delivery_date,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_price
+  FROM business_schema.order_item_table oi
+  JOIN business_schema.order_table ot ON ot.order_id = oi.order_id
+  JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
+  JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
+  JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id  -- Join for mandi name
+  WHERE ot.order_status = 6 
+    AND ot.actual_delivery_date = CURRENT_DATE
+  GROUP BY oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name, oi.unit_id, oi.wholeseller_price, ot.actual_delivery_date
+  ORDER BY total_quantity_kg DESC;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_sales_daily() OWNER TO postgres;
+
+--
+-- Name: get_sales_monthly(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_sales_monthly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, total_quantity numeric, total_price numeric, total_quantity_kg numeric, actual_delivery_date date)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    oi.product_id,
+    mp.product_name,
+    wm.mandi_id,
+    mt.mandi_name,
+    oi.unit_id,
+    SUM(oi.quantity) AS total_quantity,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_price,
+    SUM(
+      CASE
+        WHEN oi.unit_id = 1 THEN oi.quantity / 1000.0
+        WHEN oi.unit_id = 2 THEN oi.quantity
+        WHEN oi.unit_id = 3 THEN oi.quantity * 100.0
+        ELSE 0
+      END
+    ) AS total_quantity_kg,
+    ot.actual_delivery_date
+  FROM business_schema.order_item_table oi
+  JOIN business_schema.order_table ot ON ot.order_id = oi.order_id
+  JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
+  JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
+  JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id
+  WHERE ot.order_status = 6
+    AND EXTRACT(MONTH FROM ot.actual_delivery_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+    AND EXTRACT(YEAR FROM ot.actual_delivery_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+  GROUP BY oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name, oi.unit_id, ot.actual_delivery_date
+  ORDER BY total_quantity_kg DESC;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_sales_monthly() OWNER TO postgres;
+
+--
+-- Name: get_sales_weekly(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_sales_weekly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, quantity numeric, price numeric, total_quantity_kg numeric, actual_delivery_date date, total_price numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    oi.product_id,
+    mp.product_name, -- Include product name
+    wm.mandi_id,
+    mt.mandi_name, -- Include mandi name
+    oi.unit_id,
+    SUM(oi.quantity) AS quantity,
+    oi.wholeseller_price AS price,
+    SUM(
+      CASE
+        WHEN oi.unit_id = 1 THEN oi.quantity / 1000.0
+        WHEN oi.unit_id = 2 THEN oi.quantity
+        WHEN oi.unit_id = 3 THEN oi.quantity * 100.0
+        ELSE 0
+      END
+    ) AS total_quantity_kg,
+    ot.actual_delivery_date,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_price
+  FROM business_schema.order_item_table oi
+  JOIN business_schema.order_table ot ON ot.order_id = oi.order_id
+  JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
+  JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
+  JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id  -- Join for mandi name
+ WHERE ot.order_status = 6
+  AND ot.actual_delivery_date >= CURRENT_DATE - EXTRACT(DOW FROM CURRENT_DATE) * INTERVAL '1 day'
+  AND ot.actual_delivery_date < CURRENT_DATE + (7 - EXTRACT(DOW FROM CURRENT_DATE)) * INTERVAL '1 day'
+  GROUP BY oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name, oi.unit_id, oi.wholeseller_price, ot.actual_delivery_date
+  ORDER BY total_quantity_kg DESC;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_sales_weekly() OWNER TO postgres;
+
+--
+-- Name: get_sales_yearly(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_sales_yearly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, quantity numeric, price numeric, total_quantity_kg numeric, actual_delivery_date date, total_price numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    oi.product_id,
+    mp.product_name, -- Include product name
+    wm.mandi_id,
+    mt.mandi_name, -- Include mandi name
+    oi.unit_id,
+    SUM(oi.quantity) AS quantity,
+    oi.wholeseller_price AS price,
+    SUM(
+      CASE
+        WHEN oi.unit_id = 1 THEN oi.quantity / 1000.0
+        WHEN oi.unit_id = 2 THEN oi.quantity
+        WHEN oi.unit_id = 3 THEN oi.quantity * 100.0
+        ELSE 0
+      END
+    ) AS total_quantity_kg,
+    ot.actual_delivery_date,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_price
+  FROM business_schema.order_item_table oi
+  JOIN business_schema.order_table ot ON ot.order_id = oi.order_id
+  JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
+  JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
+  JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id  -- Join for mandi name
+  WHERE ot.order_status = 6
+  AND EXTRACT(YEAR FROM ot.actual_delivery_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+  GROUP BY oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name, oi.unit_id, oi.wholeseller_price, ot.actual_delivery_date
+  ORDER BY total_quantity_kg DESC;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_sales_yearly() OWNER TO postgres;
+
+--
+-- Name: get_week_sales(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_week_sales() RETURNS TABLE(week_year text, total_orders integer, total_revenue numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    TO_CHAR(DATE_TRUNC('week', ot.actual_delivery_date), 'IW-YYYY') AS week_year,
+    COUNT(DISTINCT ot.order_id)::INTEGER AS total_orders,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_revenue
+  FROM business_schema.order_table ot
+  JOIN business_schema.order_item_table oi ON ot.order_id = oi.order_id
+  WHERE ot.order_status = 6
+  GROUP BY DATE_TRUNC('week', ot.actual_delivery_date)
+  ORDER BY 1;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_week_sales() OWNER TO postgres;
+
+--
+-- Name: get_weekday_sales(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_weekday_sales() RETURNS TABLE(day_name text, total_orders integer, total_revenue numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    TO_CHAR(ot.actual_delivery_date, 'Day') AS day_name,
+    COUNT(DISTINCT ot.order_id)::INTEGER AS total_orders,
+    SUM(COALESCE(oi.quantity, 0) * COALESCE(oi.wholeseller_price, 0)) AS total_revenue
+  FROM business_schema.order_table ot
+  JOIN business_schema.order_item_table oi ON ot.order_id = oi.order_id
+  WHERE ot.order_status = 6
+  GROUP BY 
+    TO_CHAR(ot.actual_delivery_date, 'Day'),
+    EXTRACT(DOW FROM ot.actual_delivery_date)
+  ORDER BY 
+    EXTRACT(DOW FROM ot.actual_delivery_date);
+END;
+$$;
+
+
+ALTER FUNCTION public.get_weekday_sales() OWNER TO postgres;
+
+--
+-- Name: get_weekly_sales(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_weekly_sales() RETURNS TABLE(week_year text, total_orders integer, total_revenue numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    TO_CHAR(DATE_TRUNC('week', ot.actual_delivery_date), 'IW-YYYY') AS week_year,
+    COUNT(DISTINCT ot.order_id) AS total_orders,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_revenue
+  FROM business_schema.order_table ot
+  JOIN business_schema.order_item_table oi ON ot.order_id = oi.order_id
+  WHERE ot.order_status = 6
+  GROUP BY DATE_TRUNC('week', ot.actual_delivery_date)
+  ORDER BY 1;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_weekly_sales() OWNER TO postgres;
 
 --
 -- Name: insert_business(text, text, text, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -4813,6 +5326,43 @@ ALTER SEQUENCE admin_schema.vehicle_model_id_seq OWNED BY admin_schema.vehicle_m
 
 
 --
+-- Name: wholeseller_mandi_map; Type: TABLE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE TABLE admin_schema.wholeseller_mandi_map (
+    id integer NOT NULL,
+    wholeseller_id integer NOT NULL,
+    mandi_id integer NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE admin_schema.wholeseller_mandi_map OWNER TO postgres;
+
+--
+-- Name: wholeseller_mandi_map_id_seq; Type: SEQUENCE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE SEQUENCE admin_schema.wholeseller_mandi_map_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE admin_schema.wholeseller_mandi_map_id_seq OWNER TO postgres;
+
+--
+-- Name: wholeseller_mandi_map_id_seq; Type: SEQUENCE OWNED BY; Schema: admin_schema; Owner: postgres
+--
+
+ALTER SEQUENCE admin_schema.wholeseller_mandi_map_id_seq OWNED BY admin_schema.wholeseller_mandi_map.id;
+
+
+--
 -- Name: cart_table; Type: TABLE; Schema: business_schema; Owner: postgres
 --
 
@@ -4871,6 +5421,50 @@ ALTER SEQUENCE business_schema.cart_table_cart_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE business_schema.cart_table_cart_id_seq OWNED BY business_schema.cart_table.cart_id;
+
+
+--
+-- Name: cold_storage_demand_planning; Type: TABLE; Schema: business_schema; Owner: postgres
+--
+
+CREATE TABLE business_schema.cold_storage_demand_planning (
+    id integer NOT NULL,
+    product_id integer NOT NULL,
+    product_name text NOT NULL,
+    season_start_month text NOT NULL,
+    season_end_month text NOT NULL,
+    is_seasonal boolean DEFAULT true,
+    cold_storage_required boolean DEFAULT true,
+    monthly_demand_forecast jsonb,
+    storage_capacity_needed_kg integer,
+    current_storage_stock_kg integer,
+    expected_offseason_demand_kg integer,
+    last_updated timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE business_schema.cold_storage_demand_planning OWNER TO postgres;
+
+--
+-- Name: cold_storage_demand_planning_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.cold_storage_demand_planning_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.cold_storage_demand_planning_id_seq OWNER TO postgres;
+
+--
+-- Name: cold_storage_demand_planning_id_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.cold_storage_demand_planning_id_seq OWNED BY business_schema.cold_storage_demand_planning.id;
 
 
 --
@@ -5277,14 +5871,15 @@ CREATE TABLE business_schema.stock_table (
     stock_left numeric(10,2) DEFAULT 0,
     stock_sold numeric(10,2) DEFAULT 0,
     date_of_order date DEFAULT CURRENT_TIMESTAMP,
-    warehouse_id integer,
+    mandi_id integer,
     updatedat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     supplier_id integer,
     expiry_date date,
     manufacturing_date date,
     minimum_stock_level numeric(10,2),
-    maximum_stock_level numeric(10,2)
+    maximum_stock_level numeric(10,2),
+    unit_id integer
 );
 
 
@@ -6097,10 +6692,24 @@ ALTER TABLE ONLY admin_schema.vehicle_model ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: wholeseller_mandi_map id; Type: DEFAULT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.wholeseller_mandi_map ALTER COLUMN id SET DEFAULT nextval('admin_schema.wholeseller_mandi_map_id_seq'::regclass);
+
+
+--
 -- Name: cart_table cart_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.cart_table ALTER COLUMN cart_id SET DEFAULT nextval('business_schema.cart_table_cart_id_seq'::regclass);
+
+
+--
+-- Name: cold_storage_demand_planning id; Type: DEFAULT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cold_storage_demand_planning ALTER COLUMN id SET DEFAULT nextval('business_schema.cold_storage_demand_planning_id_seq'::regclass);
 
 
 --
@@ -6535,6 +7144,13 @@ INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
 
 
 --
+-- Data for Name: wholeseller_mandi_map; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
+--
+
+INSERT INTO admin_schema.wholeseller_mandi_map VALUES (1, 104, 2, '2025-04-18 15:25:01.64693', '2025-04-18 15:25:01.64693');
+
+
+--
 -- Data for Name: cart_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
@@ -6548,11 +7164,20 @@ INSERT INTO business_schema.cart_table VALUES (7, 1, 103, '[{"unit_id": 1, "quan
 
 
 --
+-- Data for Name: cold_storage_demand_planning; Type: TABLE DATA; Schema: business_schema; Owner: postgres
+--
+
+INSERT INTO business_schema.cold_storage_demand_planning VALUES (1, 1, 'Potato', 'November', 'February', true, true, '{"1": 5000, "2": 4500, "3": 4000, "4": 3000, "5": 2500, "6": 2000, "7": 1500, "8": 1000, "9": 1000, "10": 1500, "11": 4000, "12": 4800}', 10000, 3500, 8000, '2025-04-18 22:52:57.184334');
+INSERT INTO business_schema.cold_storage_demand_planning VALUES (2, 2, 'Carrot', 'December', 'March', true, true, '{"1": 3000, "2": 2800, "3": 2600, "4": 2200, "5": 1800, "6": 1500, "7": 1000, "8": 800, "9": 1000, "10": 1300, "11": 2200, "12": 2700}', 8000, 2700, 6000, '2025-04-18 22:52:57.184334');
+
+
+--
 -- Data for Name: daily_price_update; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
 INSERT INTO business_schema.daily_price_update VALUES (1, 1500.00, 2, 103, 'INR', '2025-04-03 18:04:41.442396', '2025-04-03 18:04:41.442396', 'maybe negotiable', 4, 4, 4);
 INSERT INTO business_schema.daily_price_update VALUES (2, 75.50, 2, 103, 'INR', '2025-04-07 22:40:58.125852', '2025-04-07 22:40:58.125852', 'Fresh stock update', NULL, NULL, 6);
+INSERT INTO business_schema.daily_price_update VALUES (2, 78.25, 2, 1, 'INR', '2025-04-18 18:36:18.388858', '2025-04-18 18:36:18.388858', 'New wholeseller price', NULL, NULL, 7);
 
 
 --
@@ -6638,6 +7263,10 @@ INSERT INTO business_schema.order_history_table VALUES (3, '2025-02-23 10:30:00'
 INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 10, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
 INSERT INTO business_schema.order_history_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-28 11:15:00', '2025-02-24 12:00:00', 5, 6, 2, 1, '876543', '1011 Lane, City', NULL, 11, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL);
 INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 1, '2025-04-10 00:00:00', NULL, 101, NULL, NULL, NULL, '638001', '123, College Road, Erode', NULL, 12, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-04-01 00:00:00', '2025-02-22 00:00:00', 5, 6, NULL, NULL, '000000', 'Unknown', NULL, 13, 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '2025-04-01', '2025-04-01', NULL, NULL, 0.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 1, '2025-04-10 00:00:00', NULL, 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 14, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-10 00:00:00', NULL, 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 15, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-10 00:00:00', '2025-04-18 00:00:00', 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 16, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
 
 
 --
@@ -6675,7 +7304,6 @@ INSERT INTO business_schema.order_item_table VALUES (39, 25, 3, 50.00, 1, NULL, 
 --
 
 INSERT INTO business_schema.order_table VALUES (2, '2025-02-22 09:55:59.551139', 4, NULL, 5, '{6}', 0.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-22', 5, '{6}', 1180.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (3, '2025-02-23 10:30:00', 2, NULL, 12, '{6}', 1500.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (4, '2025-02-24 11:15:00', 5, '2025-02-24', 5, '{6}', 1472.00, NULL, NULL, NULL, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (5, '2025-04-01 22:41:44.246239', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:41:44.246239', '2025-04-01 22:41:44.246239', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
@@ -6683,6 +7311,7 @@ INSERT INTO business_schema.order_table VALUES (6, '2025-04-01 22:42:40.497994',
 INSERT INTO business_schema.order_table VALUES (7, '2025-04-01 22:57:39.451206', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:57:39.451206', '2025-04-01 22:57:39.451206', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (8, '2025-04-01 23:07:08.258059', NULL, NULL, 123, '{103}', 0.00, NULL, NULL, 9200.00, '2025-04-01 23:07:08.258059', '2025-04-02 07:22:09.722567', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', 4, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (13, '2025-04-02 09:54:11.905636', NULL, NULL, 101, '{NULL}', 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '560001', '123 Retail Street, Bangalore', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-22', 5, '{6}', 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (12, '2025-04-02 07:29:55.095162', 2, NULL, 123, '{103}', 0.00, NULL, NULL, 14200.00, '2025-04-02 07:29:55.095162', '2025-04-02 07:34:42.988707', '9876543210', '560001', '456 Retail Avenue, Bangalore', 15000.00, '2025-04-18', '2025-04-25', 8, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (14, '2025-04-02 11:04:16.235683', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (15, '2025-04-02 11:08:43.342704', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
@@ -6692,13 +7321,16 @@ INSERT INTO business_schema.order_table VALUES (24, '2025-04-02 17:45:52.079056'
 INSERT INTO business_schema.order_table VALUES (25, '2025-04-02 17:48:45.911071', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (26, '2025-04-02 18:36:12.502775', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:12.502775', '2025-04-02 18:36:12.502775', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (27, '2025-04-02 18:36:17.787677', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:17.787677', '2025-04-02 18:36:17.787677', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (30, '2025-04-07 21:43:17.273763', 1, NULL, 101, '{}', 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '638001', '123, College Road, Erode', 10000.00, '2025-04-10', '2025-04-12', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-18', 101, '{103}', 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '638001', '123, College Road, Erode', 10000.00, '2025-04-10', '2025-04-12', NULL, NULL, 1);
 
 
 --
 -- Data for Name: stock_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
+INSERT INTO business_schema.stock_table VALUES (1, 2, 500.00, 300.00, 200.00, '2025-04-18', 4, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 100.00, 1000.00, 1);
+INSERT INTO business_schema.stock_table VALUES (2, 3, 1000.00, 700.00, 300.00, '2025-04-18', 5, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 200.00, 2000.00, 2);
+INSERT INTO business_schema.stock_table VALUES (3, 4, 250.00, 150.00, 100.00, '2025-04-18', 2, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 50.00, 500.00, 3);
 
 
 --
@@ -7004,6 +7636,13 @@ SELECT pg_catalog.setval('admin_schema.vehicle_model_id_seq', 3, true);
 
 
 --
+-- Name: wholeseller_mandi_map_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('admin_schema.wholeseller_mandi_map_id_seq', 2, true);
+
+
+--
 -- Name: cart_table_cart_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
@@ -7011,10 +7650,17 @@ SELECT pg_catalog.setval('business_schema.cart_table_cart_id_seq', 7, true);
 
 
 --
+-- Name: cold_storage_demand_planning_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.cold_storage_demand_planning_id_seq', 2, true);
+
+
+--
 -- Name: daily_price_update_daily_price_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.daily_price_update_daily_price_id_seq', 6, true);
+SELECT pg_catalog.setval('business_schema.daily_price_update_daily_price_id_seq', 7, true);
 
 
 --
@@ -7056,7 +7702,7 @@ SELECT pg_catalog.setval('business_schema.order_activity_log_log_id_seq', 42, tr
 -- Name: order_history_table_history_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 12, true);
+SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 16, true);
 
 
 --
@@ -7077,7 +7723,7 @@ SELECT pg_catalog.setval('business_schema.order_table_order_id_seq', 30, true);
 -- Name: stock_table_stock_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.stock_table_stock_id_seq', 1, false);
+SELECT pg_catalog.setval('business_schema.stock_table_stock_id_seq', 3, true);
 
 
 --
@@ -7523,11 +8169,27 @@ ALTER TABLE ONLY admin_schema.vehicle_model
 
 
 --
+-- Name: wholeseller_mandi_map wholeseller_mandi_map_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.wholeseller_mandi_map
+    ADD CONSTRAINT wholeseller_mandi_map_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: cart_table cart_table_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.cart_table
     ADD CONSTRAINT cart_table_pkey PRIMARY KEY (cart_id);
+
+
+--
+-- Name: cold_storage_demand_planning cold_storage_demand_planning_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cold_storage_demand_planning
+    ADD CONSTRAINT cold_storage_demand_planning_pkey PRIMARY KEY (id);
 
 
 --
@@ -7995,6 +8657,14 @@ ALTER TABLE ONLY admin_schema.business_table
 
 
 --
+-- Name: wholeseller_mandi_map fk_mandi; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.wholeseller_mandi_map
+    ADD CONSTRAINT fk_mandi FOREIGN KEY (mandi_id) REFERENCES admin_schema.master_mandi_table(mandi_id);
+
+
+--
 -- Name: master_mandi_table fk_mandi_city; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
@@ -8067,6 +8737,14 @@ ALTER TABLE ONLY admin_schema.master_vehicle_table
 
 
 --
+-- Name: wholeseller_mandi_map fk_wholeseller; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.wholeseller_mandi_map
+    ADD CONSTRAINT fk_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid);
+
+
+--
 -- Name: permission_audit_log permission_audit_log_changed_by_fkey; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
@@ -8099,19 +8777,19 @@ ALTER TABLE ONLY business_schema.cart_table
 
 
 --
--- Name: stock_table fk_category; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
---
-
-ALTER TABLE ONLY business_schema.stock_table
-    ADD CONSTRAINT fk_category FOREIGN KEY (warehouse_id) REFERENCES business_schema.warehouse_list(warehouse_id);
-
-
---
 -- Name: daily_price_update fk_category; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.daily_price_update
     ADD CONSTRAINT fk_category FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id) ON DELETE CASCADE;
+
+
+--
+-- Name: stock_table fk_mandi; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.stock_table
+    ADD CONSTRAINT fk_mandi FOREIGN KEY (mandi_id) REFERENCES admin_schema.master_mandi_table(mandi_id);
 
 
 --
@@ -8128,6 +8806,14 @@ ALTER TABLE ONLY business_schema.mode_of_payment
 
 ALTER TABLE ONLY business_schema.order_table
     ADD CONSTRAINT fk_order_status FOREIGN KEY (order_status) REFERENCES admin_schema.order_status_table(order_status_id) ON DELETE SET NULL;
+
+
+--
+-- Name: cold_storage_demand_planning fk_product; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.cold_storage_demand_planning
+    ADD CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -8151,6 +8837,14 @@ ALTER TABLE ONLY business_schema.mode_of_payment
 --
 
 ALTER TABLE ONLY business_schema.daily_price_update
+    ADD CONSTRAINT fk_unit FOREIGN KEY (unit_id) REFERENCES admin_schema.units_table(id);
+
+
+--
+-- Name: stock_table fk_unit; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.stock_table
     ADD CONSTRAINT fk_unit FOREIGN KEY (unit_id) REFERENCES admin_schema.units_table(id);
 
 
@@ -8586,6 +9280,13 @@ GRANT SELECT ON TABLE admin_schema.mode_of_payments_list TO retailer;
 --
 
 GRANT ALL ON TABLE admin_schema.product_regional_name TO admin;
+
+
+--
+-- Name: TABLE wholeseller_mandi_map; Type: ACL; Schema: admin_schema; Owner: postgres
+--
+
+GRANT ALL ON TABLE admin_schema.wholeseller_mandi_map TO admin;
 
 
 --
