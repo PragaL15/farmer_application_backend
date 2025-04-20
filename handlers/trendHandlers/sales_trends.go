@@ -8,13 +8,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-
 type SalesData struct {
 	MonthYear    string  `json:"month_year"`
 	TotalOrders  int64   `json:"total_orders"`
 	TotalRevenue float64 `json:"total_revenue"`
 }
-
 func GetSalesMonthlyHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM get_sales_by_duration('monthly');"
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -51,7 +49,6 @@ func GetSalesWeeklyHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var results []SalesData
 	for rows.Next() {
 		var data SalesData
@@ -66,7 +63,6 @@ func GetSalesWeeklyHandler(c *fiber.Ctx) error {
 	}
 	return c.JSON(results)
 }
-
 func GetSalesYearlyHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM get_sales_by_duration('yearly');"
 	rows, err := db.Pool.Query(context.Background(), query)
@@ -78,7 +74,6 @@ func GetSalesYearlyHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var results []SalesData
 	for rows.Next() {
 		var data SalesData
@@ -91,6 +86,5 @@ func GetSalesYearlyHandler(c *fiber.Ctx) error {
 		}
 		results = append(results, data)
 	}
-
 	return c.JSON(results)
 }
