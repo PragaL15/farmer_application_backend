@@ -13,3 +13,12 @@ API: 2025/04/22 15:35:45 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS
 API: 2025/04/22 15:41:45 main.go:38: METHOD=GET PATH=/getTopSellingMonthly STATUS=500 DURATION=18.8526ms
 API: 2025/04/22 15:43:47 main.go:64: Shutting down server gracefully...
 API: 2025/04/22 15:43:47 main.go:68: Server stopped cleanly
+API: 2025/04/22 15:44:02 main.go:26: Server is starting...
+API: 2025/04/22 15:44:02 main.go:53: Server is running on port 3000
+API: 2025/04/22 15:44:17 main.go:38: METHOD=GET PATH=/getTopSellingMonthly STATUS=500 DURATION=31.7315ms
+API: 2025/04/22 15:47:47 main.go:38: METHOD=GET PATH=/getTopSellingMonthly STATUS=200 DURATION=7.7435ms
+API: 2025/04/22 15:47:49 main.go:38: METHOD=GET PATH=/getTopSellingMonthly STATUS=200 DURATION=26.6355ms
+API: 2025/04/22 15:47:51 main.go:38: METHOD=GET PATH=/getTopSellingMonthly STATUS=200 DURATION=5.9794ms
+API: 2025/04/22 15:48:28 main.go:38: METHOD=GET PATH=/getTopSellingYearly STATUS=500 DURATION=22.236ms
+API: 2025/04/22 15:53:43 main.go:64: Shutting down server gracefully...
+API: 2025/04/22 15:53:43 main.go:68: Server stopped cleanly
