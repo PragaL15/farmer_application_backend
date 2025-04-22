@@ -36,7 +36,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  
 	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    
 	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler) 
-	app.Get("/getTopSellingDaily", TrendHandlers.GetTopSellingDailyHandler) 
+	//app.Get("/getTopSellingDaily", TrendHandlers.GetTopSellingDailyHandler) 
 	app.Get("/getTopSellingWeekly", TrendHandlers.GetTopSellingWeeklyHandler) 
 	app.Get("/getTopSellingMonthly", TrendHandlers.GetTopSellingMonthlyHandler) 
 	app.Get("/getTopSellingYearly", TrendHandlers.GetTopSellingYearlyHandler) 

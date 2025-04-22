@@ -1,3 +1,11 @@
 API: 2025/04/21 11:15:57 main.go:26: Server is starting...
 API: 2025/04/21 11:15:58 main.go:53: Server is running on port 3000
 API: 2025/04/21 11:17:08 main.go:38: METHOD=GET PATH=/getSalesValue/weekly STATUS=200 DURATION=71.2961ms
+API: 2025/04/22 14:53:08 main.go:38: METHOD=GET PATH=/getSalesValue/weekly STATUS=200 DURATION=262.667ms
+API: 2025/04/22 14:53:53 main.go:38: METHOD=GET PATH=/getSalesValue/monthly STATUS=200 DURATION=17.3404ms
+API: 2025/04/22 14:54:09 main.go:38: METHOD=GET PATH=/getTopSellingDaily STATUS=200 DURATION=10.5465ms
+API: 2025/04/22 14:55:14 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS=200 DURATION=36.5607ms
+API: 2025/04/22 15:01:47 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS=200 DURATION=18.1893ms
+API: 2025/04/22 15:24:20 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS=200 DURATION=15.9158ms
+API: 2025/04/22 15:27:32 main.go:64: Shutting down server gracefully...
+API: 2025/04/22 15:27:32 main.go:68: Server stopped cleanly
