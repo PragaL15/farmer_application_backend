@@ -22,3 +22,6 @@ API: 2025/04/22 15:47:51 main.go:38: METHOD=GET PATH=/getTopSellingMonthly STATU
 API: 2025/04/22 15:48:28 main.go:38: METHOD=GET PATH=/getTopSellingYearly STATUS=500 DURATION=22.236ms
 API: 2025/04/22 15:53:43 main.go:64: Shutting down server gracefully...
 API: 2025/04/22 15:53:43 main.go:68: Server stopped cleanly
+API: 2025/04/22 15:54:06 main.go:26: Server is starting...
+API: 2025/04/22 15:54:07 main.go:53: Server is running on port 3000
+API: 2025/04/22 15:55:24 main.go:38: METHOD=GET PATH=/getTopSellingYearly STATUS=200 DURATION=42.2509ms

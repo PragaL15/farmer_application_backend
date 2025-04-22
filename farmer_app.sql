@@ -3859,49 +3859,7 @@ ALTER FUNCTION public.get_sales_daily() OWNER TO postgres;
 -- Name: get_sales_monthly(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_sales_monthly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, total_quantity numeric, total_price numeric, total_quantity_kg numeric, actual_delivery_date date)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    oi.product_id,
-    mp.product_name,
-    wm.mandi_id,
-    mt.mandi_name,
-    oi.unit_id,
-    SUM(oi.quantity) AS total_quantity,
-    SUM(oi.quantity * oi.wholeseller_price) AS total_price,
-    SUM(
-      CASE
-        WHEN oi.unit_id = 1 THEN oi.quantity / 1000.0
-        WHEN oi.unit_id = 2 THEN oi.quantity
-        WHEN oi.unit_id = 3 THEN oi.quantity * 100.0
-        ELSE 0
-      END
-    ) AS total_quantity_kg,
-    ot.actual_delivery_date
-  FROM business_schema.order_item_table oi
-  JOIN business_schema.order_table ot ON ot.order_id = oi.order_id
-  JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
-  JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
-  JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id
-  WHERE ot.order_status = 6
-    AND EXTRACT(MONTH FROM ot.actual_delivery_date) = EXTRACT(MONTH FROM CURRENT_DATE)
-    AND EXTRACT(YEAR FROM ot.actual_delivery_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-  GROUP BY oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name, oi.unit_id, ot.actual_delivery_date
-  ORDER BY total_quantity_kg DESC;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_sales_monthly() OWNER TO postgres;
-
---
--- Name: get_sales_weekly(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_sales_weekly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, quantity numeric, price numeric, total_quantity_kg numeric, actual_delivery_date date, total_price numeric)
+CREATE FUNCTION public.get_sales_monthly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, quantity numeric, price numeric, total_quantity_kg numeric, actual_delivery_date date, total_price numeric)
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -3929,10 +3887,54 @@ BEGIN
   JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
   JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
   JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id  -- Join for mandi name
- WHERE ot.order_status = 6
-  AND ot.actual_delivery_date >= CURRENT_DATE - EXTRACT(DOW FROM CURRENT_DATE) * INTERVAL '1 day'
-  AND ot.actual_delivery_date < CURRENT_DATE + (7 - EXTRACT(DOW FROM CURRENT_DATE)) * INTERVAL '1 day'
+  WHERE ot.order_status = 6
+  AND EXTRACT(MONTH FROM ot.actual_delivery_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+  AND EXTRACT(YEAR FROM ot.actual_delivery_date) = EXTRACT(YEAR FROM CURRENT_DATE)
   GROUP BY oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name, oi.unit_id, oi.wholeseller_price, ot.actual_delivery_date
+  ORDER BY total_quantity_kg DESC;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_sales_monthly() OWNER TO postgres;
+
+--
+-- Name: get_sales_weekly(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_sales_weekly() RETURNS TABLE(product_id bigint, product_name character varying, mandi_id integer, mandi_name character varying, unit_id integer, quantity numeric, price numeric, total_quantity_kg numeric, actual_delivery_date date, total_price numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    oi.product_id,
+    mp.product_name,
+    wm.mandi_id,
+    mt.mandi_name,
+    oi.unit_id,
+    SUM(oi.quantity) AS quantity,
+    oi.wholeseller_price AS price,
+    SUM(
+      CASE
+        WHEN oi.unit_id = 1 THEN oi.quantity / 1000.0
+        WHEN oi.unit_id = 2 THEN oi.quantity
+        WHEN oi.unit_id = 3 THEN oi.quantity * 100.0
+        ELSE 0
+      END
+    ) AS total_quantity_kg,
+    ot.actual_delivery_date,
+    SUM(oi.quantity * oi.wholeseller_price) AS total_price
+  FROM business_schema.order_item_table oi
+  JOIN business_schema.order_table ot ON ot.order_id = oi.order_id
+  JOIN admin_schema.wholeseller_mandi_map wm ON wm.wholeseller_id = ANY(ot.wholeseller_id)
+  JOIN admin_schema.master_product mp ON mp.product_id = oi.product_id
+  JOIN admin_schema.master_mandi_table mt ON mt.mandi_id = wm.mandi_id
+  WHERE ot.order_status = 6
+    AND ot.actual_delivery_date IS NOT NULL -- Only filter nulls for now
+  GROUP BY
+    oi.product_id, mp.product_name, wm.mandi_id, mt.mandi_name,
+    oi.unit_id, oi.wholeseller_price, ot.actual_delivery_date
   ORDER BY total_quantity_kg DESC;
 END;
 $$;
@@ -7148,6 +7150,7 @@ INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
 --
 
 INSERT INTO admin_schema.wholeseller_mandi_map VALUES (1, 104, 2, '2025-04-18 15:25:01.64693', '2025-04-18 15:25:01.64693');
+INSERT INTO admin_schema.wholeseller_mandi_map VALUES (3, 103, 5, '2025-04-22 15:16:52.354644', '2025-04-22 15:16:52.354644');
 
 
 --
@@ -7267,6 +7270,28 @@ INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.
 INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 1, '2025-04-10 00:00:00', NULL, 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 14, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
 INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-10 00:00:00', NULL, 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 15, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
 INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-10 00:00:00', '2025-04-18 00:00:00', 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 16, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 17, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street', NULL, 18, 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street', NULL, 19, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 20, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street', NULL, 21, 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street', NULL, 22, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 23, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street', NULL, 24, 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street', NULL, 25, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, NULL, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 26, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 27, 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 28, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 29, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 30, 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 31, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 32, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (8, '2025-04-01 23:07:08.258059', 6, '2025-04-15 00:00:00', NULL, 123, 103, NULL, NULL, '560001', '123 Retail St, Bangalore', NULL, 33, 0.00, NULL, NULL, 9200.00, '2025-04-01 23:07:08.258059', '2025-04-02 07:22:09.722567', '9876543210', '2025-04-20', '2025-04-15', 4, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (12, '2025-04-02 07:29:55.095162', 6, '2025-04-18 00:00:00', NULL, 123, 103, NULL, NULL, '560001', '456 Retail Avenue, Bangalore', NULL, 34, 0.00, NULL, NULL, 14200.00, '2025-04-02 07:29:55.095162', '2025-04-02 07:34:42.988707', '9876543210', '2025-04-25', '2025-04-18', 8, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 35, 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 36, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 37, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-10 00:00:00', '2025-04-18 00:00:00', 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 38, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
 
 
 --
@@ -7283,12 +7308,6 @@ INSERT INTO business_schema.order_item_table VALUES (14, 8, 3, 100.00, 1, NULL, 
 INSERT INTO business_schema.order_item_table VALUES (15, 8, 3, 50.00, 1, NULL, NULL, 80.00, 75.00, 50.00, NULL, NULL);
 INSERT INTO business_schema.order_item_table VALUES (20, 12, 1, 200.00, 1, NULL, NULL, 60.00, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.order_item_table VALUES (21, 12, 1, 100.00, 1, NULL, NULL, 90.00, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (22, 13, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (23, 13, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (24, 14, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (25, 14, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (26, 15, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, NULL, NULL);
-INSERT INTO business_schema.order_item_table VALUES (27, 15, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.order_item_table VALUES (30, 21, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159');
 INSERT INTO business_schema.order_item_table VALUES (31, 21, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159');
 INSERT INTO business_schema.order_item_table VALUES (34, 23, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:36:23.545462', '2025-04-02 17:36:23.545462');
@@ -7297,6 +7316,12 @@ INSERT INTO business_schema.order_item_table VALUES (36, 24, 1, 100.00, 1, NULL,
 INSERT INTO business_schema.order_item_table VALUES (37, 24, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:45:52.079056', '2025-04-02 17:45:52.079056');
 INSERT INTO business_schema.order_item_table VALUES (38, 25, 1, 100.00, 1, NULL, NULL, 50.00, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071');
 INSERT INTO business_schema.order_item_table VALUES (39, 25, 3, 50.00, 1, NULL, NULL, 80.00, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071');
+INSERT INTO business_schema.order_item_table VALUES (24, 14, 1, 100.00, 1, NULL, NULL, 60.00, 55.00, 100.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (25, 14, 3, 100.00, 1, NULL, NULL, 60.00, 55.00, 100.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (26, 15, 1, 100.00, 1, NULL, NULL, 60.00, 55.00, 100.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (27, 15, 3, 100.00, 1, NULL, NULL, 60.00, 55.00, 100.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (22, 13, 1, 100.00, 1, NULL, NULL, 60.00, 55.00, 100.00, NULL, NULL);
+INSERT INTO business_schema.order_item_table VALUES (23, 13, 3, 100.00, 1, NULL, NULL, 60.00, 55.00, 100.00, NULL, NULL);
 
 
 --
@@ -7309,18 +7334,18 @@ INSERT INTO business_schema.order_table VALUES (4, '2025-02-24 11:15:00', 5, '20
 INSERT INTO business_schema.order_table VALUES (5, '2025-04-01 22:41:44.246239', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:41:44.246239', '2025-04-01 22:41:44.246239', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (6, '2025-04-01 22:42:40.497994', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:42:40.497994', '2025-04-01 22:42:40.497994', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (7, '2025-04-01 22:57:39.451206', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:57:39.451206', '2025-04-01 22:57:39.451206', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (8, '2025-04-01 23:07:08.258059', NULL, NULL, 123, '{103}', 0.00, NULL, NULL, 9200.00, '2025-04-01 23:07:08.258059', '2025-04-02 07:22:09.722567', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', 4, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (13, '2025-04-02 09:54:11.905636', NULL, NULL, 101, '{NULL}', 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '560001', '123 Retail Street, Bangalore', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-22', 5, '{6}', 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (12, '2025-04-02 07:29:55.095162', 2, NULL, 123, '{103}', 0.00, NULL, NULL, 14200.00, '2025-04-02 07:29:55.095162', '2025-04-02 07:34:42.988707', '9876543210', '560001', '456 Retail Avenue, Bangalore', 15000.00, '2025-04-18', '2025-04-25', 8, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (14, '2025-04-02 11:04:16.235683', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (15, '2025-04-02 11:08:43.342704', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (21, '2025-04-02 17:23:03.937159', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (23, '2025-04-02 17:36:23.545462', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:36:23.545462', '2025-04-02 17:36:23.545462', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (24, '2025-04-02 17:45:52.079056', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:45:52.079056', '2025-04-02 17:45:52.079056', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (25, '2025-04-02 17:48:45.911071', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:48:45.911071', '2025-04-02 17:48:45.911071', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (26, '2025-04-02 18:36:12.502775', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:12.502775', '2025-04-02 18:36:12.502775', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (27, '2025-04-02 18:36:17.787677', 1, NULL, 103, '{}', 0.00, NULL, NULL, NULL, '2025-04-02 18:36:17.787677', '2025-04-02 18:36:17.787677', '9876543210', '560001', 'Dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (8, '2025-04-01 23:07:08.258059', 6, NULL, 123, '{103}', 0.00, NULL, NULL, 9200.00, '2025-04-01 23:07:08.258059', '2025-04-02 07:22:09.722567', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', 4, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (12, '2025-04-02 07:29:55.095162', 6, NULL, 123, '{103}', 0.00, NULL, NULL, 14200.00, '2025-04-02 07:29:55.095162', '2025-04-02 07:34:42.988707', '9876543210', '560001', '456 Retail Avenue, Bangalore', 15000.00, '2025-04-18', '2025-04-25', 8, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-22', 101, '{103}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-22', 101, '{103}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-22', 101, '{103}', 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '560001', '123 Retail Street, Bangalore', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-18', 101, '{103}', 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '638001', '123, College Road, Erode', 10000.00, '2025-04-10', '2025-04-12', NULL, NULL, 1);
 
 
@@ -7639,7 +7664,7 @@ SELECT pg_catalog.setval('admin_schema.vehicle_model_id_seq', 3, true);
 -- Name: wholeseller_mandi_map_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('admin_schema.wholeseller_mandi_map_id_seq', 2, true);
+SELECT pg_catalog.setval('admin_schema.wholeseller_mandi_map_id_seq', 3, true);
 
 
 --
@@ -7702,7 +7727,7 @@ SELECT pg_catalog.setval('business_schema.order_activity_log_log_id_seq', 42, tr
 -- Name: order_history_table_history_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 16, true);
+SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 38, true);
 
 
 --
