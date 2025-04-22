@@ -109,10 +109,21 @@ func GetTopSellingMonthlyHandler(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	var results []SalesData
+	var results []TopSalesData
 	for rows.Next() {
-		var data SalesData
-		if err := rows.Scan(&data.MonthYear, &data.TotalOrders, &data.TotalRevenue); err != nil {
+		var data TopSalesData
+		if err := rows.Scan(
+			&data.ProductID, 
+			&data.ProductName, 
+			&data.MandiID, 
+			&data.MandiName, 
+			&data.UnitID, 
+			&data.Quantity, 
+			&data.Price, 
+			&data.TotalQuantityKg, 
+			&data.ActualDeliveryDate, 
+			&data.TotalPrice,
+		); err != nil {
 			log.Println("Error scanning row:", err)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error":  "Failed to scan row",
@@ -120,15 +131,29 @@ func GetTopSellingMonthlyHandler(c *fiber.Ctx) error {
 			})
 		}
 
-		if data.TotalOrders == 0 {
-			data.TotalOrders = 0 
+		// Check for NULL values and replace with defaults if necessary
+		if !data.ProductName.Valid {
+			data.ProductName.String = "Unknown"  // Default value for ProductName
 		}
-		if data.TotalRevenue == 0 {
-			data.TotalRevenue = 0.0 
+		if !data.MandiName.Valid {
+			data.MandiName.String = "Unknown"  // Default value for MandiName
+		}
+		if !data.ActualDeliveryDate.Valid {
+			data.ActualDeliveryDate.String = "Not Available"  // Default value for ActualDeliveryDate
+		}
+
+		// Optional: Handle zero values if needed
+		if data.Quantity == 0 {
+			data.Quantity = 0
+		}
+		if data.TotalPrice == 0.0 {
+			data.TotalPrice = 0.0
 		}
 
 		results = append(results, data)
 	}
+
+	// Return the results as a JSON response
 	return c.JSON(results)
 }
 
