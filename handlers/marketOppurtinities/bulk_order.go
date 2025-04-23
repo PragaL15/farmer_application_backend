@@ -1,14 +1,17 @@
-package marketoppurtinities
+package Marketoppurtinities
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"net/http"
 	"time"
-	"github.com/jackc/pgx/v4"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type OrderDetail struct {
-	OrderID          int     `json:"order_id"`
+	OrderID          int       `json:"order_id"`
 	DateOfOrder      time.Time `json:"date_of_order"`
 	TotalOrderAmount float64   `json:"total_order_amount"`
 	FinalAmount      float64   `json:"final_amount"`
@@ -17,13 +20,15 @@ type OrderDetail struct {
 	RetailerName     string    `json:"retailer_name"`
 }
 
-func getAllOrderDetails(conn *pgx.Conn) ([]OrderDetail, error) {
-	rows, err := conn.Query(
-		context.Background(),
-		"SELECT * FROM business_schema.get_all_order_details()",
-	)
+func GetAllBulkOrderDetailsHandler(c *fiber.Ctx) error {
+	query := "SELECT * FROM business_schema.get_all_order_details();"
+	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %v", err)
+		log.Println("Error executing order detail query:", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error":  "Database query failed",
+			"detail": err.Error(),
+		})
 	}
 	defer rows.Close()
 
@@ -39,12 +44,14 @@ func getAllOrderDetails(conn *pgx.Conn) ([]OrderDetail, error) {
 			&od.WholesellerName,
 			&od.RetailerName,
 		); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %v", err)
+			log.Println("Error scanning order row:", err)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error":  "Failed to scan row",
+				"detail": err.Error(),
+			})
 		}
 		orderDetails = append(orderDetails, od)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %v", err)
-	}
-	return orderDetails, nil
+
+	return c.Status(http.StatusOK).JSON(orderDetails)
 }
