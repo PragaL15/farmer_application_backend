@@ -2577,6 +2577,39 @@ $$;
 ALTER FUNCTION business_schema.get_all_daily_price_updates() OWNER TO postgres;
 
 --
+-- Name: get_all_order_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_all_order_details() RETURNS TABLE(order_id bigint, date_of_order timestamp without time zone, total_order_amount numeric, final_amount numeric, product_name character varying, wholeseller_name character varying, retailer_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        o.order_id,
+        o.date_of_order,
+        o.total_order_amount,
+        o.final_amount,
+        p.product_name,
+        br.b_shop_name AS wholeseller_name,
+        bt.b_owner_name AS retailer_name
+    FROM
+        business_schema.order_table o
+    JOIN
+        admin_schema.master_product p ON o.wholeseller_offer_id = p.product_id
+    JOIN
+        admin_schema.business_table bt ON o.retailer_id = bt.bid
+    LEFT JOIN
+        admin_schema.business_branch_table br ON br.bid = ANY(o.wholeseller_id)
+    ORDER BY
+        o.date_of_order DESC;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_all_order_details() OWNER TO postgres;
+
+--
 -- Name: get_cart_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2761,6 +2794,49 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_low_stock_items() OWNER TO postgres;
+
+--
+-- Name: get_low_stock_products(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_low_stock_products() RETURNS TABLE(product_id integer, product_name character varying, mandi jsonb)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        p.product_id::INTEGER,  -- Explicitly casting to integer
+        p.product_name,
+        jsonb_agg(
+            jsonb_build_object(
+                'mandi_id', m.mandi_id,
+                'mandi_name', m.mandi_name,
+                'total_stock', total_stock,
+                'mandi_stock', s.stock_left
+            )
+        ) AS mandi
+    FROM
+        admin_schema.master_product p
+    JOIN
+        business_schema.stock_table s ON p.product_id = s.product_id
+    JOIN
+        admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
+    JOIN
+        admin_schema.sales_data_table sd ON p.product_id = sd.product_id
+    CROSS JOIN LATERAL (
+        SELECT SUM(s2.stock_left) AS total_stock
+        FROM business_schema.stock_table s2
+        WHERE s2.product_id = p.product_id
+    ) AS total_stock
+    GROUP BY
+        p.product_id, p.product_name
+    HAVING
+        (SUM(s.stock_left) / NULLIF(MAX(sd.sales_volume_kg), 0)) < 2.5;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_low_stock_products() OWNER TO postgres;
 
 --
 -- Name: get_order_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -5066,6 +5142,44 @@ ALTER SEQUENCE admin_schema.roles_table_role_id_seq OWNED BY admin_schema.roles_
 
 
 --
+-- Name: sales_data_table; Type: TABLE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE TABLE admin_schema.sales_data_table (
+    sales_id integer NOT NULL,
+    product_id integer NOT NULL,
+    mandi_id integer,
+    sales_volume_kg numeric(10,2) NOT NULL,
+    sales_period character varying(50) NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE admin_schema.sales_data_table OWNER TO postgres;
+
+--
+-- Name: sales_data_table_sales_id_seq; Type: SEQUENCE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE SEQUENCE admin_schema.sales_data_table_sales_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE admin_schema.sales_data_table_sales_id_seq OWNER TO postgres;
+
+--
+-- Name: sales_data_table_sales_id_seq; Type: SEQUENCE OWNED BY; Schema: admin_schema; Owner: postgres
+--
+
+ALTER SEQUENCE admin_schema.sales_data_table_sales_id_seq OWNED BY admin_schema.sales_data_table.sales_id;
+
+
+--
 -- Name: units_table; Type: TABLE; Schema: admin_schema; Owner: admin
 --
 
@@ -6645,6 +6759,13 @@ ALTER TABLE ONLY admin_schema.roles_table ALTER COLUMN role_id SET DEFAULT nextv
 
 
 --
+-- Name: sales_data_table sales_id; Type: DEFAULT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.sales_data_table ALTER COLUMN sales_id SET DEFAULT nextval('admin_schema.sales_data_table_sales_id_seq'::regclass);
+
+
+--
 -- Name: units_table id; Type: DEFAULT; Schema: admin_schema; Owner: admin
 --
 
@@ -7086,6 +7207,16 @@ INSERT INTO admin_schema.roles_table VALUES (5, 'User');
 
 
 --
+-- Data for Name: sales_data_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
+--
+
+INSERT INTO admin_schema.sales_data_table VALUES (4, 1, 2, 120.50, 'monthly', '2025-04-23 14:11:30.622372');
+INSERT INTO admin_schema.sales_data_table VALUES (5, 2, 2, 75.25, 'weekly', '2025-04-23 14:11:30.622372');
+INSERT INTO admin_schema.sales_data_table VALUES (6, 3, 4, 210.00, 'monthly', '2025-04-23 14:11:30.622372');
+INSERT INTO admin_schema.sales_data_table VALUES (7, 4, 2, 100.00, 'test-period', '2025-04-23 14:21:16.960357');
+
+
+--
 -- Data for Name: units_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
@@ -7292,6 +7423,9 @@ INSERT INTO business_schema.order_history_table VALUES (14, '2025-04-02 11:04:16
 INSERT INTO business_schema.order_history_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street', NULL, 36, 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
 INSERT INTO business_schema.order_history_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-15 00:00:00', '2025-04-22 00:00:00', 101, 103, NULL, NULL, '560001', '123 Retail Street, Bangalore', NULL, 37, 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '2025-04-20', '2025-04-15', NULL, NULL, 15000.00, 1, 'INSERT_OR_UPDATE');
 INSERT INTO business_schema.order_history_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-10 00:00:00', '2025-04-18 00:00:00', 101, 103, NULL, NULL, '638001', '123, College Road, Erode', NULL, 38, 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '2025-04-12', '2025-04-10', NULL, NULL, 10000.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-04-01 00:00:00', '2025-02-22 00:00:00', 5, 104, NULL, NULL, '000000', 'Unknown', NULL, 39, 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '2025-04-01', '2025-04-01', NULL, NULL, 0.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-04-01 00:00:00', '2025-02-22 00:00:00', 5, 104, NULL, NULL, '000000', 'Unknown', NULL, 40, 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '2025-04-01', '2025-04-01', NULL, NULL, 0.00, 1, 'INSERT_OR_UPDATE');
+INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-04-01 00:00:00', '2025-02-22 00:00:00', 101, 104, NULL, NULL, '000000', 'Unknown', NULL, 41, 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '2025-04-01', '2025-04-01', 1, NULL, 0.00, 1, 'INSERT_OR_UPDATE');
 
 
 --
@@ -7334,7 +7468,6 @@ INSERT INTO business_schema.order_table VALUES (4, '2025-02-24 11:15:00', 5, '20
 INSERT INTO business_schema.order_table VALUES (5, '2025-04-01 22:41:44.246239', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:41:44.246239', '2025-04-01 22:41:44.246239', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (6, '2025-04-01 22:42:40.497994', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:42:40.497994', '2025-04-01 22:42:40.497994', '9876543210', '560001', '123 Retailer Street', 5000.00, '2025-04-10', '2025-04-15', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (7, '2025-04-01 22:57:39.451206', NULL, NULL, 123, '{NULL}', 0.00, NULL, NULL, NULL, '2025-04-01 22:57:39.451206', '2025-04-01 22:57:39.451206', '9876543210', '560001', '123 Retail St, Bangalore', 10000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
-INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-22', 5, '{6}', 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (21, '2025-04-02 17:23:03.937159', 1, NULL, 101, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:23:03.937159', '2025-04-02 17:23:03.937159', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (23, '2025-04-02 17:36:23.545462', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:36:23.545462', '2025-04-02 17:36:23.545462', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (24, '2025-04-02 17:45:52.079056', 1, NULL, 103, '{}', 9000.00, NULL, NULL, NULL, '2025-04-02 17:45:52.079056', '2025-04-02 17:45:52.079056', '9876543210', '560001', 'dalal Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
@@ -7346,6 +7479,7 @@ INSERT INTO business_schema.order_table VALUES (12, '2025-04-02 07:29:55.095162'
 INSERT INTO business_schema.order_table VALUES (14, '2025-04-02 11:04:16.235683', 6, '2025-04-22', 101, '{103}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:04:16.235683', '2025-04-02 11:04:16.235683', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (15, '2025-04-02 11:08:43.342704', 6, '2025-04-22', 101, '{103}', 9000.00, NULL, NULL, NULL, '2025-04-02 11:08:43.342704', '2025-04-02 11:08:43.342704', '9876543210', '560001', '123 Retail Street', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (13, '2025-04-02 09:54:11.905636', 6, '2025-04-22', 101, '{103}', 9000.00, NULL, NULL, NULL, '2025-04-02 09:54:11.905636', '2025-04-02 09:57:53.286233', '9876543210', '560001', '123 Retail Street, Bangalore', 15000.00, '2025-04-15', '2025-04-20', NULL, NULL, 1);
+INSERT INTO business_schema.order_table VALUES (1, '2025-02-22 09:55:59.551139', 6, '2025-02-22', 101, '{104}', 1180.00, NULL, NULL, 1000.00, '2025-03-25 23:07:59.479305', '2025-03-25 23:07:59.479305', '0000000000', '000000', 'Unknown', 0.00, '2025-04-01', '2025-04-01', 1, NULL, 1);
 INSERT INTO business_schema.order_table VALUES (30, '2025-04-07 21:43:17.273763', 6, '2025-04-18', 101, '{103}', 0.00, NULL, NULL, NULL, '2025-04-07 21:43:17.273763', '2025-04-07 21:43:17.273763', '9876543210', '638001', '123, College Road, Erode', 10000.00, '2025-04-10', '2025-04-12', NULL, NULL, 1);
 
 
@@ -7612,6 +7746,13 @@ SELECT pg_catalog.setval('admin_schema.roles_table_role_id_seq', 4, true);
 
 
 --
+-- Name: sales_data_table_sales_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('admin_schema.sales_data_table_sales_id_seq', 7, true);
+
+
+--
 -- Name: units_table_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
@@ -7727,7 +7868,7 @@ SELECT pg_catalog.setval('business_schema.order_activity_log_log_id_seq', 42, tr
 -- Name: order_history_table_history_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 38, true);
+SELECT pg_catalog.setval('business_schema.order_history_table_history_id_seq', 41, true);
 
 
 --
@@ -8111,6 +8252,14 @@ ALTER TABLE ONLY admin_schema.roles_table
 
 ALTER TABLE ONLY admin_schema.roles_table
     ADD CONSTRAINT roles_table_role_name_key UNIQUE (role_name);
+
+
+--
+-- Name: sales_data_table sales_data_table_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.sales_data_table
+    ADD CONSTRAINT sales_data_table_pkey PRIMARY KEY (sales_id);
 
 
 --
@@ -8690,6 +8839,14 @@ ALTER TABLE ONLY admin_schema.wholeseller_mandi_map
 
 
 --
+-- Name: sales_data_table fk_mandi; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.sales_data_table
+    ADD CONSTRAINT fk_mandi FOREIGN KEY (mandi_id) REFERENCES admin_schema.master_mandi_table(mandi_id) ON DELETE SET NULL;
+
+
+--
 -- Name: master_mandi_table fk_mandi_city; Type: FK CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
@@ -8702,6 +8859,14 @@ ALTER TABLE ONLY admin_schema.master_mandi_table
 --
 
 ALTER TABLE ONLY admin_schema.product_regional_name
+    ADD CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id) ON DELETE CASCADE;
+
+
+--
+-- Name: sales_data_table fk_product; Type: FK CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.sales_data_table
     ADD CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id) ON DELETE CASCADE;
 
 
@@ -9305,6 +9470,13 @@ GRANT SELECT ON TABLE admin_schema.mode_of_payments_list TO retailer;
 --
 
 GRANT ALL ON TABLE admin_schema.product_regional_name TO admin;
+
+
+--
+-- Name: TABLE sales_data_table; Type: ACL; Schema: admin_schema; Owner: postgres
+--
+
+GRANT ALL ON TABLE admin_schema.sales_data_table TO admin;
 
 
 --
