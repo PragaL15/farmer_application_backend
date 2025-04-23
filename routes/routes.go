@@ -5,6 +5,8 @@ import (
 	"github.com/PragaL15/go_newBackend/handlers"
 	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
 	TrendHandlers "github.com/PragaL15/go_newBackend/handlers/trendHandlers"
+	Marketoppurtinities "github.com/PragaL15/go_newBackend/handlers/marketOppurtinities"
+	RestockingStock "github.com/PragaL15/go_newBackend/handlers/restocking"
 )
 
 func RegisterRoutes(app *fiber.App) {
@@ -44,6 +46,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getLowStockItems", TrendHandlers.GetLowStockItemsHandler) 
 	app.Get("/getStockAvailabilityPercentage", TrendHandlers.GetStockAvailabilityPercentageHandler) 
 	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler)
+	app.Get("/getAllBulkOrderDetails", Marketoppurtinities.GetAllBulkOrderDetailsHandler)
+	app.Get("/getLowStockProductsHandler", RestockingStock.GetLowStockProductsHandler)
 
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
 //http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
