@@ -6,7 +6,6 @@ require (
 	github.com/go-playground/validator/v10 v10.24.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/guregu/null/v5 v5.0.0
-
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.10.0
 )
@@ -47,4 +46,9 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
+
+require (
+	github.com/jackc/pgx/v5 v5.7.4 // indirect
+	gopkg.in/guregu/null.v4 v4.0.0 // indirect
 )

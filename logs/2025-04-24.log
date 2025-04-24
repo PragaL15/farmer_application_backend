@@ -1,0 +1,17 @@
+API: 2025/04/24 21:33:52 main.go:26: Server is starting...
+API: 2025/04/24 21:33:53 main.go:53: Server is running on port 3000
+API: 2025/04/24 21:34:23 main.go:38: METHOD=GET PATH=/getSalesValue/monthly STATUS=200 DURATION=174.7589ms
+API: 2025/04/24 21:36:06 main.go:38: METHOD=GET PATH=/getSalesValue/weekly STATUS=500 DURATION=12.5007ms
+API: 2025/04/24 21:36:26 main.go:38: METHOD=GET PATH=/getSalesValue/weekly STATUS=500 DURATION=1.0601ms
+API: 2025/04/24 21:40:31 main.go:38: METHOD=GET PATH=/getSalesValue/yearly STATUS=200 DURATION=1.4611ms
+API: 2025/04/24 21:42:01 main.go:38: METHOD=GET PATH=/getSalesValue/yearly STATUS=200 DURATION=2.6627ms
+API: 2025/04/24 21:42:42 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS=500 DURATION=32.528ms
+API: 2025/04/24 21:47:43 main.go:64: Shutting down server gracefully...
+API: 2025/04/24 21:47:43 main.go:68: Server stopped cleanly
+API: 2025/04/24 21:48:35 main.go:26: Server is starting...
+API: 2025/04/24 21:48:35 main.go:53: Server is running on port 3000
+API: 2025/04/24 21:48:47 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS=500 DURATION=14.9901ms
+API: 2025/04/24 21:49:58 main.go:38: METHOD=GET PATH=/getSalesValue/weekly STATUS=200 DURATION=5.1084ms
+API: 2025/04/24 21:50:15 main.go:38: METHOD=GET PATH=/getTopSellingWeekly STATUS=500 DURATION=1.1585ms
+API: 2025/04/24 21:51:45 main.go:64: Shutting down server gracefully...
+API: 2025/04/24 21:51:45 main.go:68: Server stopped cleanly
