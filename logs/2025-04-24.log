@@ -30,3 +30,21 @@ API: 2025/04/24 22:06:20 main.go:53: Server is running on port 3000
 API: 2025/04/24 22:07:04 main.go:38: METHOD=GET PATH=/getMandiStockedProduct STATUS=200 DURATION=13.803ms
 API: 2025/04/24 22:12:20 main.go:38: METHOD=GET PATH=/getCurrentStockByMandi/4 STATUS=200 DURATION=4.1147ms
 API: 2025/04/24 22:13:35 main.go:38: METHOD=GET PATH=/getStockAvailabilityPercentage STATUS=200 DURATION=20.4481ms
+API: 2025/04/24 22:18:46 main.go:38: METHOD=GET PATH=/getWholesellerPriceComparison STATUS=400 DURATION=746.1µs
+API: 2025/04/24 22:19:00 main.go:38: METHOD=GET PATH=/getWholesellerPriceComparison STATUS=200 DURATION=23.9732ms
+API: 2025/04/24 22:35:50 main.go:38: METHOD=GET PATH=/getLowStockProductsHandler STATUS=200 DURATION=37.1161ms
+API: 2025/04/24 22:35:50 main.go:38: METHOD=GET PATH=/getLowStockProductsHandler STATUS=200 DURATION=1.3399ms
+API: 2025/04/24 22:36:27 main.go:38: METHOD=GET PATH=/getLowStockProductsHandler STATUS=200 DURATION=1.4196ms
+API: 2025/04/24 22:38:59 main.go:38: METHOD=GET PATH=/getAllBulkOrderDetails STATUS=200 DURATION=42.1586ms
+API: 2025/04/24 22:42:17 main.go:38: METHOD=GET PATH=//getLowStockItems STATUS=200 DURATION=0s
+API: 2025/04/24 22:42:22 main.go:38: METHOD=GET PATH=/getLowStockItems STATUS=200 DURATION=4.0697ms
+API: 2025/04/24 22:45:04 main.go:38: METHOD=GET PATH=/getStockAvailability STATUS=200 DURATION=0s
+API: 2025/04/24 22:45:36 main.go:64: Shutting down server gracefully...
+API: 2025/04/24 22:45:36 main.go:68: Server stopped cleanly
+API: 2025/04/24 22:45:44 main.go:26: Server is starting...
+API: 2025/04/24 22:45:44 main.go:53: Server is running on port 3000
+API: 2025/04/24 22:45:53 main.go:38: METHOD=GET PATH=/getStockAvailability STATUS=200 DURATION=18.8727ms
+API: 2025/04/24 22:47:42 main.go:38: METHOD=GET PATH=/getMandiStockedProduct STATUS=200 DURATION=3.7514ms
+API: 2025/04/24 22:48:03 main.go:38: METHOD=GET PATH=/getLowStockProductsHandler STATUS=200 DURATION=11.2194ms
+API: 2025/04/24 22:49:03 main.go:64: Shutting down server gracefully...
+API: 2025/04/24 22:49:03 main.go:68: Server stopped cleanly
