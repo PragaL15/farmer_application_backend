@@ -47,6 +47,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getStockAvailability", TrendHandlers.GetStockAvailabilityPercentageHandler) 
 	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler)
 	app.Get("/getAllBulkOrderDetails", Marketoppurtinities.GetAllBulkOrderDetailsHandler)
+	app.Get("/getTopRetailerDetails", Marketoppurtinities.GetTopRetailerHandler)
 	app.Get("/getReStockProductsHandler", RestockingStock.GetLowStockProductsHandler)
 
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
