@@ -48,3 +48,7 @@ API: 2025/04/24 22:47:42 main.go:38: METHOD=GET PATH=/getMandiStockedProduct STA
 API: 2025/04/24 22:48:03 main.go:38: METHOD=GET PATH=/getLowStockProductsHandler STATUS=200 DURATION=11.2194ms
 API: 2025/04/24 22:49:03 main.go:64: Shutting down server gracefully...
 API: 2025/04/24 22:49:03 main.go:68: Server stopped cleanly
+API: 2025/04/24 22:49:14 main.go:26: Server is starting...
+API: 2025/04/24 22:49:14 main.go:53: Server is running on port 3000
+API: 2025/04/24 22:54:21 main.go:38: METHOD=GET PATH=/getMandiStockedProduct STATUS=200 DURATION=12.5374ms
+API: 2025/04/24 22:56:32 main.go:38: METHOD=GET PATH=/getMandiStockedProduct STATUS=200 DURATION=1.9885ms
