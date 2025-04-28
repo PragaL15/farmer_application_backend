@@ -34,11 +34,9 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
 	app.Get("/getCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
 	app.Get("/getProductRegionalName", Masterhandlers.GetAllProductRegionalNames)
-
 	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  
 	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    
 	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler) 
-	//app.Get("/getTopSellingDaily", TrendHandlers.GetTopSellingDailyHandler) 
 	app.Get("/getTopSellingWeekly", TrendHandlers.GetTopSellingWeeklyHandler) 
 	app.Get("/getTopSellingMonthly", TrendHandlers.GetTopSellingMonthlyHandler) 
 	app.Get("/getTopSellingYearly", TrendHandlers.GetTopSellingYearlyHandler) 
@@ -49,7 +47,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getAllBulkOrderDetails", Marketoppurtinities.GetAllBulkOrderDetailsHandler)
 	app.Get("/getTopRetailerDetails", Marketoppurtinities.GetTopRetailerHandler)
 	app.Get("/getReStockProductsHandler", RestockingStock.GetLowStockProductsHandler)
-
+	app.Get("/getOrderSummary", handlers.GetAllWholesellerStockDetailsHandler)
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
 //http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 

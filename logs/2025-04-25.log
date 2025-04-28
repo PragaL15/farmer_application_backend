@@ -1,0 +1,3 @@
+API: 2025/04/25 10:37:22 main.go:26: Server is starting...
+API: 2025/04/25 10:37:22 main.go:53: Server is running on port 3000
+API: 2025/04/25 10:37:40 main.go:38: METHOD=GET PATH=/getTopRetailerDetails STATUS=200 DURATION=32.9873ms

@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
@@ -31,7 +30,6 @@ func GetAllBulkOrderDetailsHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var orderDetails []OrderDetail
 	for rows.Next() {
 		var od OrderDetail
@@ -52,6 +50,5 @@ func GetAllBulkOrderDetailsHandler(c *fiber.Ctx) error {
 		}
 		orderDetails = append(orderDetails, od)
 	}
-
 	return c.Status(http.StatusOK).JSON(orderDetails)
 }
