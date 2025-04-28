@@ -29,6 +29,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getCashPaymentTypes", Masterhandlers.GetAllCashPaymentsType)
 	app.Get("/getBusinessCategory", Masterhandlers.GetBusinessCategories)
 	app.Get("/getBusinessBranches", Masterhandlers.GetAllBusinessBranches)
+	app.Get("/getOrderItemDetails", handlers.GetAllOrderItemDetailsHandler)
 	app.Get("/getAllOrderDetails/:id", handlers.GetOrderDetailsHandler)
 	app.Get("/getCartitems/:id", handlers.GetCart)
 	app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
@@ -48,6 +49,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getTopRetailerDetails", Marketoppurtinities.GetTopRetailerHandler)
 	app.Get("/getReStockProductsHandler", RestockingStock.GetLowStockProductsHandler)
 	app.Get("/getOrderSummary", handlers.GetAllWholesellerStockDetailsHandler)
+	app.Get("/getCompletedOrderSummary", handlers.GetAllCompletedOrderItemHandle)
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
 //http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 
