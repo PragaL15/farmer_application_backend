@@ -2839,6 +2839,39 @@ $$;
 ALTER FUNCTION business_schema.get_low_stock_products() OWNER TO postgres;
 
 --
+-- Name: get_order_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_details() RETURNS TABLE(order_id bigint, total_order_amount numeric, order_item_id bigint, product_id bigint, product_name character varying, quantity numeric, unit_id integer, max_item_price numeric, unit_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        o.order_id,
+        o.total_order_amount,
+        oi.order_item_id,
+        oi.product_id,
+        mp.product_name,
+        oi.quantity,
+        oi.unit_id,
+        oi.max_item_price,
+        u.unit_name
+    FROM
+        business_schema.order_table o
+    INNER JOIN
+        business_schema.order_item_table oi ON o.order_id = oi.order_id
+    INNER JOIN
+        admin_schema.units_table u ON oi.unit_id = u.id
+    INNER JOIN
+        admin_schema.master_product mp ON oi.product_id = mp.product_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_details() OWNER TO postgres;
+
+--
 -- Name: get_order_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2890,6 +2923,41 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_order_details(p_order_id bigint) OWNER TO postgres;
+
+--
+-- Name: get_order_details_by_status_6(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_details_by_status_6() RETURNS TABLE(order_id bigint, total_order_amount numeric, order_item_id bigint, product_id bigint, product_name character varying, quantity numeric, unit_id integer, max_item_price numeric, unit_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.order_id,
+        o.total_order_amount,
+        oi.order_item_id,  -- Returning order_item_id as BIGINT
+        oi.product_id,  -- Returning product_id as BIGINT
+        mp.product_name,  -- Returning product_name as VARCHAR(100)
+        oi.quantity,
+        oi.unit_id,
+        oi.max_item_price,
+        u.unit_name  -- Returning unit_name as VARCHAR(50)
+    FROM 
+        business_schema.order_table o
+    INNER JOIN 
+        business_schema.order_item_table oi ON o.order_id = oi.order_id
+    INNER JOIN 
+        admin_schema.master_product mp ON oi.product_id = mp.product_id
+    INNER JOIN 
+        admin_schema.units_table u ON oi.unit_id = u.id
+    WHERE 
+        o.order_status = 6;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_details_by_status_6() OWNER TO postgres;
 
 --
 -- Name: get_order_history(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -3028,6 +3096,31 @@ $$;
 ALTER FUNCTION business_schema.get_order_history_with_details() OWNER TO postgres;
 
 --
+-- Name: get_order_summary(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_summary() RETURNS TABLE(order_id integer, total_quantity numeric, total_price numeric, retailer_id integer, retailer_name text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        oi.order_id::INT,
+        SUM(oi.quantity)::NUMERIC,
+        SUM(COALESCE(oi.agreed_quantity, 0) * COALESCE(oi.wholeseller_price, 0))::NUMERIC,
+        o.retailer_id::INT,
+        b.b_owner_name::TEXT
+    FROM business_schema.order_item_table oi
+    JOIN business_schema.order_table o ON oi.order_id = o.order_id
+    JOIN admin_schema.business_table b ON o.retailer_id = b.bid
+    GROUP BY oi.order_id, o.retailer_id, b.b_owner_name;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_summary() OWNER TO postgres;
+
+--
 -- Name: get_seasonal_demand(text[], text[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -3097,6 +3190,36 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_stock_availability_percentage() OWNER TO postgres;
+
+--
+-- Name: get_wholeseller_stock_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_wholeseller_stock_details() RETURNS TABLE(wholeseller_id integer, mandi_id integer, product_id integer, product_name character varying, stock_left numeric, stock_in numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        wmm.wholeseller_id,
+        st.mandi_id,
+        st.product_id,
+        mp.product_name,
+        st.stock_left,
+        st.stock_in
+    FROM 
+        business_schema.stock_table st
+    INNER JOIN 
+        admin_schema.wholeseller_mandi_map wmm 
+        ON st.mandi_id = wmm.mandi_id
+    INNER JOIN 
+        admin_schema.master_product mp 
+        ON st.product_id = mp.product_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_wholeseller_stock_details() OWNER TO postgres;
 
 --
 -- Name: insert_cart(bigint, jsonb, bigint, jsonb, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -7318,7 +7441,6 @@ INSERT INTO business_schema.daily_price_update VALUES (2, 78.25, 2, 1, 'INR', '2
 -- Data for Name: invoice_details_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.invoice_details_table VALUES (1, 2, 6, 5.00, 0, '2025-03-25 23:01:40.615709', '2025-03-25 23:01:40.615709', NULL, NULL, NULL, false, NULL);
 INSERT INTO business_schema.invoice_details_table VALUES (3, 5, 14, 0.00, 1, '2025-04-02 06:55:28.383207', '2025-04-02 06:55:28.383207', NULL, NULL, NULL, false, NULL);
 INSERT INTO business_schema.invoice_details_table VALUES (4, 5, 15, 0.00, 1, '2025-04-02 06:55:28.383207', '2025-04-02 06:55:28.383207', NULL, NULL, NULL, false, NULL);
 INSERT INTO business_schema.invoice_details_table VALUES (9, 39, 20, 10.00, 0, '2025-04-03 16:37:24.587299', '2025-04-03 16:37:24.587299', NULL, NULL, NULL, false, NULL);
@@ -7432,7 +7554,6 @@ INSERT INTO business_schema.order_history_table VALUES (1, '2025-02-22 09:55:59.
 -- Data for Name: order_item_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.order_item_table VALUES (6, 1, 2, 5.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
 INSERT INTO business_schema.order_item_table VALUES (4, 1, 2, 5.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
 INSERT INTO business_schema.order_item_table VALUES (7, 3, 3, 2.00, 1, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
 INSERT INTO business_schema.order_item_table VALUES (8, 3, 1, 1.00, 2, NULL, NULL, 0.00, NULL, 0.00, NULL, NULL);
@@ -9355,6 +9476,7 @@ ALTER TABLE admin_schema.vehicle_model ENABLE ROW LEVEL SECURITY;
 --
 
 GRANT USAGE ON SCHEMA admin_schema TO wholeseller_admin;
+GRANT USAGE ON SCHEMA admin_schema TO retailer;
 
 
 --

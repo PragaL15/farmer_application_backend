@@ -25,3 +25,7 @@ API: 2025/04/28 12:07:39 main.go:53: Server is running on port 3000
 API: 2025/04/28 12:08:16 main.go:38: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=15.1076ms
 API: 2025/04/28 12:33:17 main.go:64: Shutting down server gracefully...
 API: 2025/04/28 12:33:17 main.go:68: Server stopped cleanly
+API: 2025/04/28 12:33:31 main.go:26: Server is starting...
+API: 2025/04/28 12:33:31 main.go:53: Server is running on port 3000
+API: 2025/04/28 12:39:18 main.go:38: METHOD=POST PATH=/getCompletedOrderSummary STATUS=200 DURATION=510.1µs
+API: 2025/04/28 13:05:13 main.go:38: METHOD=GET PATH=/getCompletedOrderSummary STATUS=200 DURATION=411.3984ms
