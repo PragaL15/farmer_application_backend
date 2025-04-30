@@ -3,15 +3,16 @@ package handlers
 import (
 	"context"
 	"log"
-	"time"
 	"net/http"
 	"strconv"
-  "database/sql"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v4"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
+// Order represents the structure of an order request
 type Order struct {
 	OrderID              int64     `json:"order_id"`
 	DateOfOrder          string    `json:"date_of_order"`
@@ -39,11 +40,60 @@ type Order struct {
 	MaxItemPrices        []float64 `json:"max_item_prices"`
 }
 
+// OrderResponse represents the response structure for order operations
 type OrderResponse struct {
-	OrderID int64  `json:"order_id"`
+	OrderID int64  `json:"order_id,omitempty"`
 	Status  string `json:"status"`
 	Message string `json:"message"`
 }
+
+// ProductDetail represents detailed information about a product in an order
+type ProductDetail struct {
+	ProductID    int64   `json:"product_id"`
+	ProductName  string  `json:"product_name"`
+	CategoryID   int     `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	Quantity     float64 `json:"quantity"`
+	UnitID       int     `json:"unit_id"`
+	UnitName     string  `json:"unit_name"`
+	MaxPrice     float64 `json:"max_price"`
+}
+
+// OrderItemDetail represents detailed information about an order item
+type OrderItemDetail struct {
+	OrderItemID  int64   `json:"order_item_id"`
+	ProductID    int64   `json:"product_id"`
+	ProductName  string  `json:"product_name"`
+	Quantity     float64 `json:"quantity"`
+	UnitID       int     `json:"unit_id"`
+	UnitName     string  `json:"unit_name"`
+	MaxItemPrice float64 `json:"max_item_price"`
+}
+
+// OrderDetailResponse represents the detailed response for an order
+type OrderDetailResponse struct {
+	OrderID             int64           `json:"order_id"`
+	DateOfOrder         time.Time       `json:"date_of_order"`
+	OrderStatus         int             `json:"order_status"`
+	ActualDeliveryDate  *time.Time      `json:"actual_delivery_date,omitempty"`
+	RetailerID          int             `json:"retailer_id"`
+	ShopName            string          `json:"shop_name"`
+	WholesellerIDs      []int           `json:"wholeseller_ids,omitempty"`
+	TotalOrderAmount    float64         `json:"total_order_amount"`
+	DiscountAmount      float64         `json:"discount_amount"`
+	TaxAmount           float64         `json:"tax_amount"`
+	FinalAmount         float64         `json:"final_amount"`
+	Products            []ProductDetail `json:"products"`
+}
+
+// CompletedOrderDetail represents a completed order with its items
+type CompletedOrderDetail struct {
+	OrderID          int64            `json:"order_id"`
+	TotalOrderAmount float64          `json:"total_order_amount"`
+	OrderItems       []OrderItemDetail `json:"order_items"`
+}
+
+// CreateRetailerOrderHandler handles the creation of a new retailer order
 func CreateRetailerOrderHandler(c *fiber.Ctx) error {
 	var req Order
 	if err := c.BodyParser(&req); err != nil {
@@ -53,6 +103,7 @@ func CreateRetailerOrderHandler(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate required fields
 	if req.RetailerID == 0 || req.RetailerContact == "" || req.Pincode == "" || req.Address == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
 			Status:  "error",
@@ -76,7 +127,7 @@ func CreateRetailerOrderHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	var orderID sql.NullInt64
+	var orderID int64
 	var status, message string
 
 	query := `
@@ -107,63 +158,32 @@ func CreateRetailerOrderHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	if !orderID.Valid {
-		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
-			Status:  "error",
-			Message: "Failed to create order: order ID is NULL",
-		})
-	}
-
 	return c.Status(fiber.StatusCreated).JSON(OrderResponse{
-		OrderID: orderID.Int64,
+		OrderID: orderID,
 		Status:  status,
 		Message: message,
 	})
 }
 
+// GetOrderDetailsHandler retrieves detailed information about a specific order
 func GetOrderDetailsHandler(c *fiber.Ctx) error {
 	orderIDStr := c.Params("id")
 	if orderIDStr == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Order ID is required",
+		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
+			Status:  "error",
+			Message: "Order ID is required",
 		})
 	}
 
 	orderID, err := strconv.ParseInt(orderIDStr, 10, 64)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid order ID format",
+		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
+			Status:  "error",
+			Message: "Invalid order ID format",
 		})
 	}
 
-	type ProductDetail struct {
-		ProductID    int64   `json:"product_id"`
-		ProductName  string  `json:"product_name"`
-		CategoryID   int     `json:"category_id"`
-		CategoryName string  `json:"category_name"`
-		Quantity     float64 `json:"quantity"`
-		UnitID       int     `json:"unit_id"`
-		UnitName     string  `json:"unit_name"`
-		MaxPrice     float64 `json:"max_price"`
-	}
-
-	type OrderResponse struct {
-		OrderID             int64          `json:"order_id"`
-		DateOfOrder         time.Time      `json:"date_of_order"`
-		OrderStatus         int            `json:"order_status"`
-		ActualDeliveryDate  *time.Time     `json:"actual_delivery_date,omitempty"`
-		RetailerID          int            `json:"retailer_id"`
-		ShopName            string         `json:"shop_name"`
-		WholesellerIDs      []int          `json:"wholeseller_ids,omitempty"`
-		TotalOrderAmount    float64        `json:"total_order_amount"`
-		DiscountAmount      float64        `json:"discount_amount"`
-		TaxAmount           float64        `json:"tax_amount"`
-		FinalAmount         float64        `json:"final_amount"`
-		Products            []ProductDetail `json:"products"`
-	}
-
+	// Get basic order information
 	var order struct {
 		OrderID             int64
 		DateOfOrder         time.Time
@@ -193,15 +213,15 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 	)
 
 	if err == pgx.ErrNoRows {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Order not found",
+		return c.Status(fiber.StatusNotFound).JSON(OrderResponse{
+			Status:  "error",
+			Message: "Order not found",
 		})
 	} else if err != nil {
 		log.Printf("Failed to fetch order: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed to fetch order details",
+		return c.Status(fiber.StatusInternalServerError).JSON(OrderResponse{
+			Status:  "error",
+			Message: "Failed to fetch order details",
 		})
 	}
 
@@ -216,62 +236,19 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 	}
 
 	// Get wholeseller IDs
-	var wholesellerIDs []int
-	wholesellerQuery := `
-		SELECT wholeseller_id 
-		FROM business_schema.order_wholeseller_mapping
-		WHERE order_id = $1 AND status = 1`
-
-	rows, err := db.Pool.Query(context.Background(), wholesellerQuery, orderID)
+	wholesellerIDs, err := getWholesellerIDs(orderID)
 	if err != nil {
 		log.Printf("Failed to fetch wholesellers: %v", err)
-	} else {
-		defer rows.Close()
-		for rows.Next() {
-			var id int
-			if err := rows.Scan(&id); err == nil {
-				wholesellerIDs = append(wholesellerIDs, id)
-			}
-		}
-		if err = rows.Err(); err != nil {
-			log.Printf("Error processing wholeseller rows: %v", err)
-		}
 	}
 
-	// Get order item details
-	var products []ProductDetail
-	productQuery := `
-		SELECT 
-			oi.product_id, mp.product_name, mp.category_id, 
-			mpc.category_name, oi.quantity, 
-			oi.unit_id, ut.unit_name, oi.max_item_price
-		FROM business_schema.order_item_table oi
-		JOIN admin_schema.master_product mp ON oi.product_id = mp.product_id
-		LEFT JOIN admin_schema.master_product_category_table mpc ON mp.category_id = mpc.category_id
-		LEFT JOIN admin_schema.units_table ut ON oi.unit_id = ut.id
-		WHERE oi.order_id = $1`
-
-	productRows, err := db.Pool.Query(context.Background(), productQuery, orderID)
+	// Get order products
+	products, err := getOrderProducts(orderID)
 	if err != nil {
 		log.Printf("Failed to fetch order items: %v", err)
-	} else {
-		defer productRows.Close()
-		for productRows.Next() {
-			var p ProductDetail
-			if err := productRows.Scan(
-				&p.ProductID, &p.ProductName, &p.CategoryID, &p.CategoryName,
-				&p.Quantity, &p.UnitID, &p.UnitName, &p.MaxPrice,
-			); err == nil {
-				products = append(products, p)
-			}
-		}
-		if err = productRows.Err(); err != nil {
-			log.Printf("Error processing product rows: %v", err)
-		}
 	}
 
-	// Response
-	response := OrderResponse{
+	// Prepare response
+	response := OrderDetailResponse{
 		OrderID:             order.OrderID,
 		DateOfOrder:         order.DateOfOrder,
 		OrderStatus:         order.OrderStatus,
@@ -289,83 +266,128 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-func derefFloat(val *float64) float64 {
-	if val != nil {
-		return *val
-	}
-	return 0.0
-}
-type OrderItemDetail struct {
-	OrderItemID   int     `json:"order_item_id"`
-	ProductID     int     `json:"product_id"`
-	ProductName   string  `json:"product_name"`
-	Quantity      float64 `json:"quantity"`
-	UnitID        int     `json:"unit_id"`
-	UnitName      string  `json:"unit_name"`
-	MaxItemPrice  float64 `json:"max_item_price"`
-}
-
-type OrderDetails struct {
-	OrderID          int          `json:"order_id"`
-	TotalOrderAmount float64      `json:"total_order_amount"`
-	OrderItems       []OrderItems `json:"order_items"`
-}
-
-func GetAllCompletedOrderItemHandle(c *fiber.Ctx) error {
-	// Replace the full query with a call to the stored procedure
+// GetAllCompletedOrderItemHandler retrieves all completed order items
+func GetAllCompletedOrderItemHandler(c *fiber.Ctx) error {
 	query := `SELECT * FROM business_schema.get_order_details_by_status_6();`
 
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
 		log.Println("Error executing order details query:", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error":  "Database query failed",
-			"detail": err.Error(),
+		return c.Status(http.StatusInternalServerError).JSON(OrderResponse{
+			Status:  "error",
+			Message: "Database query failed: " + err.Error(),
 		})
 	}
 	defer rows.Close()
 
-	// Map to store orders grouped by OrderID
-	orderDetailsMap := make(map[int]*OrderDetail)
+	orderDetailsMap := make(map[int64]*CompletedOrderDetail)
 
-	// Iterate over the query results and populate the map
 	for rows.Next() {
-		var od OrderDetail
-		var oi OrderItems
+		var orderID int64
+		var totalAmount float64
+		var item OrderItemDetail
+
 		if err := rows.Scan(
-			&od.OrderID,
-			&od.TotalOrderAmount,
-			&oi.OrderItemID,
-			&oi.ProductID,
-			&oi.ProductName,
-			&oi.Quantity,
-			&oi.UnitID,
-			&oi.MaxItemPrice,
-			&oi.UnitName,
+			&orderID,
+			&totalAmount,
+			&item.OrderItemID,
+			&item.ProductID,
+			&item.ProductName,
+			&item.Quantity,
+			&item.UnitID,
+			&item.MaxItemPrice,
+			&item.UnitName,
 		); err != nil {
 			log.Println("Error scanning order row:", err)
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-				"error":  "Failed to scan row",
-				"detail": err.Error(),
+			return c.Status(http.StatusInternalServerError).JSON(OrderResponse{
+				Status:  "error",
+				Message: "Failed to scan row: " + err.Error(),
 			})
 		}
 
-		// Add order item to the appropriate order
-		if existingOrder, exists := orderDetailsMap[od.OrderID]; exists {
-			existingOrder.OrderItems = append(existingOrder.OrderItems, oi)
+		if existingOrder, exists := orderDetailsMap[orderID]; exists {
+			existingOrder.OrderItems = append(existingOrder.OrderItems, item)
 		} else {
-			// If order ID doesn't exist in map, initialize it and add order item
-			od.OrderItems = append(od.OrderItems, oi)
-			orderDetailsMap[od.OrderID] = &od
+			orderDetailsMap[orderID] = &CompletedOrderDetail{
+				OrderID:          orderID,
+				TotalOrderAmount: totalAmount,
+				OrderItems:       []OrderItemDetail{item},
+			}
 		}
 	}
 
-	// Convert map to slice for response
-	var orderDetails []OrderDetail
+	// Convert map to slice
+	var orderDetails []CompletedOrderDetail
 	for _, order := range orderDetailsMap {
 		orderDetails = append(orderDetails, *order)
 	}
 
-	// Return the grouped order details as a JSON response
 	return c.Status(http.StatusOK).JSON(orderDetails)
+}
+
+// Helper function to get wholeseller IDs for an order
+func getWholesellerIDs(orderID int64) ([]int, error) {
+	var wholesellerIDs []int
+	query := `
+		SELECT wholeseller_id 
+		FROM business_schema.order_wholeseller_mapping
+		WHERE order_id = $1 AND status = 1`
+
+	rows, err := db.Pool.Query(context.Background(), query, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		wholesellerIDs = append(wholesellerIDs, id)
+	}
+
+	return wholesellerIDs, rows.Err()
+}
+
+// Helper function to get products for an order
+func getOrderProducts(orderID int64) ([]ProductDetail, error) {
+	var products []ProductDetail
+	query := `
+		SELECT 
+			oi.product_id, mp.product_name, mp.category_id, 
+			mpc.category_name, oi.quantity, 
+			oi.unit_id, ut.unit_name, oi.max_item_price
+		FROM business_schema.order_item_table oi
+		JOIN admin_schema.master_product mp ON oi.product_id = mp.product_id
+		LEFT JOIN admin_schema.master_product_category_table mpc ON mp.category_id = mpc.category_id
+		LEFT JOIN admin_schema.units_table ut ON oi.unit_id = ut.id
+		WHERE oi.order_id = $1`
+
+	rows, err := db.Pool.Query(context.Background(), query, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p ProductDetail
+		if err := rows.Scan(
+			&p.ProductID, &p.ProductName, &p.CategoryID, &p.CategoryName,
+			&p.Quantity, &p.UnitID, &p.UnitName, &p.MaxPrice,
+		); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	return products, rows.Err()
+}
+
+// Helper function to safely dereference float pointers
+func derefFloat(val *float64) float64 {
+	if val != nil {
+		return *val
+	}
+	return 0.0
 }

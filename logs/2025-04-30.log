@@ -52,3 +52,53 @@ API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=swagger-ui-standalone-prese
 API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=1.5475ms
 API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=522µs
 API: 2025/04/30 08:58:28 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 08:59:01 main.go:42: Server is starting...
+API: 2025/04/30 08:59:01 main.go:68: Server is running on port 3000
+API: 2025/04/30 08:59:19 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=2.3114ms
+API: 2025/04/30 08:59:19 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:19 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:19 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:19 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=2.5023ms
+API: 2025/04/30 08:59:19 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:51 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:51 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:51 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:51 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:59:52 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=5.8775ms
+API: 2025/04/30 08:59:52 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=911.9µs
+API: 2025/04/30 09:02:46 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=2.0147ms
+API: 2025/04/30 09:02:46 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 09:02:46 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 09:02:46 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 09:02:46 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=0s
+API: 2025/04/30 09:02:46 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 10:23:11 main.go:53: METHOD=GET PATH=/getOrderSummary STATUS=200 DURATION=257.9123ms
+API: 2025/04/30 10:34:23 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=33.911ms
+API: 2025/04/30 16:18:11 main.go:53: METHOD=GET PATH=/getOrderSummary STATUS=200 DURATION=168.8137ms
+API: 2025/04/30 16:32:47 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=22.4331ms
+API: 2025/04/30 16:52:30 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 16:52:30 main.go:82: Server stopped cleanly
+API: 2025/04/30 17:05:36 main.go:42: Server is starting...
+API: 2025/04/30 17:05:37 main.go:68: Server is running on port 3000
+API: 2025/04/30 17:05:54 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=500 DURATION=19.5575ms
+API: 2025/04/30 17:09:16 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 17:09:16 main.go:82: Server stopped cleanly
+API: 2025/04/30 17:28:50 main.go:42: Server is starting...
+API: 2025/04/30 17:28:50 main.go:68: Server is running on port 3000
+API: 2025/04/30 17:29:14 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=28.6692ms
+API: 2025/04/30 17:30:23 main.go:53: METHOD=GET PATH=/getCompletedOrderSummary STATUS=200 DURATION=5.7216ms
+API: 2025/04/30 17:49:04 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 17:49:04 main.go:82: Server stopped cleanly
+API: 2025/04/30 17:49:18 main.go:42: Server is starting...
+API: 2025/04/30 17:49:18 main.go:68: Server is running on port 3000
+API: 2025/04/30 17:49:29 main.go:53: METHOD=GET PATH=/getCompletedOrderSummary STATUS=200 DURATION=27.2526ms
+API: 2025/04/30 17:49:46 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=18.6861ms
+API: 2025/04/30 17:50:02 main.go:53: METHOD=GET PATH=/getStockAvailability STATUS=200 DURATION=42.1011ms
+API: 2025/04/30 17:52:54 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 17:52:54 main.go:82: Server stopped cleanly
+API: 2025/04/30 17:53:07 main.go:42: Server is starting...
+API: 2025/04/30 17:53:07 main.go:68: Server is running on port 3000
+API: 2025/04/30 17:53:18 main.go:53: METHOD=GET PATH=/getStockAvailability STATUS=200 DURATION=36.2824ms
+API: 2025/04/30 17:53:48 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=30.6669ms
+API: 2025/04/30 17:57:21 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 17:57:21 main.go:82: Server stopped cleanly

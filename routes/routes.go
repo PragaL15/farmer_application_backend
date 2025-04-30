@@ -54,8 +54,8 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getTopRetailerDetails", Marketoppurtinities.GetTopRetailerHandler)
 	app.Get("/getReStockProductsHandler", RestockingStock.GetLowStockProductsHandler)
 	app.Get("/getOrderSummary", handlers.GetAllWholesellerStockDetailsHandler)
-	app.Get("/getCompletedOrderSummary", handlers.GetAllCompletedOrderItemHandle)
-	
+	app.Get("/getCompletedOrderSummary", handlers.GetAllCompletedOrderItemHandler)
+
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
 //http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 
