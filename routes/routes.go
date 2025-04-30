@@ -1,15 +1,19 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	_ "github.com/PragaL15/go_newBackend/docs"
 	"github.com/PragaL15/go_newBackend/handlers"
-	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
-	TrendHandlers "github.com/PragaL15/go_newBackend/handlers/trendHandlers"
 	Marketoppurtinities "github.com/PragaL15/go_newBackend/handlers/marketOppurtinities"
+	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
 	RestockingStock "github.com/PragaL15/go_newBackend/handlers/restocking"
+	TrendHandlers "github.com/PragaL15/go_newBackend/handlers/trendHandlers"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 )
 
 func RegisterRoutes(app *fiber.App) {
+
+	app.Get("/swagger/*", swagger.HandlerDefault) 
 	// Registering routes for GET methods
 	app.Get("/getUsers", Masterhandlers.GetAllUsers)
 	app.Get("/getCategoriesBySupID/:super_cat_id", Masterhandlers.GetCategoriesBySuperCatID)

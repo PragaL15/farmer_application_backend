@@ -1,0 +1,20 @@
+API: 2025/04/29 16:18:11 main.go:43: Server is starting...
+API: 2025/04/29 16:18:11 main.go:69: Server is running on port 3000
+API: 2025/04/29 16:18:38 main.go:54: METHOD=GET PATH=index.html STATUS=200 DURATION=2.7374ms
+API: 2025/04/29 16:18:38 main.go:54: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=658.4µs
+API: 2025/04/29 16:18:38 main.go:54: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/29 16:18:38 main.go:54: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/29 16:18:38 main.go:54: METHOD=GET PATH=doc.json STATUS=200 DURATION=0s
+API: 2025/04/29 16:18:38 main.go:54: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/29 16:21:24 main.go:79: Shutting down server gracefully...
+API: 2025/04/29 16:22:09 main.go:42: Server is starting...
+API: 2025/04/29 16:22:10 main.go:68: Server is running on port 3000
+API: 2025/04/29 16:22:25 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=1.7288ms
+API: 2025/04/29 16:22:25 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=2.0357ms
+API: 2025/04/29 16:22:25 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=934.6µs
+API: 2025/04/29 16:22:25 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/29 16:22:25 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=0s
+API: 2025/04/29 16:22:25 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/29 16:22:42 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=619µs
+API: 2025/04/30 07:45:10 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 07:45:10 main.go:82: Server stopped cleanly

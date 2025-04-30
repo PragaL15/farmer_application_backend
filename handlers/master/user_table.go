@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
+// User represents a user in the system
 type User struct {
 	UserID       int    `json:"user_id"`
 	Name         string `json:"name"`
@@ -27,7 +28,14 @@ type User struct {
 	RoleID       int    `json:"role_id"`
 }
 
-
+// GetAllUsers godoc
+// @Summary      Get all users
+// @Description  Fetches all users from the database
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Success      200 {array} Masterhandlers.User
+// @Router       /getUsers [get]
 func GetAllUsers(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_users()")
 	if err != nil {
@@ -51,6 +59,17 @@ func GetAllUsers(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
+// GetUserByID godoc
+// @Summary      Get user by ID
+// @Description  Fetch a single user by ID
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "User ID"
+// @Success      200  {object}  Masterhandlers.User
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /getUsers/{id} [get]
 func GetUserByID(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -86,7 +105,17 @@ func GetUserByID(c *fiber.Ctx) error {
 	return c.JSON(u)
 }
 
-
+// InsertUser godoc
+// @Summary      Create a new user
+// @Description  Insert a new user into the system
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        user  body      Masterhandlers.User  true  "User data"
+// @Success      201   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /userTableDetails [post]
 func InsertUser(c *fiber.Ctx) error {
 	var u User
 	if err := c.BodyParser(&u); err != nil {
@@ -94,10 +123,9 @@ func InsertUser(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(),
-    "SELECT admin_schema.insert_user($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-    u.Name, u.MobileNum, u.Email, u.Address, u.Pincode,
-    u.Location, u.State, u.ActiveStatus, u.RoleID,
-
+		"SELECT admin_schema.insert_user($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+		u.Name, u.MobileNum, u.Email, u.Address, u.Pincode,
+		u.Location, u.State, u.ActiveStatus, u.RoleID,
 	)
 	if err != nil {
 		log.Println("Error inserting user:", err)
@@ -107,6 +135,18 @@ func InsertUser(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "User created successfully"})
 }
 
+// UpdateUser godoc
+// @Summary      Update an existing user
+// @Description  Update user data by ID
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int               true  "User ID"
+// @Param        user  body      Masterhandlers.User  true  "Updated user data"
+// @Success      200   {object}  map[string]string
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /userUpdate/{id} [put]
 func UpdateUser(c *fiber.Ctx) error {
 	type UpdateUser struct {
 		Name         string `json:"name"`
@@ -114,8 +154,8 @@ func UpdateUser(c *fiber.Ctx) error {
 		Email        string `json:"email"`
 		Address      string `json:"address"`
 		Pincode      string `json:"pincode"`
-		Location     int    `json:"location"` // FIXED: was string
-		State        int    `json:"state"`    // FIXED: was string
+		Location     int    `json:"location"`
+		State        int    `json:"state"`
 		ActiveStatus bool   `json:"active_status"`
 		RoleID       int64  `json:"role_id"`
 	}

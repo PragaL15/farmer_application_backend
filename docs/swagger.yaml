@@ -1,4 +1,298 @@
+basePath: /
+definitions:
+  Masterhandlers.ProductRegional:
+    properties:
+      language_id:
+        type: integer
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      product_regional_id:
+        type: integer
+      product_regional_name:
+        type: string
+    type: object
+  Masterhandlers.User:
+    properties:
+      active_status:
+        type: integer
+      address:
+        type: string
+      email:
+        type: string
+      location_id:
+        type: integer
+      location_name:
+        type: string
+      mobile_num:
+        type: string
+      name:
+        type: string
+      pincode:
+        type: string
+      role_id:
+        type: integer
+      state_id:
+        type: integer
+      state_name:
+        type: string
+      user_id:
+        type: integer
+    type: object
+host: localhost:3000
 info:
-  contact: {}
-paths: {}
+  contact:
+    email: your-email@example.com
+    name: Pragalya Kanakaraj
+  description: This is the API documentation for Go Fiber App.
+  termsOfService: http://yourterms.com
+  title: My API
+  version: "1.0"
+paths:
+  /getUsers:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all users from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Masterhandlers.User'
+            type: array
+      summary: Get all users
+      tags:
+      - Users
+  /getUsers/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetch a single user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Masterhandlers.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user by ID
+      tags:
+      - Users
+  /product-regional:
+    get:
+      description: Retrieves all product regional names from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Masterhandlers.ProductRegional'
+            type: array
+      summary: Get all product regional names
+      tags:
+      - Product Regional Names
+    post:
+      consumes:
+      - application/json
+      description: Adds a new product regional name to the database
+      parameters:
+      - description: Product Regional Name Input
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.ProductRegional'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Insert a new product regional name
+      tags:
+      - Product Regional Names
+    put:
+      consumes:
+      - application/json
+      description: Updates a product regional name by ID
+      parameters:
+      - description: Product Regional Name Input
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.ProductRegional'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update product regional name
+      tags:
+      - Product Regional Names
+  /product-regional/{id}:
+    get:
+      description: Retrieves a product regional name by its ID
+      parameters:
+      - description: Product Regional ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Masterhandlers.ProductRegional'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get product regional name by ID
+      tags:
+      - Product Regional Names
+  /userTableDetails:
+    post:
+      consumes:
+      - application/json
+      description: Insert a new user into the system
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new user
+      tags:
+      - Users
+  /userUpdate/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update user data by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated user data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update an existing user
+      tags:
+      - Users
+schemes:
+- http
 swagger: "2.0"

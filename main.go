@@ -1,4 +1,13 @@
 package main
+// @title           Go New Backend API
+// @version         1.0
+// @description     This is the API documentation for Go Fiber App.
+// @termsOfService  http://yourterms.com
+// @contact.name    Pragalya Kanakaraj
+// @contact.email   your-email@example.com
+// @host            localhost:3000
+// @BasePath        /
+// @schemes         http
 
 import (
 	"os"
