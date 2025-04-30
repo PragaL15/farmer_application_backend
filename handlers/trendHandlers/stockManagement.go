@@ -2,11 +2,11 @@ package TrendHandlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"github.com/gofiber/fiber/v2"
 )
 type CurrentStockData struct {
 	ProductID     int     `json:"product_id"`
@@ -15,7 +15,6 @@ type CurrentStockData struct {
 	MandiName     string  `json:"mandi_name"`
 	CurrentStock  float64 `json:"current_stock"`
 }
-
 type LeastStockedData struct {
 	ProductID     int     `json:"product_id"`
 	ProductName   string  `json:"product_name"`
@@ -35,13 +34,16 @@ type StockAvailabilityData struct {
 	StockAvailabilityPercentage float64 `json:"stock_availability_percentage"`
 }
 
-type LowStockItemData struct {
-	ProductID       int     `json:"product_id"`
-	ProductName     string  `json:"product_name"`
-	MandiID         int     `json:"mandi_id"`
-	MandiName       string  `json:"mandi_name"`
-	StockLeft       float64 `json:"stock_left"`
-	MinimumStockLevel float64 `json:"minimum_stock_level"`
+type LowStockProduct struct {
+	ProductID     int         `json:"product_id"`
+	ProductName   string      `json:"product_name"`
+	CurrentStock  float64     `json:"current_stock"`
+	Mandis        []MandiData `json:"mandis"`
+}
+type MandiData struct {
+	MandiID    int     `json:"mandi_id"`
+	MandiName  string  `json:"mandi_name"`
+	MandiStock float64 `json:"mandi_stock"`
 }
 func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 	mandiID := c.Params("mandi_id")
@@ -137,17 +139,29 @@ func GetLowStockItemsHandler(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	var results []LowStockItemData
+	var results []LowStockProduct
 	for rows.Next() {
-		var data LowStockItemData
-		if err := rows.Scan(&data.ProductID, &data.ProductName, &data.MandiID, &data.MandiName, &data.StockLeft, &data.MinimumStockLevel); err != nil {
+		var item LowStockProduct
+		var mandisRaw []byte
+
+		err := rows.Scan(&item.ProductID, &item.ProductName, &item.CurrentStock, &mandisRaw)
+		if err != nil {
 			log.Println("Error scanning row:", err)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error":  "Failed to scan row",
 				"detail": err.Error(),
 			})
 		}
-		results = append(results, data)
+
+		if err := json.Unmarshal(mandisRaw, &item.Mandis); err != nil {
+			log.Println("Error unmarshaling mandis JSON:", err)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error":  "Failed to parse mandis JSON",
+				"detail": err.Error(),
+			})
+		}
+
+		results = append(results, item)
 	}
 
 	return c.JSON(results)

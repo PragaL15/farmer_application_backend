@@ -102,3 +102,19 @@ API: 2025/04/30 17:53:18 main.go:53: METHOD=GET PATH=/getStockAvailability STATU
 API: 2025/04/30 17:53:48 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=30.6669ms
 API: 2025/04/30 17:57:21 main.go:78: Shutting down server gracefully...
 API: 2025/04/30 17:57:21 main.go:82: Server stopped cleanly
+API: 2025/04/30 17:57:47 main.go:42: Server is starting...
+API: 2025/04/30 17:57:48 main.go:68: Server is running on port 3000
+API: 2025/04/30 17:58:03 main.go:53: METHOD=GET PATH=/getOrderItemDetails STATUS=200 DURATION=37.935ms
+API: 2025/04/30 18:09:42 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 18:09:42 main.go:82: Server stopped cleanly
+API: 2025/04/30 18:09:58 main.go:42: Server is starting...
+API: 2025/04/30 18:09:58 main.go:68: Server is running on port 3000
+API: 2025/04/30 18:10:24 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=1.8614ms
+API: 2025/04/30 18:10:24 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 18:10:24 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 18:10:24 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 18:10:24 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=970.4µs
+API: 2025/04/30 18:10:24 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 18:15:34 main.go:53: METHOD=GET PATH=/getLowStockItems STATUS=200 DURATION=53.1018ms
+API: 2025/04/30 18:25:53 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 18:25:53 main.go:82: Server stopped cleanly
