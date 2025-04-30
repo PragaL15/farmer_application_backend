@@ -47,6 +47,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getTopSellingYearly", TrendHandlers.GetTopSellingYearlyHandler) 
 	app.Get("/getMandiStockedProduct", TrendHandlers.GetLeastStockedProductsHandler) 
 	app.Get("/getLowStockItems", TrendHandlers.GetLowStockItemsHandler) 
+
 	app.Get("/getStockAvailability", TrendHandlers.GetStockAvailabilityPercentageHandler) 
 	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler)
 	app.Get("/getAllBulkOrderDetails", Marketoppurtinities.GetAllBulkOrderDetailsHandler)
@@ -54,6 +55,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getReStockProductsHandler", RestockingStock.GetLowStockProductsHandler)
 	app.Get("/getOrderSummary", handlers.GetAllWholesellerStockDetailsHandler)
 	app.Get("/getCompletedOrderSummary", handlers.GetAllCompletedOrderItemHandle)
+	
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
 //http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 

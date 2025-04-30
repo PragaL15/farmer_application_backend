@@ -8,3 +8,47 @@ API: 2025/04/30 07:59:37 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATIO
 API: 2025/04/30 07:59:37 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
 API: 2025/04/30 08:28:12 main.go:78: Shutting down server gracefully...
 API: 2025/04/30 08:28:12 main.go:82: Server stopped cleanly
+API: 2025/04/30 08:28:40 main.go:42: Server is starting...
+API: 2025/04/30 08:28:40 main.go:68: Server is running on port 3000
+API: 2025/04/30 08:31:05 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=1.6531ms
+API: 2025/04/30 08:31:05 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 08:31:05 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:31:05 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:31:06 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 08:31:06 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=1.9142ms
+API: 2025/04/30 08:50:00 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 08:50:00 main.go:82: Server stopped cleanly
+API: 2025/04/30 08:50:22 main.go:42: Server is starting...
+API: 2025/04/30 08:50:22 main.go:68: Server is running on port 3000
+API: 2025/04/30 08:50:37 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=1.8396ms
+API: 2025/04/30 08:50:37 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=556.9µs
+API: 2025/04/30 08:50:37 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:50:37 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:50:37 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=0s
+API: 2025/04/30 08:50:37 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 08:52:24 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 08:52:24 main.go:82: Server stopped cleanly
+API: 2025/04/30 08:53:10 main.go:42: Server is starting...
+API: 2025/04/30 08:53:10 main.go:68: Server is running on port 3000
+API: 2025/04/30 08:53:36 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=1.6965ms
+API: 2025/04/30 08:53:36 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=2.0686ms
+API: 2025/04/30 08:53:36 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=5.3995ms
+API: 2025/04/30 08:53:36 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:53:37 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 08:53:37 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=481.9µs
+API: 2025/04/30 08:53:45 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=0s
+API: 2025/04/30 08:53:45 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 08:53:45 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:53:45 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:53:45 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=1.1796ms
+API: 2025/04/30 08:53:45 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/04/30 08:55:06 main.go:78: Shutting down server gracefully...
+API: 2025/04/30 08:55:51 main.go:42: Server is starting...
+API: 2025/04/30 08:55:52 main.go:68: Server is running on port 3000
+API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=1.0672ms
+API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=1.5475ms
+API: 2025/04/30 08:56:19 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=522µs
+API: 2025/04/30 08:58:28 main.go:78: Shutting down server gracefully...

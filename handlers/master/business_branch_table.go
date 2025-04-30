@@ -7,6 +7,7 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
+// BusinessBranch represents a business branch entity
 type BusinessBranch struct {
 	BranchID        int    `json:"b_branch_id"`
 	BID             int    `json:"bid"`
@@ -24,6 +25,15 @@ type BusinessBranch struct {
 	ActiveStatus    int    `json:"active_status"`
 }
 
+// GetAllBusinessBranches godoc
+// @Summary      Get all business branches
+// @Description  Fetch all business branches from the system
+// @Tags         Business Branches
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}   BusinessBranch
+// @Failure      500  {object}  map[string]string
+// @Router       /business-branches [get]
 func GetAllBusinessBranches(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_business_branches()")
 	if err != nil {
@@ -42,6 +52,17 @@ func GetAllBusinessBranches(c *fiber.Ctx) error {
 	return c.JSON(branches)
 }
 
+// GetBusinessBranchByID godoc
+// @Summary      Get business branch by ID
+// @Description  Get a specific business branch by its ID
+// @Tags         Business Branches
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Branch ID"
+// @Success      200  {object}  BusinessBranch
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /business-branches/{id} [get]
 func GetBusinessBranchByID(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -57,6 +78,17 @@ func GetBusinessBranchByID(c *fiber.Ctx) error {
 	return c.JSON(b)
 }
 
+// InsertBusinessBranch godoc
+// @Summary      Create a new business branch
+// @Description  Insert a new business branch into the system
+// @Tags         Business Branches
+// @Accept       json
+// @Produce      json
+// @Param        branch  body      BusinessBranch  true  "Business Branch Data"
+// @Success      200     {object}  map[string]interface{}
+// @Failure      400     {object}  map[string]string
+// @Failure      500     {object}  map[string]string
+// @Router       /business-branches [post]
 func InsertBusinessBranch(c *fiber.Ctx) error {
 	var req BusinessBranch
 	if err := c.BodyParser(&req); err != nil {
@@ -73,6 +105,17 @@ func InsertBusinessBranch(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Business branch inserted successfully", "b_branch_id": newID})
 }
 
+// UpdateBusinessBranch godoc
+// @Summary      Update a business branch
+// @Description  Update the details of a business branch
+// @Tags         Business Branches
+// @Accept       json
+// @Produce      json
+// @Param        branch  body      BusinessBranch  true  "Updated Business Branch"
+// @Success      200     {object}  map[string]string
+// @Failure      400     {object}  map[string]string
+// @Failure      500     {object}  map[string]string
+// @Router       /business-branches [put]
 func UpdateBusinessBranch(c *fiber.Ctx) error {
 	var req BusinessBranch
 	if err := c.BodyParser(&req); err != nil {

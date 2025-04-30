@@ -9,13 +9,36 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
+// BusinessCategory represents a business category
 type BusinessCategory struct {
 	BCategoryID   int    `json:"b_category_id"`
 	BCategoryName string `json:"b_category_name"`
 }
 
+// InsertBusinessCategoryRequest is the request body for inserting a category
+type InsertBusinessCategoryRequest struct {
+	BCategoryName string `json:"b_category_name"`
+}
+
+// UpdateBusinessCategoryRequest is the request body for updating a category
+type UpdateBusinessCategoryRequest struct {
+	BCategoryID   int    `json:"b_category_id"`
+	BCategoryName string `json:"b_category_name"`
+}
+
+// GetBusinessCategories godoc
+// @Summary Get all or specific business categories
+// @Description Get all business categories or a specific one if ID is passed
+// @Tags BusinessCategory
+// @Accept json
+// @Produce json
+// @Param id query int false "Business Category ID"
+// @Success 200 {array} BusinessCategory
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /business-category [get]
 func GetBusinessCategories(c *fiber.Ctx) error {
-	id := c.Query("id") 
+	id := c.Query("id")
 
 	var rows pgx.Rows
 	var err error
@@ -47,12 +70,19 @@ func GetBusinessCategories(c *fiber.Ctx) error {
 	return c.JSON(categories)
 }
 
+// InsertBusinessCategory godoc
+// @Summary Insert a new business category
+// @Description Add a new business category name
+// @Tags BusinessCategory
+// @Accept json
+// @Produce json
+// @Param data body InsertBusinessCategoryRequest true "Business Category Name"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /business-category [post]
 func InsertBusinessCategory(c *fiber.Ctx) error {
-	type Request struct {
-		BCategoryName string `json:"b_category_name"`
-	}
-
-	var req Request
+	var req InsertBusinessCategoryRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
@@ -67,13 +97,20 @@ func InsertBusinessCategory(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Business category inserted successfully", "id": newID})
 }
 
+// UpdateBusinessCategory godoc
+// @Summary Update a business category
+// @Description Update the name of a business category using its ID
+// @Tags BusinessCategory
+// @Accept json
+// @Produce json
+// @Param data body UpdateBusinessCategoryRequest true "Updated Info"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /business-category [put]
 func UpdateBusinessCategory(c *fiber.Ctx) error {
-	type Request struct {
-		BCategoryID   int    `json:"b_category_id"`
-		BCategoryName string `json:"b_category_name"`
-	}
-
-	var req Request
+	var req UpdateBusinessCategoryRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}

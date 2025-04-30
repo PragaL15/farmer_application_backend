@@ -1,5 +1,63 @@
 basePath: /
 definitions:
+  Masterhandlers.Business:
+    properties:
+      b_category_id:
+        type: integer
+      b_owner_name:
+        type: string
+      b_registration_num:
+        type: string
+      b_type_id:
+        type: integer
+      bid:
+        type: integer
+      is_active:
+        type: boolean
+    type: object
+  Masterhandlers.BusinessBranch:
+    properties:
+      active_status:
+        type: integer
+      b_address:
+        type: string
+      b_branch_id:
+        type: integer
+      b_email:
+        type: string
+      b_established_year:
+        type: string
+      b_gst_num:
+        type: string
+      b_location:
+        type: integer
+      b_number:
+        type: string
+      b_pan_num:
+        type: string
+      b_privilege_user:
+        type: integer
+      b_shop_name:
+        type: string
+      b_state:
+        type: integer
+      b_type_id:
+        type: integer
+      bid:
+        type: integer
+    type: object
+  Masterhandlers.BusinessCategory:
+    properties:
+      b_category_id:
+        type: integer
+      b_category_name:
+        type: string
+    type: object
+  Masterhandlers.InsertBusinessCategoryRequest:
+    properties:
+      b_category_name:
+        type: string
+    type: object
   Masterhandlers.ProductRegional:
     properties:
       language_id:
@@ -11,6 +69,13 @@ definitions:
       product_regional_id:
         type: integer
       product_regional_name:
+        type: string
+    type: object
+  Masterhandlers.UpdateBusinessCategoryRequest:
+    properties:
+      b_category_id:
+        type: integer
+      b_category_name:
         type: string
     type: object
   Masterhandlers.User:
@@ -50,6 +115,365 @@ info:
   title: My API
   version: "1.0"
 paths:
+  /business:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all business entries from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Masterhandlers.Business'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all businesses
+      tags:
+      - Business
+    post:
+      consumes:
+      - application/json
+      description: Create a new business record
+      parameters:
+      - description: Business Data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.Business'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Insert a new business
+      tags:
+      - Business
+    put:
+      consumes:
+      - application/json
+      description: Update an existing business record
+      parameters:
+      - description: Business Update Data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.Business'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a business
+      tags:
+      - Business
+  /business-branches:
+    get:
+      consumes:
+      - application/json
+      description: Fetch all business branches from the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Masterhandlers.BusinessBranch'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all business branches
+      tags:
+      - Business Branches
+    post:
+      consumes:
+      - application/json
+      description: Insert a new business branch into the system
+      parameters:
+      - description: Business Branch Data
+        in: body
+        name: branch
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.BusinessBranch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new business branch
+      tags:
+      - Business Branches
+    put:
+      consumes:
+      - application/json
+      description: Update the details of a business branch
+      parameters:
+      - description: Updated Business Branch
+        in: body
+        name: branch
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.BusinessBranch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a business branch
+      tags:
+      - Business Branches
+  /business-branches/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a specific business branch by its ID
+      parameters:
+      - description: Branch ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Masterhandlers.BusinessBranch'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get business branch by ID
+      tags:
+      - Business Branches
+  /business-category:
+    get:
+      consumes:
+      - application/json
+      description: Get all business categories or a specific one if ID is passed
+      parameters:
+      - description: Business Category ID
+        in: query
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Masterhandlers.BusinessCategory'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all or specific business categories
+      tags:
+      - BusinessCategory
+    post:
+      consumes:
+      - application/json
+      description: Add a new business category name
+      parameters:
+      - description: Business Category Name
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.InsertBusinessCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Insert a new business category
+      tags:
+      - BusinessCategory
+    put:
+      consumes:
+      - application/json
+      description: Update the name of a business category using its ID
+      parameters:
+      - description: Updated Info
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/Masterhandlers.UpdateBusinessCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a business category
+      tags:
+      - BusinessCategory
+  /business/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a business entry by its ID
+      parameters:
+      - description: Business ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Masterhandlers.Business'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a business by ID
+      tags:
+      - Business
   /getUsers:
     get:
       consumes:
