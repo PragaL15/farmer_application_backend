@@ -11,7 +11,6 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
-// Structs for DB Scan (use sql.Null*)
 type OrderItems struct {
 	OrderItemID  sql.NullInt64
 	ProductID    sql.NullInt64
@@ -35,7 +34,6 @@ type OrderDetail struct {
 	OrderItems        []OrderItems
 }
 
-// Structs for clean JSON response
 type CleanOrderItem struct {
 	OrderItemID  int64   `json:"order_item_id"`
 	ProductID    int64   `json:"product_id"`
@@ -59,7 +57,6 @@ type CleanOrderDetail struct {
 	OrderItems         []CleanOrderItem `json:"order_items"`
 }
 
-// Handler Function
 func GetAllOrderItemDetailsHandler(c *fiber.Ctx) error {
 	query := `
 		SELECT 
@@ -126,7 +123,6 @@ func GetAllOrderItemDetailsHandler(c *fiber.Ctx) error {
 
 		orderID := od.OrderID.Int64
 
-		// Convert order item
 		cleanItem := CleanOrderItem{
 			OrderItemID:  oi.OrderItemID.Int64,
 			ProductID:    oi.ProductID.Int64,
@@ -140,7 +136,6 @@ func GetAllOrderItemDetailsHandler(c *fiber.Ctx) error {
 		if existingOrder, ok := orderMap[orderID]; ok {
 			existingOrder.OrderItems = append(existingOrder.OrderItems, cleanItem)
 		} else {
-			// Convert time to string if valid
 			var deliveryDateStr string
 			if od.ActualDeliveryDate.Valid {
 				deliveryDateStr = od.ActualDeliveryDate.Time.Format(time.RFC3339)
