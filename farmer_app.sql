@@ -2769,18 +2769,22 @@ ALTER FUNCTION business_schema.get_least_stocked_products() OWNER TO postgres;
 -- Name: get_low_stock_items(); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
-CREATE FUNCTION business_schema.get_low_stock_items() RETURNS TABLE(product_id integer, product_name character varying, mandi_id integer, mandi_name character varying, stock_left numeric, minimum_stock_level numeric)
+CREATE FUNCTION business_schema.get_low_stock_items() RETURNS TABLE(product_id integer, product_name character varying, current_stock numeric, mandis json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY
-  SELECT
+  SELECT 
     s.product_id,
     p.product_name,
-    s.mandi_id,
-    m.mandi_name,
-    s.stock_left,
-    s.minimum_stock_level
+    SUM(s.stock_left) AS current_stock,
+    json_agg(
+      json_build_object(
+        'mandi_id', s.mandi_id,
+        'mandi_name', m.mandi_name,
+        'mandi_stock', s.stock_left
+      )
+    ) AS mandis
   FROM
     business_schema.stock_table s
   JOIN
@@ -2788,7 +2792,9 @@ BEGIN
   JOIN
     admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
   WHERE
-    s.stock_left < s.minimum_stock_level;
+    s.stock_left < s.minimum_stock_level
+  GROUP BY
+    s.product_id, p.product_name;
 END;
 $$;
 
@@ -2958,6 +2964,50 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_order_details_by_status_6() OWNER TO postgres;
+
+--
+-- Name: get_order_details_v2(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_order_details_v2() RETURNS TABLE(order_id bigint, retailer_id integer, retailer_name character varying, retailer_address character varying, retailer_mobile character varying, actual_delivery_date date, order_status_id integer, order_status character varying, total_order_amount numeric, order_item_id bigint, product_id bigint, product_name character varying, quantity numeric, unit_id integer, max_item_price numeric, unit_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        o.order_id,
+        o.retailer_id,
+        b.b_owner_name AS retailer_name,
+        b.address::VARCHAR AS retailer_address,  -- cast to match return type
+        b.mobile_number,
+        o.actual_delivery_date,
+        o.order_status AS order_status_id,
+        os.order_status,
+        o.total_order_amount,
+        oi.order_item_id,
+        oi.product_id,
+        mp.product_name,
+        oi.quantity,
+        oi.unit_id,
+        oi.max_item_price,
+        u.unit_name
+    FROM
+        business_schema.order_table o
+    INNER JOIN
+        business_schema.order_item_table oi ON o.order_id = oi.order_id
+    INNER JOIN
+        admin_schema.units_table u ON oi.unit_id = u.id
+    INNER JOIN
+        admin_schema.master_product mp ON oi.product_id = mp.product_id
+    LEFT JOIN
+        admin_schema.business_table b ON o.retailer_id = b.bid
+    LEFT JOIN
+        admin_schema.order_status_table os ON o.order_status = os.order_status_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_order_details_v2() OWNER TO postgres;
 
 --
 -- Name: get_order_history(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -4516,7 +4566,8 @@ CREATE TABLE admin_schema.business_table (
     is_active boolean DEFAULT true,
     state_id integer,
     location_id integer,
-    address text
+    address text,
+    mobile_number character varying(15)
 );
 
 
@@ -7132,10 +7183,10 @@ INSERT INTO admin_schema.business_category_table VALUES (3, 'Retail Business');
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true, NULL, NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true, NULL, NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (1, 'REG-98213', 'Madhan Enterprises', '2025-04-09 09:50:55.872491+05:30', '2025-04-09 10:01:55.544163+05:30', 3, 2, true, NULL, NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true, 1, 2, NULL);
+INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true, NULL, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true, NULL, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (1, 'REG-98213', 'Madhan Enterprises', '2025-04-09 09:50:55.872491+05:30', '2025-04-09 10:01:55.544163+05:30', 3, 2, true, NULL, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true, 1, 2, NULL, NULL);
 
 
 --
@@ -7608,9 +7659,9 @@ INSERT INTO business_schema.order_table VALUES (30, '2025-04-07 21:43:17.273763'
 -- Data for Name: stock_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
-INSERT INTO business_schema.stock_table VALUES (1, 2, 500.00, 300.00, 200.00, '2025-04-18', 4, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 100.00, 1000.00, 1);
 INSERT INTO business_schema.stock_table VALUES (2, 3, 1000.00, 700.00, 300.00, '2025-04-18', 5, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 200.00, 2000.00, 2);
 INSERT INTO business_schema.stock_table VALUES (3, 4, 250.00, 150.00, 100.00, '2025-04-18', 2, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 50.00, 500.00, 3);
+INSERT INTO business_schema.stock_table VALUES (1, 2, 500.00, 80.00, 200.00, '2025-04-18', 4, '2025-04-18 17:26:01.598525', '2025-04-18 17:26:01.598525', NULL, NULL, NULL, 100.00, 1000.00, 1);
 
 
 --

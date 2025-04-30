@@ -22,7 +22,6 @@ type LeastStockedData struct {
 	MandiName     string  `json:"mandi_name"`
 	StockLeft     float64 `json:"stock_left"`
 }
-
 type StockAvailabilityData struct {
 	StockID                    int     `json:"stock_id"`
 	ProductID                  int     `json:"product_id"`
@@ -33,7 +32,6 @@ type StockAvailabilityData struct {
 	MaximumStockLevel         float64 `json:"maximum_stock_level"`
 	StockAvailabilityPercentage float64 `json:"stock_availability_percentage"`
 }
-
 type LowStockProduct struct {
 	ProductID     int         `json:"product_id"`
 	ProductName   string      `json:"product_name"`
@@ -57,7 +55,6 @@ func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var results []CurrentStockData
 	for rows.Next() {
 		var data CurrentStockData
@@ -70,7 +67,6 @@ func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 		}
 		results = append(results, data)
 	}
-
 	return c.JSON(results)
 }
 func GetLeastStockedProductsHandler(c *fiber.Ctx) error {
@@ -84,7 +80,6 @@ func GetLeastStockedProductsHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var results []LeastStockedData
 	for rows.Next() {
 		var data LeastStockedData
@@ -97,7 +92,6 @@ func GetLeastStockedProductsHandler(c *fiber.Ctx) error {
 		}
 		results = append(results, data)
 	}
-
 	return c.JSON(results)
 }
 func GetStockAvailabilityPercentageHandler(c *fiber.Ctx) error {
@@ -111,7 +105,6 @@ func GetStockAvailabilityPercentageHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var results []StockAvailabilityData
 	for rows.Next() {
 		var data StockAvailabilityData
@@ -124,7 +117,6 @@ func GetStockAvailabilityPercentageHandler(c *fiber.Ctx) error {
 		}
 		results = append(results, data)
 	}
-
 	return c.JSON(results)
 }
 func GetLowStockItemsHandler(c *fiber.Ctx) error {
@@ -138,12 +130,10 @@ func GetLowStockItemsHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var results []LowStockProduct
 	for rows.Next() {
 		var item LowStockProduct
 		var mandisRaw []byte
-
 		err := rows.Scan(&item.ProductID, &item.ProductName, &item.CurrentStock, &mandisRaw)
 		if err != nil {
 			log.Println("Error scanning row:", err)
@@ -152,7 +142,6 @@ func GetLowStockItemsHandler(c *fiber.Ctx) error {
 				"detail": err.Error(),
 			})
 		}
-
 		if err := json.Unmarshal(mandisRaw, &item.Mandis); err != nil {
 			log.Println("Error unmarshaling mandis JSON:", err)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
@@ -160,9 +149,7 @@ func GetLowStockItemsHandler(c *fiber.Ctx) error {
 				"detail": err.Error(),
 			})
 		}
-
 		results = append(results, item)
 	}
-
 	return c.JSON(results)
 }
