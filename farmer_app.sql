@@ -3596,6 +3596,90 @@ $$;
 ALTER FUNCTION business_schema.insert_price_data(p_product_id integer, p_price double precision, p_unit_id integer, p_wholeseller_id integer, p_currency text, p_created_at timestamp without time zone, p_updated_at timestamp without time zone, p_remarks text) OWNER TO postgres;
 
 --
+-- Name: insert_wholeseller_entry(integer, character varying, character varying, double precision, double precision, timestamp without time zone, integer, integer, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_wholeseller_entry(p_product_id integer, p_quality character varying, p_wastage character varying, p_quantity double precision, p_price double precision, p_datetime timestamp without time zone, p_wholeseller_id integer, p_mandi_id integer, p_warehouse_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_entry_id INTEGER;
+BEGIN
+    INSERT INTO business_schema.wholeseller_entry_table (
+        product_id,
+        quality,
+        wastage,
+        quantity,
+        price,
+        datetime,
+        wholeseller_id,
+        mandi_id,
+        warehouse_id
+    )
+    VALUES (
+        p_product_id,
+        p_quality,
+        p_wastage,
+        p_quantity,
+        p_price,
+        p_datetime,
+        p_wholeseller_id,
+        p_mandi_id,
+        p_warehouse_id
+    )
+    RETURNING entry_id INTO v_entry_id;
+
+    RETURN v_entry_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_wholeseller_entry(p_product_id integer, p_quality character varying, p_wastage character varying, p_quantity double precision, p_price double precision, p_datetime timestamp without time zone, p_wholeseller_id integer, p_mandi_id integer, p_warehouse_id integer) OWNER TO postgres;
+
+--
+-- Name: insert_wholeseller_entry(integer, character varying, character varying, double precision, double precision, timestamp without time zone, integer, integer, integer, integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_wholeseller_entry(p_product_id integer, p_quality character varying, p_wastage character varying, p_quantity double precision, p_price double precision, p_datetime timestamp without time zone, p_wholeseller_id integer, p_mandi_id integer, p_warehouse_id integer, p_unit_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_entry_id INTEGER;
+BEGIN
+    INSERT INTO business_schema.wholeseller_entry_table (
+        product_id,
+        quality,
+        wastage,
+        quantity,
+        price,
+        datetime,
+        wholeseller_id,
+        mandi_id,
+        warehouse_id,
+        unit_id
+    )
+    VALUES (
+        p_product_id,
+        p_quality,
+        p_wastage,
+        p_quantity,
+        p_price,
+        p_datetime,
+        p_wholeseller_id,
+        p_mandi_id,
+        p_warehouse_id,
+        p_unit_id
+    )
+    RETURNING entry_id INTO v_entry_id;
+
+    RETURN v_entry_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_wholeseller_entry(p_product_id integer, p_quality character varying, p_wastage character varying, p_quantity double precision, p_price double precision, p_datetime timestamp without time zone, p_wholeseller_id integer, p_mandi_id integer, p_warehouse_id integer, p_unit_id integer) OWNER TO postgres;
+
+--
 -- Name: insert_wholeseller_offer(integer, integer, numeric, date, text); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -5395,6 +5479,32 @@ ALTER SEQUENCE admin_schema.product_regional_name_product_regional_id_seq OWNED 
 
 
 --
+-- Name: quality_list_table_quality_id_seq; Type: SEQUENCE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE SEQUENCE admin_schema.quality_list_table_quality_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE admin_schema.quality_list_table_quality_id_seq OWNER TO postgres;
+
+--
+-- Name: quality_list_table; Type: TABLE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE TABLE admin_schema.quality_list_table (
+    quality_id integer DEFAULT nextval('admin_schema.quality_list_table_quality_id_seq'::regclass) NOT NULL,
+    quality_name character varying(15) NOT NULL
+);
+
+
+ALTER TABLE admin_schema.quality_list_table OWNER TO postgres;
+
+--
 -- Name: roles_table; Type: TABLE; Schema: admin_schema; Owner: admin
 --
 
@@ -5727,6 +5837,18 @@ ALTER SEQUENCE admin_schema.vehicle_model_id_seq OWNER TO admin;
 
 ALTER SEQUENCE admin_schema.vehicle_model_id_seq OWNED BY admin_schema.vehicle_model.id;
 
+
+--
+-- Name: wastage_measure_table; Type: TABLE; Schema: admin_schema; Owner: postgres
+--
+
+CREATE TABLE admin_schema.wastage_measure_table (
+    id integer NOT NULL,
+    wastage_measure_name character varying(15) NOT NULL
+);
+
+
+ALTER TABLE admin_schema.wastage_measure_table OWNER TO postgres;
 
 --
 -- Name: wholeseller_mandi_map; Type: TABLE; Schema: admin_schema; Owner: postgres
@@ -6351,6 +6473,52 @@ ALTER SEQUENCE business_schema.warehouse_list_warehouse_id_seq OWNER TO postgres
 --
 
 ALTER SEQUENCE business_schema.warehouse_list_warehouse_id_seq OWNED BY business_schema.warehouse_list.warehouse_id;
+
+
+--
+-- Name: wholeseller_entry_table; Type: TABLE; Schema: business_schema; Owner: postgres
+--
+
+CREATE TABLE business_schema.wholeseller_entry_table (
+    entry_id integer NOT NULL,
+    product_id integer NOT NULL,
+    quality character varying(15) NOT NULL,
+    wastage character varying(15) NOT NULL,
+    quantity double precision NOT NULL,
+    price double precision NOT NULL,
+    datetime timestamp without time zone NOT NULL,
+    wholeseller_id integer NOT NULL,
+    mandi_id integer NOT NULL,
+    unit_id integer,
+    last_updated timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    warehouse_id integer,
+    CONSTRAINT wholeseller_entry_table_price_check CHECK ((price > (0)::double precision)),
+    CONSTRAINT wholeseller_entry_table_quantity_check CHECK ((quantity > (0)::double precision))
+);
+
+
+ALTER TABLE business_schema.wholeseller_entry_table OWNER TO postgres;
+
+--
+-- Name: wholeseller_entry_table_entry_id_seq; Type: SEQUENCE; Schema: business_schema; Owner: postgres
+--
+
+CREATE SEQUENCE business_schema.wholeseller_entry_table_entry_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE business_schema.wholeseller_entry_table_entry_id_seq OWNER TO postgres;
+
+--
+-- Name: wholeseller_entry_table_entry_id_seq; Type: SEQUENCE OWNED BY; Schema: business_schema; Owner: postgres
+--
+
+ALTER SEQUENCE business_schema.wholeseller_entry_table_entry_id_seq OWNED BY business_schema.wholeseller_entry_table.entry_id;
 
 
 --
@@ -7193,6 +7361,13 @@ ALTER TABLE ONLY business_schema.warehouse_list ALTER COLUMN warehouse_id SET DE
 
 
 --
+-- Name: wholeseller_entry_table entry_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table ALTER COLUMN entry_id SET DEFAULT nextval('business_schema.wholeseller_entry_table_entry_id_seq'::regclass);
+
+
+--
 -- Name: wholeseller_offers offer_id; Type: DEFAULT; Schema: business_schema; Owner: postgres
 --
 
@@ -7483,6 +7658,16 @@ INSERT INTO admin_schema.product_regional_name VALUES (1, 1, 3, 'தக்கா
 
 
 --
+-- Data for Name: quality_list_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
+--
+
+INSERT INTO admin_schema.quality_list_table VALUES (1, 'High');
+INSERT INTO admin_schema.quality_list_table VALUES (2, 'Very High');
+INSERT INTO admin_schema.quality_list_table VALUES (3, 'Low');
+INSERT INTO admin_schema.quality_list_table VALUES (4, 'Moderate');
+
+
+--
 -- Data for Name: roles_table; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
@@ -7561,6 +7746,16 @@ INSERT INTO admin_schema.vehicle_make VALUES (3, 'Ford');
 INSERT INTO admin_schema.vehicle_model VALUES (1, 'Corolla');
 INSERT INTO admin_schema.vehicle_model VALUES (2, 'Civic');
 INSERT INTO admin_schema.vehicle_model VALUES (3, 'Mustang');
+
+
+--
+-- Data for Name: wastage_measure_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
+--
+
+INSERT INTO admin_schema.wastage_measure_table VALUES (1, 'High');
+INSERT INTO admin_schema.wastage_measure_table VALUES (2, 'Very High');
+INSERT INTO admin_schema.wastage_measure_table VALUES (3, 'Low');
+INSERT INTO admin_schema.wastage_measure_table VALUES (4, 'Moderate');
 
 
 --
@@ -7782,6 +7977,17 @@ INSERT INTO business_schema.stock_table VALUES (1, 2, 500.00, 80.00, 200.00, '20
 -- Data for Name: warehouse_list; Type: TABLE DATA; Schema: business_schema; Owner: postgres
 --
 
+INSERT INTO business_schema.warehouse_list VALUES (1, 101, 'Erode Central Warehouse', '123 Gandhi Street, Erode', 'erode.central@warehouse.com', '9876543210', 638001, true, 'Col1 sample', 'Col2 sample', 'Primary warehouse for Erode region');
+INSERT INTO business_schema.warehouse_list VALUES (2, 102, 'Coimbatore West Warehouse', '456 Anna Nagar, Coimbatore', 'cbe.west@warehouse.com', '9876543211', 641001, true, 'Col1 sample', 'Col2 sample', 'Handles high-volume retail orders');
+
+
+--
+-- Data for Name: wholeseller_entry_table; Type: TABLE DATA; Schema: business_schema; Owner: postgres
+--
+
+INSERT INTO business_schema.wholeseller_entry_table VALUES (3, 1, 'High', 'Low', 100, 25.5, '2025-05-01 10:00:00', 103, 4, 1, '2025-05-01 22:36:45.721827', NULL);
+INSERT INTO business_schema.wholeseller_entry_table VALUES (4, 1, 'High', 'Low', 100, 25.5, '2025-05-01 10:00:00', 103, 4, NULL, '2025-05-01 22:52:08.258198', NULL);
+INSERT INTO business_schema.wholeseller_entry_table VALUES (8, 3, 'High', 'Low', 50.5, 120.75, '2025-05-01 10:30:00', 103, 4, 1, '2025-05-01 23:15:54.637314', 1);
 
 
 --
@@ -8025,6 +8231,13 @@ SELECT pg_catalog.setval('admin_schema.product_regional_name_product_regional_id
 
 
 --
+-- Name: quality_list_table_quality_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('admin_schema.quality_list_table_quality_id_seq', 1, true);
+
+
+--
 -- Name: roles_table_role_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
@@ -8182,7 +8395,14 @@ SELECT pg_catalog.setval('business_schema.stock_table_stock_id_seq', 3, true);
 -- Name: warehouse_list_warehouse_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.warehouse_list_warehouse_id_seq', 1, false);
+SELECT pg_catalog.setval('business_schema.warehouse_list_warehouse_id_seq', 2, true);
+
+
+--
+-- Name: wholeseller_entry_table_entry_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
+--
+
+SELECT pg_catalog.setval('business_schema.wholeseller_entry_table_entry_id_seq', 8, true);
 
 
 --
@@ -8525,6 +8745,14 @@ ALTER TABLE ONLY admin_schema.product_regional_name
 
 
 --
+-- Name: quality_list_table quality_list_table_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.quality_list_table
+    ADD CONSTRAINT quality_list_table_pkey PRIMARY KEY (quality_id);
+
+
+--
 -- Name: roles_table roles_table_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: admin
 --
 
@@ -8554,6 +8782,22 @@ ALTER TABLE ONLY admin_schema.sales_data_table
 
 ALTER TABLE ONLY admin_schema.order_status_table
     ADD CONSTRAINT unique_order_status_id UNIQUE (order_status_id);
+
+
+--
+-- Name: quality_list_table unique_quality_name; Type: CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.quality_list_table
+    ADD CONSTRAINT unique_quality_name UNIQUE (quality_name);
+
+
+--
+-- Name: wastage_measure_table unique_wastage_name; Type: CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.wastage_measure_table
+    ADD CONSTRAINT unique_wastage_name UNIQUE (wastage_measure_name);
 
 
 --
@@ -8626,6 +8870,14 @@ ALTER TABLE ONLY admin_schema.vehicle_make
 
 ALTER TABLE ONLY admin_schema.vehicle_model
     ADD CONSTRAINT vehicle_model_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: wastage_measure_table wastage_measure_table_pkey; Type: CONSTRAINT; Schema: admin_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY admin_schema.wastage_measure_table
+    ADD CONSTRAINT wastage_measure_table_pkey PRIMARY KEY (id);
 
 
 --
@@ -8754,6 +9006,14 @@ ALTER TABLE ONLY business_schema.invoice_table
 
 ALTER TABLE ONLY business_schema.warehouse_list
     ADD CONSTRAINT warehouse_list_pkey PRIMARY KEY (warehouse_id);
+
+
+--
+-- Name: wholeseller_entry_table wholeseller_entry_table_pkey; Type: CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT wholeseller_entry_table_pkey PRIMARY KEY (entry_id);
 
 
 --
@@ -9269,6 +9529,14 @@ ALTER TABLE ONLY business_schema.stock_table
 
 
 --
+-- Name: wholeseller_entry_table fk_mandi; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_mandi FOREIGN KEY (mandi_id) REFERENCES admin_schema.master_mandi_table(mandi_id);
+
+
+--
 -- Name: mode_of_payment fk_mode; Type: FK CONSTRAINT; Schema: business_schema; Owner: admin
 --
 
@@ -9290,6 +9558,22 @@ ALTER TABLE ONLY business_schema.order_table
 
 ALTER TABLE ONLY business_schema.cold_storage_demand_planning
     ADD CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: wholeseller_entry_table fk_product; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES admin_schema.master_product(product_id);
+
+
+--
+-- Name: wholeseller_entry_table fk_quality; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_quality FOREIGN KEY (quality) REFERENCES admin_schema.quality_list_table(quality_name);
 
 
 --
@@ -9325,6 +9609,14 @@ ALTER TABLE ONLY business_schema.stock_table
 
 
 --
+-- Name: wholeseller_entry_table fk_unit; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_unit FOREIGN KEY (unit_id) REFERENCES admin_schema.units_table(id);
+
+
+--
 -- Name: order_item_table fk_units; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
@@ -9333,11 +9625,35 @@ ALTER TABLE ONLY business_schema.order_item_table
 
 
 --
+-- Name: wholeseller_entry_table fk_warehouse; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_warehouse FOREIGN KEY (warehouse_id) REFERENCES business_schema.warehouse_list(warehouse_id);
+
+
+--
+-- Name: wholeseller_entry_table fk_wastage; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_wastage FOREIGN KEY (wastage) REFERENCES admin_schema.wastage_measure_table(wastage_measure_name);
+
+
+--
 -- Name: daily_price_update fk_wholeseller; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
 --
 
 ALTER TABLE ONLY business_schema.daily_price_update
     ADD CONSTRAINT fk_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid) ON DELETE CASCADE;
+
+
+--
+-- Name: wholeseller_entry_table fk_wholeseller; Type: FK CONSTRAINT; Schema: business_schema; Owner: postgres
+--
+
+ALTER TABLE ONLY business_schema.wholeseller_entry_table
+    ADD CONSTRAINT fk_wholeseller FOREIGN KEY (wholeseller_id) REFERENCES admin_schema.business_table(bid);
 
 
 --
@@ -9760,10 +10076,24 @@ GRANT ALL ON TABLE admin_schema.product_regional_name TO admin;
 
 
 --
+-- Name: TABLE quality_list_table; Type: ACL; Schema: admin_schema; Owner: postgres
+--
+
+GRANT ALL ON TABLE admin_schema.quality_list_table TO admin;
+
+
+--
 -- Name: TABLE sales_data_table; Type: ACL; Schema: admin_schema; Owner: postgres
 --
 
 GRANT ALL ON TABLE admin_schema.sales_data_table TO admin;
+
+
+--
+-- Name: TABLE wastage_measure_table; Type: ACL; Schema: admin_schema; Owner: postgres
+--
+
+GRANT ALL ON TABLE admin_schema.wastage_measure_table TO admin;
 
 
 --

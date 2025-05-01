@@ -97,6 +97,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/InsertDailyPrice", handlers.InsertPriceHandler)
 	app.Post("/InsertInvoiceDetails", handlers.InsertInvoiceDetails)
 	app.Post("/InsertCartDetails", handlers.InsertCart)
+	app.Post("/InsertWholesellerOrder", handlers.InsertWholesellerEntryHandler)
 	app.Post("/InserWholesellerOffers", handlers.CreateWholesellerOfferHandler)
 	app.Post("/PostCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
 	app.Post("/PostProductRegional", Masterhandlers.InsertProductRegionalName)

@@ -1,5 +1,4 @@
 package Marketoppurtinities
-
 import (
 	"context"
 	"log"
@@ -7,15 +6,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-// TopRetailerSummary represents a retailer and their aggregated order data.
-type TopRetailerSummary struct {
-	RetailerID      int64   `json:"retailer_id" example:"101"`
-	RetailerName    string  `json:"retailer_name" example:"Sri Lakshmi Stores"`
-	TotalQuantity   float64 `json:"total_quantity" example:"350.5"`
-	TotalOrderValue float64 `json:"total_order_value" example:"78000.75"`
+type TopRetailerSummary struct 
+{
+	RetailerID      int64   `json:"retailer_id"`
+	RetailerName    string  `json:"retailer_name"`
+	TotalQuantity   float64 `json:"total_quantity"`
+	TotalOrderValue float64 `json:"total_order_value"`
 }
 // GetTopRetailersHandler godoc
-//
 // @Summary      Get top 5 bulk ordering retailers
 // @Description  Returns the top 5 retailers who place the largest quantity of bulk orders
 // @Tags         Market Opportunities
@@ -24,6 +22,7 @@ type TopRetailerSummary struct {
 // @Success      200  {array}   TopRetailerSummary
 // @Failure      500  {object}  map[string]string
 // @Router       /api/top-retailers [get]
+
 func GetTopRetailersHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM business_schema.get_top_5_bulk_ordering_retailers();"
 	rows, err := db.Pool.Query(context.Background(), query)

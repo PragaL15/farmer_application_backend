@@ -70,3 +70,26 @@ API: 2025/05/01 15:05:25 main.go:68: Server is running on port 3000
 API: 2025/05/01 15:05:50 main.go:53: METHOD=GET PATH=/getTopRetailerDetails STATUS=200 DURATION=21.2147ms
 API: 2025/05/01 15:05:55 main.go:78: Shutting down server gracefully...
 API: 2025/05/01 15:05:55 main.go:82: Server stopped cleanly
+API: 2025/05/01 15:15:53 main.go:42: Server is starting...
+API: 2025/05/01 15:15:53 main.go:68: Server is running on port 3000
+API: 2025/05/01 15:16:12 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=2.3869ms
+API: 2025/05/01 15:16:12 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/05/01 15:16:12 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/05/01 15:16:12 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/05/01 15:16:12 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=1.9502ms
+API: 2025/05/01 15:16:12 main.go:53: METHOD=GET PATH=favicon-32x32.png STATUS=200 DURATION=0s
+API: 2025/05/01 22:49:29 main.go:78: Shutting down server gracefully...
+API: 2025/05/01 22:49:29 main.go:82: Server stopped cleanly
+API: 2025/05/01 22:49:44 main.go:42: Server is starting...
+API: 2025/05/01 22:49:45 main.go:68: Server is running on port 3000
+API: 2025/05/01 22:51:44 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=400 DURATION=9.6336ms
+API: 2025/05/01 22:52:08 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=200 DURATION=63.6309ms
+API: 2025/05/01 23:08:08 main.go:78: Shutting down server gracefully...
+API: 2025/05/01 23:08:08 main.go:82: Server stopped cleanly
+API: 2025/05/01 23:08:21 main.go:42: Server is starting...
+API: 2025/05/01 23:08:21 main.go:68: Server is running on port 3000
+API: 2025/05/01 23:09:18 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=500 DURATION=18.54ms
+API: 2025/05/01 23:12:25 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=500 DURATION=21.0569ms
+API: 2025/05/01 23:15:18 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=500 DURATION=22.8695ms
+API: 2025/05/01 23:15:32 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=500 DURATION=27.3638ms
+API: 2025/05/01 23:15:54 main.go:53: METHOD=POST PATH=/InsertWholesellerOrder STATUS=200 DURATION=20.4092ms
