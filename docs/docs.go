@@ -51,6 +51,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/top-retailers": {
+            "get": {
+                "description": "Returns the top 5 retailers who place the largest quantity of bulk orders",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market Opportunities"
+                ],
+                "summary": "Get top 5 bulk ordering retailers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Marketoppurtinities.TopRetailerSummary"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/wholeseller/offer": {
+            "post": {
+                "description": "Inserts a new offer for the given order by the wholeseller",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "Make a new price offer on an existing bulk order",
+                "parameters": [
+                    {
+                        "description": "Offer Details",
+                        "name": "offer",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OfferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.OfferResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/business": {
             "get": {
                 "description": "Retrieve all business entries from the database",
@@ -1038,6 +1125,27 @@ const docTemplate = `{
                 }
             }
         },
+        "Marketoppurtinities.TopRetailerSummary": {
+            "type": "object",
+            "properties": {
+                "retailer_id": {
+                    "type": "integer",
+                    "example": 101
+                },
+                "retailer_name": {
+                    "type": "string",
+                    "example": "Sri Lakshmi Stores"
+                },
+                "total_order_value": {
+                    "type": "number",
+                    "example": 78000.75
+                },
+                "total_quantity": {
+                    "type": "number",
+                    "example": 350.5
+                }
+            }
+        },
         "Masterhandlers.Business": {
             "type": "object",
             "properties": {
@@ -1233,6 +1341,35 @@ const docTemplate = `{
                 },
                 "stock_to_sales_ratio": {
                     "type": "number"
+                }
+            }
+        },
+        "handlers.OfferRequest": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "offered_price": {
+                    "type": "number"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "proposed_delivery_date": {
+                    "description": "\"YYYY-MM-DD\"",
+                    "type": "string"
+                },
+                "wholeseller_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.OfferResponse": {
+            "type": "object",
+            "properties": {
+                "offer_id": {
+                    "type": "integer"
                 }
             }
         }

@@ -28,6 +28,21 @@ definitions:
       quantity:
         type: number
     type: object
+  Marketoppurtinities.TopRetailerSummary:
+    properties:
+      retailer_id:
+        example: 101
+        type: integer
+      retailer_name:
+        example: Sri Lakshmi Stores
+        type: string
+      total_order_value:
+        example: 78000.75
+        type: number
+      total_quantity:
+        example: 350.5
+        type: number
+    type: object
   Masterhandlers.Business:
     properties:
       b_category_id:
@@ -157,6 +172,25 @@ definitions:
       stock_to_sales_ratio:
         type: number
     type: object
+  handlers.OfferRequest:
+    properties:
+      message:
+        type: string
+      offered_price:
+        type: number
+      order_id:
+        type: integer
+      proposed_delivery_date:
+        description: '"YYYY-MM-DD"'
+        type: string
+      wholeseller_id:
+        type: integer
+    type: object
+  handlers.OfferResponse:
+    properties:
+      offer_id:
+        type: integer
+    type: object
 host: localhost:3000
 info:
   contact:
@@ -189,6 +223,64 @@ paths:
       summary: Get all bulk order details
       tags:
       - Orders
+  /api/top-retailers:
+    get:
+      consumes:
+      - application/json
+      description: Returns the top 5 retailers who place the largest quantity of bulk
+        orders
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Marketoppurtinities.TopRetailerSummary'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get top 5 bulk ordering retailers
+      tags:
+      - Market Opportunities
+  /api/wholeseller/offer:
+    post:
+      consumes:
+      - application/json
+      description: Inserts a new offer for the given order by the wholeseller
+      parameters:
+      - description: Offer Details
+        in: body
+        name: offer
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.OfferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.OfferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Make a new price offer on an existing bulk order
+      tags:
+      - Offers
   /business:
     get:
       consumes:

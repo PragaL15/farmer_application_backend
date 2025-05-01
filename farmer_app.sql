@@ -2610,6 +2610,45 @@ $$;
 ALTER FUNCTION business_schema.get_all_order_details() OWNER TO postgres;
 
 --
+-- Name: get_bulk_order_items_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_bulk_order_items_details() RETURNS TABLE(order_id bigint, product_id bigint, product_name character varying, quantity numeric, price_of_product numeric, retailer_id bigint, wholeseller_id bigint, retailer_name character varying, wholeseller_name character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        oi.order_id,
+        oi.product_id,
+        mp.product_name,
+        oi.quantity,
+        oi.max_item_price AS price_of_product,
+        o.retailer_id::bigint,
+        wh.bid::bigint AS wholeseller_id,
+        br.b_owner_name AS retailer_name,
+        wh.b_owner_name AS wholeseller_name
+    FROM
+        business_schema.order_item_table oi
+    JOIN
+        business_schema.order_table o ON oi.order_id = o.order_id
+    JOIN
+        admin_schema.master_product mp ON oi.product_id = mp.product_id
+    LEFT JOIN
+        admin_schema.business_table br ON o.retailer_id = br.bid
+    LEFT JOIN
+        admin_schema.business_table wh ON wh.bid = ANY(o.wholeseller_id)
+    WHERE
+        oi.order_id IS NOT NULL
+    ORDER BY
+        oi.order_id DESC;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_bulk_order_items_details() OWNER TO postgres;
+
+--
 -- Name: get_cart_details(bigint); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -2800,49 +2839,6 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_low_stock_items() OWNER TO postgres;
-
---
--- Name: get_low_stock_products(); Type: FUNCTION; Schema: business_schema; Owner: postgres
---
-
-CREATE FUNCTION business_schema.get_low_stock_products() RETURNS TABLE(product_id integer, product_name character varying, mandi jsonb)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        p.product_id::INTEGER,  -- Explicitly casting to integer
-        p.product_name,
-        jsonb_agg(
-            jsonb_build_object(
-                'mandi_id', m.mandi_id,
-                'mandi_name', m.mandi_name,
-                'total_stock', total_stock,
-                'mandi_stock', s.stock_left
-            )
-        ) AS mandi
-    FROM
-        admin_schema.master_product p
-    JOIN
-        business_schema.stock_table s ON p.product_id = s.product_id
-    JOIN
-        admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
-    JOIN
-        admin_schema.sales_data_table sd ON p.product_id = sd.product_id
-    CROSS JOIN LATERAL (
-        SELECT SUM(s2.stock_left) AS total_stock
-        FROM business_schema.stock_table s2
-        WHERE s2.product_id = p.product_id
-    ) AS total_stock
-    GROUP BY
-        p.product_id, p.product_name
-    HAVING
-        (SUM(s.stock_left) / NULLIF(MAX(sd.sales_volume_kg), 0)) < 2.5;
-END;
-$$;
-
-
-ALTER FUNCTION business_schema.get_low_stock_products() OWNER TO postgres;
 
 --
 -- Name: get_order_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -3149,26 +3145,78 @@ ALTER FUNCTION business_schema.get_order_history_with_details() OWNER TO postgre
 -- Name: get_order_summary(); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
-CREATE FUNCTION business_schema.get_order_summary() RETURNS TABLE(order_id integer, total_quantity numeric, total_price numeric, retailer_id integer, retailer_name text)
+CREATE FUNCTION business_schema.get_order_summary() RETURNS TABLE(order_id bigint, total_quantity numeric, total_price numeric, retailer_id bigint, retailer_name text)
     LANGUAGE plpgsql
     AS $$
 BEGIN
     RETURN QUERY
     SELECT 
-        oi.order_id::INT,
-        SUM(oi.quantity)::NUMERIC,
-        SUM(COALESCE(oi.agreed_quantity, 0) * COALESCE(oi.wholeseller_price, 0))::NUMERIC,
-        o.retailer_id::INT,
+        o.order_id,
+        SUM(oi.quantity)::NUMERIC AS total_quantity,
+        SUM(oi.quantity * COALESCE(oi.wholeseller_price, 0))::NUMERIC AS total_price,
+        o.retailer_id::BIGINT,
         b.b_owner_name::TEXT
-    FROM business_schema.order_item_table oi
-    JOIN business_schema.order_table o ON oi.order_id = o.order_id
+    FROM business_schema.order_table o
+    JOIN business_schema.order_item_table oi ON o.order_id = oi.order_id
     JOIN admin_schema.business_table b ON o.retailer_id = b.bid
-    GROUP BY oi.order_id, o.retailer_id, b.b_owner_name;
+    GROUP BY o.order_id, o.retailer_id, b.b_owner_name;
 END;
 $$;
 
 
 ALTER FUNCTION business_schema.get_order_summary() OWNER TO postgres;
+
+--
+-- Name: get_re_stock_products(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_re_stock_products() RETURNS TABLE(product_id integer, product_name character varying, stock_to_sales_ratio numeric, stock_status character varying, mandi jsonb)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        p.product_id::INTEGER,
+        p.product_name,
+        ROUND(stock_totals.total_stock / NULLIF(sd.sales_volume_kg, 0), 2) AS stock_to_sales_ratio,
+        (
+            CASE
+                WHEN (stock_totals.total_stock / NULLIF(sd.sales_volume_kg, 0)) < 2 THEN 'Low Stock'
+                WHEN (stock_totals.total_stock / NULLIF(sd.sales_volume_kg, 0)) < 4 THEN 'Restock Soon'
+                ELSE 'Stock Sufficient'
+            END
+        )::VARCHAR AS stock_status,
+        jsonb_agg(
+            jsonb_build_object(
+                'mandi_id', m.mandi_id,
+                'mandi_name', m.mandi_name,
+                'mandi_stock', s.stock_left
+            )
+        ) AS mandi
+    FROM
+        admin_schema.master_product p
+    JOIN
+        business_schema.stock_table s ON p.product_id = s.product_id
+    JOIN
+        admin_schema.master_mandi_table m ON s.mandi_id = m.mandi_id
+    JOIN
+        admin_schema.sales_data_table sd ON p.product_id = sd.product_id
+    CROSS JOIN LATERAL (
+        SELECT SUM(s2.stock_left) AS total_stock
+        FROM business_schema.stock_table s2
+        WHERE s2.product_id = p.product_id
+    ) AS stock_totals
+    WHERE
+        (stock_totals.total_stock / NULLIF(sd.sales_volume_kg, 0)) < 4
+    GROUP BY
+        p.product_id, p.product_name, stock_totals.total_stock, sd.sales_volume_kg
+    ORDER BY
+        stock_to_sales_ratio ASC;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_re_stock_products() OWNER TO postgres;
 
 --
 -- Name: get_seasonal_demand(text[], text[]); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -3240,6 +3288,32 @@ $$;
 
 
 ALTER FUNCTION business_schema.get_stock_availability_percentage() OWNER TO postgres;
+
+--
+-- Name: get_top_5_bulk_ordering_retailers(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_top_5_bulk_ordering_retailers() RETURNS TABLE(retailer_id bigint, retailer_name text, total_quantity numeric, total_order_value numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.retailer_id::BIGINT,
+        b.b_owner_name::TEXT,
+        SUM(oi.quantity)::NUMERIC AS total_quantity,
+        SUM(oi.quantity * COALESCE(oi.wholeseller_price, 0))::NUMERIC AS total_order_value
+    FROM business_schema.order_table o
+    JOIN business_schema.order_item_table oi ON o.order_id = oi.order_id
+    JOIN admin_schema.business_table b ON o.retailer_id = b.bid
+    GROUP BY o.retailer_id, b.b_owner_name
+    ORDER BY total_quantity DESC -- or change to total_order_value DESC
+    LIMIT 5;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_top_5_bulk_ordering_retailers() OWNER TO postgres;
 
 --
 -- Name: get_wholeseller_stock_details(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -3520,6 +3594,45 @@ $$;
 
 
 ALTER FUNCTION business_schema.insert_price_data(p_product_id integer, p_price double precision, p_unit_id integer, p_wholeseller_id integer, p_currency text, p_created_at timestamp without time zone, p_updated_at timestamp without time zone, p_remarks text) OWNER TO postgres;
+
+--
+-- Name: insert_wholeseller_offer(integer, integer, numeric, date, text); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.insert_wholeseller_offer(p_order_id integer, p_wholeseller_id integer, p_offered_price numeric, p_proposed_delivery_date date, p_rejection_reason text DEFAULT NULL::text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_offer_id INT;
+BEGIN
+    INSERT INTO business_schema.wholeseller_offers (
+        order_id,
+        wholeseller_id,
+        offered_price,
+        proposed_delivery_date,
+        offer_status,
+        created_at,
+        updated_at,
+        rejection_reason
+    )
+    VALUES (
+        p_order_id,
+        p_wholeseller_id,
+        p_offered_price,
+        p_proposed_delivery_date,
+        1,                        -- offer_status: 1 = active/pending
+        NOW(),
+        NOW(),
+        p_rejection_reason
+    )
+    RETURNING offer_id INTO v_offer_id;
+
+    RETURN v_offer_id;
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.insert_wholeseller_offer(p_order_id integer, p_wholeseller_id integer, p_offered_price numeric, p_proposed_delivery_date date, p_rejection_reason text) OWNER TO postgres;
 
 --
 -- Name: log_order_activity(); Type: FUNCTION; Schema: business_schema; Owner: postgres
@@ -7183,10 +7296,10 @@ INSERT INTO admin_schema.business_category_table VALUES (3, 'Retail Business');
 -- Data for Name: business_table; Type: TABLE DATA; Schema: admin_schema; Owner: postgres
 --
 
-INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'Jane Doe', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true, NULL, NULL, NULL, NULL);
-INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'Jane Doe', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true, NULL, NULL, NULL, NULL);
 INSERT INTO admin_schema.business_table VALUES (1, 'REG-98213', 'Madhan Enterprises', '2025-04-09 09:50:55.872491+05:30', '2025-04-09 10:01:55.544163+05:30', 3, 2, true, NULL, NULL, NULL, NULL);
 INSERT INTO admin_schema.business_table VALUES (103, 'REG789', 'Jane Doe', NULL, '2025-03-27 11:51:51.001148+05:30', 2, 2, true, 1, 2, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (104, 'REG104', 'ravi', NULL, '2025-03-27 11:54:56.79385+05:30', 3, 3, true, NULL, NULL, NULL, NULL);
+INSERT INTO admin_schema.business_table VALUES (101, 'REG123', 'ram', NULL, '2025-03-27 11:46:40.100715+05:30', 1, 1, true, NULL, NULL, NULL, NULL);
 
 
 --
@@ -7509,6 +7622,7 @@ INSERT INTO business_schema.invoice_table VALUES (3, 'INV-20250225-00003', 3, 15
 INSERT INTO business_schema.invoice_table VALUES (5, 'INV-10', 8, 9200.00, 0.00, '2025-04-02 06:49:33.705601', '2025-04-25', 0.00, NULL, 'INR', DEFAULT, 103, 2, '2025-04-02 07:22:09.722567', NULL, 1, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.invoice_table VALUES (23, 'INV-18', NULL, 1500.00, 0.00, '2025-04-03 11:31:05.940004', NULL, NULL, NULL, 'INR', DEFAULT, NULL, 1, '2025-04-03 11:31:05.940004', NULL, 1, NULL, NULL, NULL, NULL);
 INSERT INTO business_schema.invoice_table VALUES (39, NULL, 12, 1500.50, 50.00, '2025-04-02 00:00:00', '2025-04-15', 75.25, NULL, 'INR', DEFAULT, 103, 1, '2025-04-03 16:37:24.587299', NULL, 1, NULL, NULL, NULL, NULL);
+INSERT INTO business_schema.invoice_table VALUES (40, NULL, 23, 9500.00, 0.00, '2025-05-01 00:00:00', '2025-04-26', NULL, NULL, 'INR', DEFAULT, 103, 1, '2025-05-01 13:02:13.778619', NULL, 1, NULL, NULL, NULL, NULL);
 
 
 --
@@ -7676,8 +7790,8 @@ INSERT INTO business_schema.stock_table VALUES (1, 2, 500.00, 80.00, 200.00, '20
 
 INSERT INTO business_schema.wholeseller_offers VALUES (3, 8, 101, 9500.00, '2025-04-16', 1, '2025-04-01 23:12:23.480634', '2025-04-01 23:12:23.480634', NULL);
 INSERT INTO business_schema.wholeseller_offers VALUES (4, 8, 103, 9200.00, '2025-04-17', 1, '2025-04-01 23:12:23.504043', '2025-04-01 23:12:23.504043', NULL);
-INSERT INTO business_schema.wholeseller_offers VALUES (8, 12, 101, 14500.00, '2025-04-19', 1, '2025-04-02 07:31:18.740848', '2025-04-02 07:31:18.740848', NULL);
-INSERT INTO business_schema.wholeseller_offers VALUES (10, 12, 103, 14200.00, '2025-04-18', 1, '2025-04-02 07:33:04.585076', '2025-04-02 07:33:04.585076', NULL);
+INSERT INTO business_schema.wholeseller_offers VALUES (12, 23, 103, 9500.00, '2025-05-03', 1, '2025-05-01 13:02:13.778619', '2025-05-01 13:02:13.778619', 'Offering better rate');
+INSERT INTO business_schema.wholeseller_offers VALUES (13, 12, 103, 9500.00, '2025-05-04', 1, '2025-05-01 13:20:50.473807', '2025-05-01 13:20:50.473807', 'Offering a discount for early delivery');
 
 
 --
@@ -8019,7 +8133,7 @@ SELECT pg_catalog.setval('business_schema.invoice_number_seq', 18, true);
 -- Name: invoice_table_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 39, true);
+SELECT pg_catalog.setval('business_schema.invoice_table_id_seq', 40, true);
 
 
 --
@@ -8075,7 +8189,7 @@ SELECT pg_catalog.setval('business_schema.warehouse_list_warehouse_id_seq', 1, f
 -- Name: wholeseller_offers_offer_id_seq; Type: SEQUENCE SET; Schema: business_schema; Owner: postgres
 --
 
-SELECT pg_catalog.setval('business_schema.wholeseller_offers_offer_id_seq', 10, true);
+SELECT pg_catalog.setval('business_schema.wholeseller_offers_offer_id_seq', 13, true);
 
 
 --
