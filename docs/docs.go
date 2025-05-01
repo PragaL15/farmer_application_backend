@@ -19,6 +19,38 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/orders/bulk": {
+            "get": {
+                "description": "Retrieves all bulk order details with nested item information per order",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get all bulk order details",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Marketoppurtinities.OrderDetail"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/business": {
             "get": {
                 "description": "Retrieve all business entries from the database",
@@ -963,6 +995,49 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "Marketoppurtinities.OrderDetail": {
+            "type": "object",
+            "properties": {
+                "date_of_order": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Marketoppurtinities.OrderItem"
+                    }
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "retailer_name": {
+                    "type": "string"
+                },
+                "total_order_amount": {
+                    "type": "number"
+                },
+                "wholeseller_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "Marketoppurtinities.OrderItem": {
+            "type": "object",
+            "properties": {
+                "price_of_product": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                }
+            }
+        },
         "Masterhandlers.Business": {
             "type": "object",
             "properties": {

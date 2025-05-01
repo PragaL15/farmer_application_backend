@@ -1,5 +1,33 @@
 basePath: /
 definitions:
+  Marketoppurtinities.OrderDetail:
+    properties:
+      date_of_order:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/Marketoppurtinities.OrderItem'
+        type: array
+      order_id:
+        type: integer
+      retailer_name:
+        type: string
+      total_order_amount:
+        type: number
+      wholeseller_name:
+        type: string
+    type: object
+  Marketoppurtinities.OrderItem:
+    properties:
+      price_of_product:
+        type: number
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      quantity:
+        type: number
+    type: object
   Masterhandlers.Business:
     properties:
       b_category_id:
@@ -139,6 +167,28 @@ info:
   title: My API
   version: "1.0"
 paths:
+  /api/orders/bulk:
+    get:
+      description: Retrieves all bulk order details with nested item information per
+        order
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Marketoppurtinities.OrderDetail'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all bulk order details
+      tags:
+      - Orders
   /business:
     get:
       consumes:
