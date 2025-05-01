@@ -9,19 +9,18 @@ import (
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
-type OrderSummary struct {
-	OrderID       int     `json:"order_id"`
-	TotalQuantity float64 `json:"total_quantity"`
-	TotalPrice    float64 `json:"total_price"`
-	RetailerID    int     `json:"retailer_id"`
-	RetailerName  string  `json:"retailer_name"`
+type TopRetailerSummary struct {
+	RetailerID     int64   `json:"retailer_id"`
+	RetailerName   string  `json:"retailer_name"`
+	TotalQuantity  float64 `json:"total_quantity"`
+	TotalOrderValue float64 `json:"total_order_value"`
 }
 
-func GetTopRetailerHandler(c *fiber.Ctx) error {
-	query := "SELECT * FROM business_schema.get_order_summary();"
+func GetTopRetailersHandler(c *fiber.Ctx) error {
+	query := "SELECT * FROM business_schema.get_top_5_bulk_ordering_retailers();"
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
-		log.Println("Error executing order summary query:", err)
+		log.Println("Error executing top 5 retailers query:", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error":  "Database query failed",
 			"detail": err.Error(),
@@ -29,25 +28,24 @@ func GetTopRetailerHandler(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	var summaries []OrderSummary
+	var topRetailers []TopRetailerSummary
 	for rows.Next() {
-		var summary OrderSummary
+		var retailer TopRetailerSummary
 		err := rows.Scan(
-			&summary.OrderID,
-			&summary.TotalQuantity,
-			&summary.TotalPrice,
-			&summary.RetailerID,
-			&summary.RetailerName,
+			&retailer.RetailerID,
+			&retailer.RetailerName,
+			&retailer.TotalQuantity,
+			&retailer.TotalOrderValue,
 		)
 		if err != nil {
-			log.Println("Error scanning order summary row:", err)
+			log.Println("Error scanning retailer row:", err)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error":  "Failed to scan row",
 				"detail": err.Error(),
 			})
 		}
-		summaries = append(summaries, summary)
+		topRetailers = append(topRetailers, retailer)
 	}
 
-	return c.Status(http.StatusOK).JSON(summaries)
+	return c.Status(http.StatusOK).JSON(topRetailers)
 }

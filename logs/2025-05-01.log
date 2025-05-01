@@ -53,3 +53,9 @@ API: 2025/05/01 11:15:56 main.go:68: Server is running on port 3000
 API: 2025/05/01 12:54:25 main.go:53: METHOD=GET PATH=/getAllBulkOrderDetails STATUS=200 DURATION=254.8046ms
 API: 2025/05/01 13:12:32 main.go:78: Shutting down server gracefully...
 API: 2025/05/01 13:12:32 main.go:82: Server stopped cleanly
+API: 2025/05/01 13:12:54 main.go:42: Server is starting...
+API: 2025/05/01 13:12:54 main.go:68: Server is running on port 3000
+API: 2025/05/01 13:20:50 main.go:53: METHOD=POST PATH=/InserWholesellerOffers STATUS=200 DURATION=18.4805ms
+API: 2025/05/01 13:32:55 main.go:53: METHOD=GET PATH=/getTopRetailerDetails STATUS=200 DURATION=11.8171ms
+API: 2025/05/01 13:54:58 main.go:78: Shutting down server gracefully...
+API: 2025/05/01 13:54:58 main.go:82: Server stopped cleanly
