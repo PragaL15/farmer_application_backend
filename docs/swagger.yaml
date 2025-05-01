@@ -105,6 +105,30 @@ definitions:
       user_id:
         type: integer
     type: object
+  RestockingStock.Mandi:
+    properties:
+      mandi_id:
+        type: integer
+      mandi_name:
+        type: string
+      mandi_stock:
+        type: number
+    type: object
+  RestockingStock.RestockingProduct:
+    properties:
+      mandi:
+        items:
+          $ref: '#/definitions/RestockingStock.Mandi'
+        type: array
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      stock_status:
+        type: string
+      stock_to_sales_ratio:
+        type: number
+    type: object
 host: localhost:3000
 info:
   contact:
@@ -640,6 +664,27 @@ paths:
       summary: Get product regional name by ID
       tags:
       - Product Regional Names
+  /restocking/recommendations:
+    get:
+      description: Returns products with stock-to-sales ratio < 4, sorted by urgency,
+        with mandi-wise breakdown
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/RestockingStock.RestockingProduct'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get restocking product recommendations
+      tags:
+      - Restocking
   /userTableDetails:
     post:
       consumes:

@@ -811,6 +811,36 @@
                 }
             }
         },
+        "/restocking/recommendations": {
+            "get": {
+                "description": "Returns products with stock-to-sales ratio \u003c 4, sorted by urgency, with mandi-wise breakdown",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Restocking"
+                ],
+                "summary": "Get restocking product recommendations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/RestockingStock.RestockingProduct"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/userTableDetails": {
             "post": {
                 "description": "Insert a new user into the system",
@@ -1088,6 +1118,43 @@
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "RestockingStock.Mandi": {
+            "type": "object",
+            "properties": {
+                "mandi_id": {
+                    "type": "integer"
+                },
+                "mandi_name": {
+                    "type": "string"
+                },
+                "mandi_stock": {
+                    "type": "number"
+                }
+            }
+        },
+        "RestockingStock.RestockingProduct": {
+            "type": "object",
+            "properties": {
+                "mandi": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/RestockingStock.Mandi"
+                    }
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "stock_status": {
+                    "type": "string"
+                },
+                "stock_to_sales_ratio": {
+                    "type": "number"
                 }
             }
         }

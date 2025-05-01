@@ -1,0 +1,9 @@
+API: 2025/05/01 09:04:25 main.go:42: Server is starting...
+API: 2025/05/01 09:04:26 main.go:68: Server is running on port 3000
+API: 2025/05/01 09:07:10 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=5.2166ms
+API: 2025/05/01 09:07:10 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/05/01 09:07:10 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=0s
+API: 2025/05/01 09:07:10 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/05/01 09:07:10 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=1.5854ms
+API: 2025/05/01 09:07:44 main.go:53: METHOD=GET PATH=/getReStockProductsHandler STATUS=500 DURATION=25.0159ms
+API: 2025/05/01 09:08:13 main.go:78: Shutting down server gracefully...

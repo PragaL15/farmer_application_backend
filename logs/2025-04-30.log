@@ -181,3 +181,6 @@ API: 2025/04/30 22:09:10 main.go:68: Server is running on port 3000
 API: 2025/04/30 22:09:28 main.go:53: METHOD=GET PATH=/getOrderFilter STATUS=500 DURATION=6.7147ms
 API: 2025/04/30 22:11:19 main.go:78: Shutting down server gracefully...
 API: 2025/04/30 22:11:19 main.go:82: Server stopped cleanly
+API: 2025/04/30 22:12:03 main.go:42: Server is starting...
+API: 2025/04/30 22:12:04 main.go:68: Server is running on port 3000
+API: 2025/04/30 22:12:33 main.go:53: METHOD=GET PATH=/getOrderFilter STATUS=200 DURATION=33.4676ms
