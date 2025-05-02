@@ -1003,6 +1003,30 @@ $$;
 ALTER FUNCTION admin_schema.get_state_by_id(p_id integer) OWNER TO postgres;
 
 --
+-- Name: get_supercategories(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_supercategories() RETURNS TABLE(category_id integer, category_name character varying, super_cat_id integer, img_path text, active_status integer, category_regional_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        ct.category_id,
+        ct.category_name,
+        ct.super_cat_id,
+        ct.img_path,
+        ct.active_status,
+        ct.category_regional_id
+    FROM admin_schema.master_product_category_table ct
+    WHERE ct.super_cat_id IS NULL;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_supercategories() OWNER TO postgres;
+
+--
 -- Name: get_unit_by_id(integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -3257,6 +3281,58 @@ $$;
 ALTER FUNCTION business_schema.get_seasonal_demand(product_names text[], month_list text[]) OWNER TO postgres;
 
 --
+-- Name: get_slow_moving_products(); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_slow_moving_products() RETURNS TABLE(product_name text, mandi_name text, stock_left numeric, weekly_sales numeric, days_in_stock integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        mp.product_name::TEXT,
+        mm.mandi_name::TEXT,
+        s.stock_left,
+        s.stock_sold / GREATEST(((CURRENT_DATE - s.date_of_order) / 7.0), 1),
+        (CURRENT_DATE - s.date_of_order)
+    FROM business_schema.stock_table s
+    INNER JOIN admin_schema.master_mandi_table mm ON s.mandi_id = mm.mandi_id
+    INNER JOIN admin_schema.master_product mp ON s.product_id = mp.product_id
+    WHERE (CURRENT_DATE - s.date_of_order) > 3;  -- Relaxed threshold: more than 3 days old
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_slow_moving_products() OWNER TO postgres;
+
+--
+-- Name: get_slow_moving_products(integer); Type: FUNCTION; Schema: business_schema; Owner: postgres
+--
+
+CREATE FUNCTION business_schema.get_slow_moving_products(p_mandi_id integer) RETURNS TABLE(product_name text, mandi_name text, stock_left numeric, weekly_sales numeric, days_in_stock integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        mp.product_name,
+        mm.mandi_name,
+        s.stock_left,
+        s.stock_sold / GREATEST(DATE_PART('day', CURRENT_DATE - s.date_of_order) / 7.0, 1) AS weekly_sales,
+        DATE_PART('day', CURRENT_DATE - s.date_of_order)::INT AS days_in_stock
+    FROM business_schema.stock_table s
+    INNER JOIN admin_schema.master_mandi_table mm ON s.mandi_id = mm.mandi_id
+    INNER JOIN admin_schema.master_product mp ON s.product_id = mp.product_id
+    WHERE s.mandi_id = p_mandi_id
+      AND DATE_PART('day', CURRENT_DATE - s.date_of_order) > 7 -- over 1 week
+      AND (s.stock_sold / GREATEST(DATE_PART('day', CURRENT_DATE - s.date_of_order) / 7.0, 1)) < (0.1 * s.stock_left); -- movement rate < 10%
+END;
+$$;
+
+
+ALTER FUNCTION business_schema.get_slow_moving_products(p_mandi_id integer) OWNER TO postgres;
+
+--
 -- Name: get_stock_availability_percentage(); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
@@ -3293,7 +3369,7 @@ ALTER FUNCTION business_schema.get_stock_availability_percentage() OWNER TO post
 -- Name: get_top_5_bulk_ordering_retailers(); Type: FUNCTION; Schema: business_schema; Owner: postgres
 --
 
-CREATE FUNCTION business_schema.get_top_5_bulk_ordering_retailers() RETURNS TABLE(retailer_id bigint, retailer_name text, total_quantity numeric, total_order_value numeric)
+CREATE FUNCTION business_schema.get_top_5_bulk_ordering_retailers() RETURNS TABLE(retailer_id bigint, retailer_name text, product_id integer, product_name text, unit_id integer, quantity numeric, order_value numeric)
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -3301,13 +3377,17 @@ BEGIN
     SELECT 
         o.retailer_id::BIGINT,
         b.b_owner_name::TEXT,
-        SUM(oi.quantity)::NUMERIC AS total_quantity,
-        SUM(oi.quantity * COALESCE(oi.wholeseller_price, 0))::NUMERIC AS total_order_value
+        oi.product_id::INTEGER,
+        mp.product_name::TEXT,  -- ✅ Fix: cast to TEXT
+        oi.unit_id,
+        SUM(oi.quantity)::NUMERIC AS quantity,
+        SUM(oi.quantity * COALESCE(oi.wholeseller_price, 0))::NUMERIC AS order_value
     FROM business_schema.order_table o
     JOIN business_schema.order_item_table oi ON o.order_id = oi.order_id
     JOIN admin_schema.business_table b ON o.retailer_id = b.bid
-    GROUP BY o.retailer_id, b.b_owner_name
-    ORDER BY total_quantity DESC -- or change to total_order_value DESC
+    JOIN admin_schema.master_product mp ON oi.product_id = mp.product_id
+    GROUP BY o.retailer_id, b.b_owner_name, oi.product_id, mp.product_name, oi.unit_id
+    ORDER BY SUM(oi.quantity) DESC
     LIMIT 5;
 END;
 $$;
