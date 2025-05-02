@@ -157,3 +157,42 @@ func GetCategoriesBySuperCatID(c *fiber.Ctx) error {
 
 	return c.JSON(categories)
 }
+
+func GetSuperCategories(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_supercategories();")
+	if err != nil {
+		log.Printf("DB query failed: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch supercategories"})
+	}
+	defer rows.Close()
+
+	type Category struct {
+		CategoryID         int     `json:"category_id"`
+		CategoryName       string  `json:"category_name"`
+		SuperCatID         *int    `json:"super_cat_id"`
+		ImgPath            *string `json:"img_path"`
+		ActiveStatus       *int    `json:"active_status"`
+		CategoryRegionalID *int    `json:"category_regional_id"`
+	}
+
+	var categories []Category
+
+	for rows.Next() {
+		var cat Category
+		err := rows.Scan(
+			&cat.CategoryID,
+			&cat.CategoryName,
+			&cat.SuperCatID,
+			&cat.ImgPath,
+			&cat.ActiveStatus,
+			&cat.CategoryRegionalID,
+		)
+		if err != nil {
+			log.Printf("Row scan error: %v", err)
+			continue
+		}
+		categories = append(categories, cat)
+	}
+
+	return c.JSON(categories)
+}
