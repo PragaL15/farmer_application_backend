@@ -83,30 +83,30 @@ func GetCategoryByID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Category ID is required"})
 	}
 
+	// Use json.RawMessage to hold raw JSON
+	var rawJSON []byte
 	row := db.Pool.QueryRow(context.Background(), "SELECT admin_schema.get_category_with_subcategories($1);", categoryID)
-
-	type Category struct {
-		CategoryID         int     `json:"category_id"`
-		CategoryName       string  `json:"category_name"`
-		SuperCatID         *int    `json:"super_cat_id"`
-		ImgPath            *string `json:"img_path"`
-		ActiveStatus       *int    `json:"active_status"`
-		CategoryRegionalID *int    `json:"category_regional_id"`
-	}
-
-	var category Category
-	err := row.Scan(
-		&category.CategoryID,
-		&category.CategoryName,
-		&category.SuperCatID,
-		&category.ImgPath,
-		&category.ActiveStatus,
-		&category.CategoryRegionalID,
-	)
-
+	err := row.Scan(&rawJSON)
 	if err != nil {
 		log.Printf("Failed to fetch category: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch category"})
+	}
+
+	// Define struct to match the returned JSON
+	type Category struct {
+		CategoryID         int      `json:"category_id"`
+		CategoryName       string   `json:"category_name"`
+		SuperCatID         *int     `json:"super_cat_id"`
+		ImgPath            *string  `json:"img_path"`
+		ActiveStatus       *int     `json:"active_status"`
+		CategoryRegionalID *int     `json:"category_regional_id"`
+		Subcategories      []Category `json:"subcategories"`
+	}
+
+	var category Category
+	if err := json.Unmarshal(rawJSON, &category); err != nil {
+		log.Printf("Error unmarshaling JSON: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid category JSON format"})
 	}
 
 	return c.JSON(category)
@@ -153,6 +153,45 @@ func GetCategoriesBySuperCatID(c *fiber.Ctx) error {
 			CategoryID:   categoryID,
 			CategoryName: categoryName,
 		})
+	}
+
+	return c.JSON(categories)
+}
+
+func GetSuperCategories(c *fiber.Ctx) error {
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_supercategories();")
+	if err != nil {
+		log.Printf("DB query failed: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch supercategories"})
+	}
+	defer rows.Close()
+
+	type Category struct {
+		CategoryID         int     `json:"category_id"`
+		CategoryName       string  `json:"category_name"`
+		SuperCatID         *int    `json:"super_cat_id"`
+		ImgPath            *string `json:"img_path"`
+		ActiveStatus       *int    `json:"active_status"`
+		CategoryRegionalID *int    `json:"category_regional_id"`
+	}
+
+	var categories []Category
+
+	for rows.Next() {
+		var cat Category
+		err := rows.Scan(
+			&cat.CategoryID,
+			&cat.CategoryName,
+			&cat.SuperCatID,
+			&cat.ImgPath,
+			&cat.ActiveStatus,
+			&cat.CategoryRegionalID,
+		)
+		if err != nil {
+			log.Printf("Row scan error: %v", err)
+			continue
+		}
+		categories = append(categories, cat)
 	}
 
 	return c.JSON(categories)
