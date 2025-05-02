@@ -38,3 +38,13 @@ API: 2025/05/02 19:44:36 main.go:42: Server is starting...
 API: 2025/05/02 19:44:36 main.go:68: Server is running on port 3000
 API: 2025/05/02 19:54:41 main.go:78: Shutting down server gracefully...
 API: 2025/05/02 19:54:41 main.go:82: Server stopped cleanly
+API: 2025/05/02 19:54:48 main.go:42: Server is starting...
+API: 2025/05/02 19:54:49 main.go:68: Server is running on port 3000
+API: 2025/05/02 19:55:52 main.go:53: METHOD=GET PATH=/getTopRetailerDetails STATUS=200 DURATION=18.8372ms
+API: 2025/05/02 20:13:16 main.go:53: METHOD=GET PATH=index.html STATUS=200 DURATION=3.4238ms
+API: 2025/05/02 20:13:16 main.go:53: METHOD=GET PATH=swagger-ui.css STATUS=200 DURATION=0s
+API: 2025/05/02 20:13:16 main.go:53: METHOD=GET PATH=swagger-ui-bundle.js STATUS=200 DURATION=433.6µs
+API: 2025/05/02 20:13:16 main.go:53: METHOD=GET PATH=swagger-ui-standalone-preset.js STATUS=200 DURATION=0s
+API: 2025/05/02 20:13:17 main.go:53: METHOD=GET PATH=doc.json STATUS=200 DURATION=998.8µs
+API: 2025/05/02 22:48:57 main.go:78: Shutting down server gracefully...
+API: 2025/05/02 22:48:57 main.go:82: Server stopped cleanly
