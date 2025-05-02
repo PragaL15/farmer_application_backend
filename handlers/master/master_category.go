@@ -2,11 +2,13 @@ package Masterhandlers
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v2"
+	"encoding/json"
+	"log"
+	"strconv"
+
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"github.com/go-playground/validator/v10"
-	"log"
-"strconv"
+	"github.com/gofiber/fiber/v2"
 	"github.com/guregu/null/v5"
 )
 

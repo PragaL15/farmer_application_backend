@@ -1,4 +1,5 @@
 package Marketoppurtinities
+
 import (
 	"context"
 	"log"
@@ -6,25 +7,29 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-type TopRetailerSummary struct 
-{
-	RetailerID      int64   `json:"retailer_id"`
-	RetailerName    string  `json:"retailer_name"`
-	TotalQuantity   float64 `json:"total_quantity"`
-	TotalOrderValue float64 `json:"total_order_value"`
+
+type TopRetailerProduct struct {
+	RetailerID   int64   `json:"retailer_id"`
+	RetailerName string  `json:"retailer_name"`
+	ProductID    int     `json:"product_id"`
+	ProductName  string  `json:"product_name"`
+	UnitID       int     `json:"unit_id"`
+	Quantity     float64 `json:"quantity"`
+	OrderValue   float64 `json:"order_value"`
 }
+
 // GetTopRetailersHandler godoc
-// @Summary      Get top 5 bulk ordering retailers
-// @Description  Returns the top 5 retailers who place the largest quantity of bulk orders
+// @Summary      Get top 5 bulk ordering retailers (product-wise)
+// @Description  Returns top 5 bulk orders made by retailers per product
 // @Tags         Market Opportunities
 // @Accept       json
 // @Produce      json
-// @Success      200  {array}   TopRetailerSummary
+// @Success      200  {array}   TopRetailerProduct
 // @Failure      500  {object}  map[string]string
 // @Router       /api/top-retailers [get]
-
 func GetTopRetailersHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM business_schema.get_top_5_bulk_ordering_retailers();"
+
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
 		log.Println("Error executing top 5 retailers query:", err)
@@ -34,14 +39,18 @@ func GetTopRetailersHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-	var topRetailers []TopRetailerSummary
+
+	var topRetailers []TopRetailerProduct
 	for rows.Next() {
-		var retailer TopRetailerSummary
+		var retailer TopRetailerProduct
 		err := rows.Scan(
 			&retailer.RetailerID,
 			&retailer.RetailerName,
-			&retailer.TotalQuantity,
-			&retailer.TotalOrderValue,
+			&retailer.ProductID,
+			&retailer.ProductName,
+			&retailer.UnitID,
+			&retailer.Quantity,
+			&retailer.OrderValue,
 		)
 		if err != nil {
 			log.Println("Error scanning retailer row:", err)
@@ -52,5 +61,6 @@ func GetTopRetailersHandler(c *fiber.Ctx) error {
 		}
 		topRetailers = append(topRetailers, retailer)
 	}
+
 	return c.Status(http.StatusOK).JSON(topRetailers)
 }
