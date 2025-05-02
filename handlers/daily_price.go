@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v4"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
@@ -65,99 +64,73 @@ func updatePriceData(req PriceData) error {
 }
 
 // Get Price Handler
-func GetPriceHandler(c *fiber.Ctx) error {
-	dailyPriceID := c.Query("daily_price_id")
 
+type PriceRow struct {
+	DailyPriceID   int64     `json:"daily_price_id"`
+	ProductID      int       `json:"product_id"`
+	ProductName    string    `json:"product_name"`
+	CategoryID     int       `json:"category_id"`
+	CategoryName   string    `json:"category_name"`
+	Price          float64   `json:"price"`
+	UnitID         int       `json:"unit_id"`
+	UnitName       string    `json:"unit_name"`
+	WholesellerID  int       `json:"wholeseller_id"`
+	Currency       string    `json:"currency"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Remarks        string    `json:"remarks"`
+	BranchID       *int      `json:"b_branch_id"`   // Nullable
+	BranchShopName *string   `json:"b_shop_name"`   // Nullable
+}
+
+func GetAllPriceDetailsHandler(c *fiber.Ctx) error {
 	query := `
-		SELECT daily_price_id, product_id, product_name, category_id, category_name, price, unit_id, unit_name, 
-		       wholeseller_id, currency, created_at, updated_at, remarks, b_branch_id, b_shop_name
+		SELECT daily_price_id, product_id, product_name, category_id, category_name, price,
+		       unit_id, unit_name, wholeseller_id, currency, created_at, updated_at,
+		       remarks, b_branch_id, b_shop_name
 		FROM business_schema.get_all_daily_price_updates()
 	`
 
-	var rows pgx.Rows
-	var err error
-
-	if dailyPriceID != "" {
-		query += " WHERE daily_price_id = $1"
-		rows, err = db.Pool.Query(context.Background(), query, dailyPriceID)
-	} else {
-		rows, err = db.Pool.Query(context.Background(), query)
-	}
-
+	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
-		log.Println("Query error:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error"})
+		log.Println("Error querying price data:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch price data",
+		})
 	}
 	defer rows.Close()
 
-	var prices []struct {
-		DailyPriceID   int64     `json:"daily_price_id"`
-		ProductID      int       `json:"product_id"`
-		ProductName    string    `json:"product_name"`
-		CategoryID     int       `json:"category_id"`
-		CategoryName   string    `json:"category_name"`
-		Price          float64   `json:"price"`
-		UnitID         int       `json:"unit_id"`
-		UnitName       string    `json:"unit_name"`
-		WholesellerID  int       `json:"wholeseller_id"`
-		Currency       string    `json:"currency"`
-		CreatedAt      time.Time `json:"created_at"`
-		UpdatedAt      time.Time `json:"updated_at"`
-		Remarks        string    `json:"remarks"`
-		BranchID       int       `json:"b_branch_id"`
-		BranchShopName string    `json:"b_shop_name"`
-	}
+	var results []PriceRow
 
 	for rows.Next() {
-		var p struct {
-			DailyPriceID   int64     `json:"daily_price_id"`
-			ProductID      int       `json:"product_id"`
-			ProductName    string    `json:"product_name"`
-			CategoryID     int       `json:"category_id"`
-			CategoryName   string    `json:"category_name"`
-			Price          float64   `json:"price"`
-			UnitID         int       `json:"unit_id"`
-			UnitName       string    `json:"unit_name"`
-			WholesellerID  int       `json:"wholeseller_id"`
-			Currency       string    `json:"currency"`
-			CreatedAt      time.Time `json:"created_at"`
-			UpdatedAt      time.Time `json:"updated_at"`
-			Remarks        string    `json:"remarks"`
-			BranchID       int       `json:"b_branch_id"`
-			BranchShopName string    `json:"b_shop_name"`
-		}
-
+		var row PriceRow
 		if err := rows.Scan(
-			&p.DailyPriceID,
-			&p.ProductID,
-			&p.ProductName,
-			&p.CategoryID,
-			&p.CategoryName,
-			&p.Price,
-			&p.UnitID,
-			&p.UnitName,
-			&p.WholesellerID,
-			&p.Currency,
-			&p.CreatedAt,
-			&p.UpdatedAt,
-			&p.Remarks,
-			&p.BranchID,
-			&p.BranchShopName,
+			&row.DailyPriceID,
+			&row.ProductID,
+			&row.ProductName,
+			&row.CategoryID,
+			&row.CategoryName,
+			&row.Price,
+			&row.UnitID,
+			&row.UnitName,
+			&row.WholesellerID,
+			&row.Currency,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+			&row.Remarks,
+			&row.BranchID,
+			&row.BranchShopName,
 		); err != nil {
-			log.Println("Row scan error:", err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Data scan error"})
+			log.Println("Error scanning row:", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to read row",
+			})
 		}
-
-		prices = append(prices, p)
+		results = append(results, row)
 	}
 
-	if len(prices) == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "No records found"})
-	}
-
-	return c.JSON(prices)
+	return c.Status(fiber.StatusOK).JSON(results)
 }
-
 
 
 // Insert Price Handler
