@@ -57,6 +57,27 @@ CREATE TYPE public.acceptance_status AS ENUM (
 ALTER TYPE public.acceptance_status OWNER TO postgres;
 
 --
+-- Name: check_user_login(character varying, character varying, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.check_user_login(_name character varying, _mobile_num character varying, _role_id integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    user_count INT;
+BEGIN
+    SELECT COUNT(*) INTO user_count
+    FROM admin_schema.user_table
+    WHERE name = _name AND mobile_num = _mobile_num AND role_id = _role_id;
+
+    RETURN user_count > 0;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.check_user_login(_name character varying, _mobile_num character varying, _role_id integer) OWNER TO postgres;
+
+--
 -- Name: create_business_branch(integer, character varying, integer, integer, integer, character varying, character varying, character varying, integer, integer, character varying, character varying, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -109,6 +130,22 @@ $$;
 
 
 ALTER FUNCTION admin_schema.create_business_branch(p_bid integer, p_b_shop_name character varying, p_b_type_id integer, p_b_location integer, p_b_state integer, p_b_address character varying, p_b_email character varying, p_b_number character varying, p_b_mandi_id integer, p_b_gst_num character varying, p_b_pan_num character varying, p_b_privilege_user integer, p_b_established_year character varying, p_active_status integer) OWNER TO postgres;
+
+--
+-- Name: create_user(character varying, character varying, integer, character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.create_user(_username character varying, _password character varying, _role_id integer, _email character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.users (username, password, role_id, email)
+    VALUES (_username, _password, _role_id, _email);
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.create_user(_username character varying, _password character varying, _role_id integer, _email character varying) OWNER TO postgres;
 
 --
 -- Name: get_all_branches_of_registered_businesses(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
@@ -1286,6 +1323,60 @@ $$;
 ALTER FUNCTION admin_schema.insert_city(p_city_shortnames character varying, p_city_name character varying) OWNER TO postgres;
 
 --
+-- Name: insert_email_trigger_function(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_email_trigger_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.users (username, password, role_id, email)
+    VALUES (NEW.name, NEW.mobile_num, NEW.role_id, NEW.email);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_email_trigger_function() OWNER TO postgres;
+
+--
+-- Name: insert_into_users_function(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_into_users_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    INSERT INTO admin_schema.users (username, password, role_id, email)
+    VALUES (NEW.name, NEW.mobile_num, NEW.role_id, NEW.email);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_into_users_function() OWNER TO postgres;
+
+--
+-- Name: insert_into_users_table(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.insert_into_users_table() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Insert data from user_table into users table
+    INSERT INTO admin_schema.users (username, password, role_id, email)
+    VALUES (NEW.name, NEW.mobile_num, NEW.role_id, NEW.email);
+    
+    -- Return the newly inserted row in case any other logic is needed
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.insert_into_users_table() OWNER TO postgres;
+
+--
 -- Name: insert_language(character varying); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
@@ -1529,14 +1620,24 @@ ALTER FUNCTION admin_schema.insert_unit(p_unit_name character varying) OWNER TO 
 -- Name: insert_user(character varying, character varying, character varying, text, character varying, integer, integer, integer, integer); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 
-CREATE FUNCTION admin_schema.insert_user(p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_active_status integer DEFAULT 0, p_role_id integer DEFAULT 5) RETURNS void
+CREATE FUNCTION admin_schema.insert_user(p_name character varying, p_mobile_num character varying, p_email character varying, p_address text, p_pincode character varying, p_location integer, p_state integer, p_active_status integer, p_role_id integer) RETURNS void
     LANGUAGE plpgsql
     AS $$
 BEGIN
+    -- Insert into user_table
     INSERT INTO admin_schema.user_table (
-        name, mobile_num, email, address, pincode, location, state, active_status, role_id
+        name, mobile_num, email, address, pincode,
+        location, state, active_status, role_id
     ) VALUES (
-        p_name, p_mobile_num, p_email, p_address, p_pincode, p_location, p_state, p_active_status, p_role_id
+        p_name, p_mobile_num, p_email, p_address, p_pincode,
+        p_location, p_state, p_active_status, p_role_id
+    );
+
+    -- Insert into users (with schema prefix)
+    INSERT INTO admin_schema.users (
+        username, password, role_id, email
+    ) VALUES (
+        p_name, p_mobile_num, p_role_id, p_email
     );
 END;
 $$;
@@ -4666,6 +4767,26 @@ $$;
 ALTER FUNCTION public.insert_business_user() OWNER TO postgres;
 
 --
+-- Name: insert_email_trigger_function(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_email_trigger_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- Insert the email into the 'users' table (or another target table)
+  INSERT INTO users (email)
+  VALUES (NEW.email);
+  
+  -- Return the newly inserted row so that the original insert is completed
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.insert_email_trigger_function() OWNER TO postgres;
+
+--
 -- Name: insert_location(integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -5769,7 +5890,8 @@ CREATE TABLE admin_schema.users (
     user_id integer NOT NULL,
     username character varying(255) NOT NULL,
     password character varying(255) NOT NULL,
-    role_id integer
+    role_id integer,
+    email character varying(100)
 );
 
 
@@ -7816,13 +7938,18 @@ INSERT INTO admin_schema.user_table VALUES (13, 'Jane Smith', '9123456789', 'jan
 INSERT INTO admin_schema.user_table VALUES (14, 'John Doe', '9876543210', 'john.doe@example.com', '123 Street', '123456', 1, 2, 0, 1);
 INSERT INTO admin_schema.user_table VALUES (16, 'Pragalya Kanakaraj', '9876543210', 'pragalya@example.com', '123 Anna Nagar, Erode', '638001', 1, 1, 1, 2);
 INSERT INTO admin_schema.user_table VALUES (12, 'Madhan Kumar', '9876543210', 'madhan.kumar@example.com', '23B Gandhi Road, Erode', '638001', 2, 1, 1, 3);
+INSERT INTO admin_schema.user_table VALUES (28, 'Pragalya Kanakaraj', '9876543210', 'pragalya12@example.com', 'Erode', '638001', 1, 1, 1, 2);
+INSERT INTO admin_schema.user_table VALUES (46, 'Jane Doe', '9876543210', 'jane.doe@example.com', '123 Elm St', '654321', 1, 2, 1, 3);
+INSERT INTO admin_schema.user_table VALUES (56, 'Pragalya Kanakaraj', '9876543210', 'pragaly12@example.com', 'Erode, Tamil Nadu', '638001', 1, 1, 1, 2);
 
 
 --
 -- Data for Name: users; Type: TABLE DATA; Schema: admin_schema; Owner: admin
 --
 
-INSERT INTO admin_schema.users VALUES (12, 'John Doe', '9876543210', NULL);
+INSERT INTO admin_schema.users VALUES (1, 'rihaan', 'srihaan123', 2, 'rihaan1@example.com');
+INSERT INTO admin_schema.users VALUES (20, 'Pragalya Kanakaraj', '9876543210', 2, 'pragaly12@example.com');
+INSERT INTO admin_schema.users VALUES (21, 'Pragalya Kanakaraj', '9876543210', 2, 'pragaly12@example.com');
 
 
 --
@@ -8371,14 +8498,14 @@ SELECT pg_catalog.setval('admin_schema.units_table_id_seq', 5, true);
 -- Name: user_table_user_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.user_table_user_id_seq', 16, true);
+SELECT pg_catalog.setval('admin_schema.user_table_user_id_seq', 56, true);
 
 
 --
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: admin_schema; Owner: admin
 --
 
-SELECT pg_catalog.setval('admin_schema.users_user_id_seq', 1, false);
+SELECT pg_catalog.setval('admin_schema.users_user_id_seq', 21, true);
 
 
 --
@@ -9330,6 +9457,13 @@ CREATE TRIGGER business_user_insert_trigger BEFORE INSERT ON admin_schema.busine
 --
 
 CREATE TRIGGER trg_insert_business_user AFTER INSERT ON admin_schema.business_branch_table FOR EACH ROW EXECUTE FUNCTION admin_schema.insert_business_user();
+
+
+--
+-- Name: user_table trigger_insert_into_users; Type: TRIGGER; Schema: admin_schema; Owner: admin
+--
+
+CREATE TRIGGER trigger_insert_into_users AFTER INSERT ON admin_schema.user_table FOR EACH ROW EXECUTE FUNCTION admin_schema.insert_email_trigger_function();
 
 
 --
