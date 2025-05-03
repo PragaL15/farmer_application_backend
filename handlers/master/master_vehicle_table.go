@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
-
+"database/sql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
@@ -16,9 +16,9 @@ type Vehicle struct {
 	VehicleRegistrationNo string    `json:"vehicle_registration_no"`
 	VehicleYear           string    `json:"vehicle_manufacture_year"`
 	VehicleWarranty       string    `json:"vehicle_warranty"`
-	VehicleMake           int64     `json:"vehicle_make"`
-	VehicleModel          int64     `json:"vehicle_model"`
-	VehicleEngineType     int64     `json:"vehicle_engine_type"`
+	VehicleMake           sql.NullInt64     `json:"vehicle_make"`
+	VehicleModel          sql.NullInt64      `json:"vehicle_model"`
+	VehicleEngineType     sql.NullInt64     `json:"vehicle_engine_type"`
 	VehiclePurchaseDate   time.Time `json:"vehicle_purchase_date"`
 	VehicleColor          string    `json:"vehicle_color"`
 	CreatedAt             time.Time `json:"created_at"`
