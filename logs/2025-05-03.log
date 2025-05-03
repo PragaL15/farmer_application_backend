@@ -19,3 +19,74 @@ API: 2025/05/03 18:28:15 main.go:82: Server stopped cleanly
 API: 2025/05/03 18:28:45 main.go:42: Server is starting...
 API: 2025/05/03 18:28:45 main.go:68: Server is running on port 3000
 API: 2025/05/03 18:29:54 main.go:53: METHOD=GET PATH=/getVehicles STATUS=200 DURATION=12.1597ms
+API: 2025/05/03 18:33:51 main.go:53: METHOD=GET PATH=/getOrderStatus STATUS=200 DURATION=3.5018ms
+API: 2025/05/03 18:35:58 main.go:53: METHOD=GET PATH=/getOrderStatus STATUS=200 DURATION=4.5389ms
+API: 2025/05/03 19:35:41 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 19:35:41 main.go:82: Server stopped cleanly
+API: 2025/05/03 19:36:59 main.go:42: Server is starting...
+API: 2025/05/03 19:36:59 main.go:68: Server is running on port 3000
+API: 2025/05/03 19:46:34 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=401 DURATION=46.2486ms
+API: 2025/05/03 19:46:47 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=200 DURATION=1.38ms
+API: 2025/05/03 19:50:18 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=34.7951ms
+API: 2025/05/03 19:50:26 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=19.7542ms
+API: 2025/05/03 19:50:43 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=4.5544ms
+API: 2025/05/03 19:50:54 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=6.3344ms
+API: 2025/05/03 19:51:21 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=5.4407ms
+API: 2025/05/03 19:51:32 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=4.5283ms
+API: 2025/05/03 19:51:37 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=3.4833ms
+API: 2025/05/03 19:52:36 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=3.3442ms
+API: 2025/05/03 19:55:56 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=5.5464ms
+API: 2025/05/03 19:56:05 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=3.24ms
+API: 2025/05/03 19:58:01 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=4.54ms
+API: 2025/05/03 19:58:07 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=3.1903ms
+API: 2025/05/03 20:05:31 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 20:05:31 main.go:82: Server stopped cleanly
+API: 2025/05/03 20:06:01 main.go:42: Server is starting...
+API: 2025/05/03 20:06:01 main.go:68: Server is running on port 3000
+API: 2025/05/03 20:06:26 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=20.6293ms
+API: 2025/05/03 20:07:17 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=6.6199ms
+API: 2025/05/03 20:15:11 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 20:15:11 main.go:82: Server stopped cleanly
+API: 2025/05/03 20:15:25 main.go:42: Server is starting...
+API: 2025/05/03 20:15:26 main.go:68: Server is running on port 3000
+API: 2025/05/03 20:15:43 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=400 DURATION=2.3778ms
+API: 2025/05/03 20:16:33 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=22.6015ms
+API: 2025/05/03 20:16:42 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=201 DURATION=32.5471ms
+API: 2025/05/03 20:34:49 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=201 DURATION=17.0286ms
+API: 2025/05/03 20:39:12 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=8.2171ms
+API: 2025/05/03 20:44:10 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=7.1351ms
+API: 2025/05/03 20:49:48 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=8.303ms
+API: 2025/05/03 20:49:51 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 20:49:51 main.go:82: Server stopped cleanly
+API: 2025/05/03 20:50:09 main.go:42: Server is starting...
+API: 2025/05/03 20:50:09 main.go:68: Server is running on port 3000
+API: 2025/05/03 20:57:00 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=32.2147ms
+API: 2025/05/03 20:57:08 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=3.6096ms
+API: 2025/05/03 20:57:13 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=4.1991ms
+API: 2025/05/03 21:20:00 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=11.8556ms
+API: 2025/05/03 21:20:21 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 21:20:21 main.go:82: Server stopped cleanly
+API: 2025/05/03 21:20:31 main.go:42: Server is starting...
+API: 2025/05/03 21:20:31 main.go:68: Server is running on port 3000
+API: 2025/05/03 21:20:46 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=500 DURATION=43.7645ms
+API: 2025/05/03 21:32:26 main.go:53: METHOD=POST PATH=/userTableDetails STATUS=201 DURATION=30.4222ms
+API: 2025/05/03 21:38:36 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 21:38:36 main.go:82: Server stopped cleanly
+API: 2025/05/03 21:43:30 main.go:42: Server is starting...
+API: 2025/05/03 21:43:30 main.go:68: Server is running on port 3000
+API: 2025/05/03 21:44:09 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=401 DURATION=5.5863ms
+API: 2025/05/03 21:44:25 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=401 DURATION=784.6µs
+API: 2025/05/03 21:44:59 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=500 DURATION=4.8324ms
+API: 2025/05/03 21:46:21 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=500 DURATION=3.5687ms
+API: 2025/05/03 21:50:11 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 21:50:11 main.go:82: Server stopped cleanly
+API: 2025/05/03 21:50:42 main.go:42: Server is starting...
+API: 2025/05/03 21:50:42 main.go:68: Server is running on port 3000
+API: 2025/05/03 21:51:13 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=500 DURATION=12.3095ms
+API: 2025/05/03 21:52:42 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 21:52:42 main.go:82: Server stopped cleanly
+API: 2025/05/03 21:52:56 main.go:42: Server is starting...
+API: 2025/05/03 21:52:56 main.go:68: Server is running on port 3000
+API: 2025/05/03 21:53:33 main.go:53: METHOD=POST PATH=/InsertLoginCredentials STATUS=500 DURATION=9.7438ms
+API: 2025/05/03 21:54:28 main.go:78: Shutting down server gracefully...
+API: 2025/05/03 21:54:28 main.go:82: Server stopped cleanly

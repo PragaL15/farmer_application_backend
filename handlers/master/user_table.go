@@ -20,9 +20,9 @@ type User struct {
 	Email        string `json:"email"`
 	Address      string `json:"address"`
 	Pincode      string `json:"pincode"`
-	Location     int    `json:"location_id"`
+	Location     int    `json:"location"`
 	LocationName string `json:"location_name"`
-	State        int    `json:"state_id"`
+	State        int    `json:"state"`
 	StateName    string `json:"state_name"`
 	ActiveStatus int    `json:"active_status"`
 	RoleID       int    `json:"role_id"`
@@ -118,22 +118,42 @@ func GetUserByID(c *fiber.Ctx) error {
 // @Router       /userTableDetails [post]
 func InsertUser(c *fiber.Ctx) error {
 	var u User
+
+	// Step 1: Parse the incoming body
 	if err := c.BodyParser(&u); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+		log.Println("Body parsing failed:", err)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	// Step 2: Debug log the received values
+	log.Printf("Received User: %+v\n", u)
+
+	// Step 3: Basic validation
+	if u.RoleID == 0 {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid or missing role_id"})
+	}
+	if u.State == 0 {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid or missing state"})
+	}
+
+	// Step 4: Call the DB insert function
 	_, err := db.Pool.Exec(context.Background(),
 		"SELECT admin_schema.insert_user($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 		u.Name, u.MobileNum, u.Email, u.Address, u.Pincode,
 		u.Location, u.State, u.ActiveStatus, u.RoleID,
 	)
+
 	if err != nil {
 		log.Println("Error inserting user:", err)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert user"})
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to insert user. Please ensure all foreign key values (state, role_id) exist.",
+		})
 	}
 
+	// Step 5: Success response
 	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "User created successfully"})
 }
+
 
 // UpdateUser godoc
 // @Summary      Update an existing user

@@ -79,7 +79,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessUser/:id", Masterhandlers.GetBusinessUserByID) 
 	app.Get("/getProductCategoryRegional/:id", Masterhandlers.GetProductCategoryRegionalByID) 
 	app.Get("/invoice/:invoice_id", handlers.GetInvoiceDetails)
-
+  
 	// POST Routes
 	app.Post("/categoryDetails", Masterhandlers.InsertCategory)
 	app.Post("/locationDetails", Masterhandlers.InsertLocation)
@@ -100,6 +100,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/InsertInvoiceDetails", handlers.InsertInvoiceDetails)
 	app.Post("/InsertCartDetails", handlers.InsertCart)
 	app.Post("/InsertWholesellerOrder", handlers.InsertWholesellerEntryHandler)
+	app.Post("/InsertLoginCredentials", Masterhandlers.LoginUser)
 	app.Post("/InserWholesellerOffers", handlers.CreateWholesellerOfferHandler)
 	app.Post("/PostCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
 	app.Post("/PostProductRegional", Masterhandlers.InsertProductRegionalName)
