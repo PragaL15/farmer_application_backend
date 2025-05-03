@@ -261,6 +261,33 @@ $$;
 ALTER FUNCTION admin_schema.get_all_cities() OWNER TO postgres;
 
 --
+-- Name: get_all_drivers(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
+--
+
+CREATE FUNCTION admin_schema.get_all_drivers() RETURNS TABLE(driver_id integer, driver_name character varying, driver_license character varying, driver_number character varying, driver_address character varying, date_of_joining date, emergency_contact character varying, created_at timestamp without time zone, driver_dob date, driver_license_type integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        d.driver_id,
+        d.driver_name,
+        d.driver_license,
+        d.driver_number,
+        d.driver_address,
+        d.date_of_joining,
+        d.emergency_contact,
+        d.created_at,
+        d.driver_dob,
+        d.driver_license_type
+    FROM admin_schema.master_driver_table d;
+END;
+$$;
+
+
+ALTER FUNCTION admin_schema.get_all_drivers() OWNER TO postgres;
+
+--
 -- Name: get_all_languages(); Type: FUNCTION; Schema: admin_schema; Owner: postgres
 --
 

@@ -1,6 +1,5 @@
 package Marketoppurtinities
 
-
 import (
 	"context"
 	"log"
@@ -9,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
-
 type SlowMovingProduct struct {
 	ProductName   string  `json:"product_name"`
 	MandiName     string  `json:"mandi_name"`
@@ -17,11 +15,10 @@ type SlowMovingProduct struct {
 	WeeklySales   float64 `json:"weekly_sales"`
 	DaysInStock   int     `json:"days_in_stock"`
 }
-
 // GetSlowMovingProductsHandler godoc
 // @Summary      Get slow moving products
 // @Description  Returns products that have been in stock for more than 3 days and are moving slowly
-// @Tags         Market Opportunities
+// @Tags         Market Opportunities 
 // @Accept       json
 // @Produce      json
 // @Success      200  {array}   SlowMovingProduct
@@ -29,7 +26,6 @@ type SlowMovingProduct struct {
 // @Router       /api/slow-moving-products [get]
 func GetSlowMovingProductsHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM business_schema.get_slow_moving_products();"
-
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
 		log.Println("Error executing slow moving products query:", err)
@@ -39,7 +35,6 @@ func GetSlowMovingProductsHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var slowProducts []SlowMovingProduct
 	for rows.Next() {
 		var product SlowMovingProduct
@@ -59,7 +54,6 @@ func GetSlowMovingProductsHandler(c *fiber.Ctx) error {
 		}
 		slowProducts = append(slowProducts, product)
 	}
-
 	return c.Status(http.StatusOK).JSON(slowProducts)
 }
 // Product is in stock more than 7 days

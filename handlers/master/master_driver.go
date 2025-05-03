@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strconv"
+		"database/sql"
 "time"
 	"github.com/gofiber/fiber/v2"
 	"github.com/PragaL15/go_newBackend/go_backend/db"
@@ -119,21 +120,20 @@ func DeleteDriver(c *fiber.Ctx) error {
 
 func GetDrivers(c *fiber.Ctx) error {
 	type Driver struct {
-		DriverID         int        `json:"driver_id"`
-		DriverName       string    `json:"driver_name"`
-		DriverAge        int        `json:"driver_age"`
-		DriverLicense    string    `json:"driver_license"`
-		DriverNumber     string    `json:"driver_number"`
-		DriverAddress    string    `json:"driver_address"`
-		DriverStatus     string    `json:"driver_status"`
-		DateOfJoining    *string    `json:"date_of_joining"`
-		ExperienceYears  int        `json:"experience_years"`
-		LicenseExpiry    *string    `json:"license_expiry_date"`
-		EmergencyContact string    `json:"emergency_contact"`
-		AssignedRouteID  int        `json:"assigned_route_id"`
-		DOB              *string    `json:"d_o_b"`
+		DriverID         int     `json:"driver_id"`
+		DriverName       string  `json:"driver_name"`
+		DriverLicense    string  `json:"driver_license"`
+		DriverNumber     string  `json:"driver_number"`
+		DriverAddress    string  `json:"driver_address"`
+		DateOfJoining    *string `json:"date_of_joining"`
+		EmergencyContact string  `json:"emergency_contact"`
+		CreatedAt        *string `json:"created_at"`
+		DOB              *string `json:"d_o_b"`
+		LicenseTypeID sql.NullInt32 `json:"driver_license_type"`
+
 	}
-	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM get_all_drivers()")
+
+	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_drivers()")
 	if err != nil {
 		log.Printf("Failed to fetch drivers: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch drivers"})
@@ -144,33 +144,51 @@ func GetDrivers(c *fiber.Ctx) error {
 
 	for rows.Next() {
 		var driver Driver
-		var dateOfJoining, licenseExpiry, d_o_b *time.Time
+
+		var (
+			doj            sql.NullTime
+			created        sql.NullTime
+			dob            sql.NullTime
+			driverAddress  sql.NullString
+			emergency      sql.NullString
+		)
 
 		err := rows.Scan(
-			&driver.DriverID, &driver.DriverName, &driver.DriverAge, &driver.DriverLicense,
-			&driver.DriverNumber, &driver.DriverAddress, &driver.DriverStatus, &dateOfJoining,
-			&driver.ExperienceYears, &licenseExpiry, &driver.EmergencyContact, &driver.AssignedRouteID, &d_o_b,
+			&driver.DriverID, &driver.DriverName, &driver.DriverLicense,
+			&driver.DriverNumber, &driverAddress, &doj,
+			&emergency, &created, &dob, &driver.LicenseTypeID,
 		)
 		if err != nil {
 			log.Printf("Error scanning row: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error processing data"})
 		}
 
-		driver.DateOfJoining = formatDate(dateOfJoining)
-		driver.LicenseExpiry = formatDate(licenseExpiry)
-		driver.DOB = formatDate(d_o_b)
+		driver.DriverAddress = nullStringToString(driverAddress)
+		driver.EmergencyContact = nullStringToString(emergency)
+		driver.DateOfJoining = formatNullableTime(doj)
+		driver.CreatedAt = formatNullableTime(created)
+		driver.DOB = formatNullableTime(dob)
 
 		drivers = append(drivers, driver)
 	}
+
 	return c.JSON(drivers)
 }
 
-func formatDate(t *time.Time) *string {
-	if t == nil {
-		return nil
+// formatNullableTime formats a sql.NullTime to *string
+func formatNullableTime(t sql.NullTime) *string {
+	if t.Valid {
+		formatted := t.Time.Format("2006-01-02")
+		return &formatted
 	}
-	formatted := t.Format("2006-01-02")
-	return &formatted
+	return nil
+}
+
+func nullStringToString(s sql.NullString) string {
+	if s.Valid {
+		return s.String
+	}
+	return ""
 }
 
 func GetDriverByID(c *fiber.Ctx) error {

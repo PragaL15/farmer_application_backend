@@ -17,7 +17,6 @@ type TopRetailerProduct struct {
 	Quantity     float64 `json:"quantity"`
 	OrderValue   float64 `json:"order_value"`
 }
-
 // GetTopRetailersHandler godoc
 // @Summary      Get top 5 bulk ordering retailers (product-wise)
 // @Description  Returns top 5 bulk orders made by retailers per product
@@ -29,7 +28,6 @@ type TopRetailerProduct struct {
 // @Router       /api/top-retailers [get]
 func GetTopRetailersHandler(c *fiber.Ctx) error {
 	query := "SELECT * FROM business_schema.get_top_5_bulk_ordering_retailers();"
-
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
 		log.Println("Error executing top 5 retailers query:", err)
@@ -39,7 +37,6 @@ func GetTopRetailersHandler(c *fiber.Ctx) error {
 		})
 	}
 	defer rows.Close()
-
 	var topRetailers []TopRetailerProduct
 	for rows.Next() {
 		var retailer TopRetailerProduct
@@ -61,6 +58,5 @@ func GetTopRetailersHandler(c *fiber.Ctx) error {
 		}
 		topRetailers = append(topRetailers, retailer)
 	}
-
 	return c.Status(http.StatusOK).JSON(topRetailers)
 }
