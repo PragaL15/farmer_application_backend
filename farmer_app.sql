@@ -345,8 +345,10 @@ CREATE FUNCTION admin_schema.get_all_order_statuses() RETURNS TABLE(order_status
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    RETURN QUERY 
-    SELECT order_status_id, order_status FROM admin_schema.order_status_table ORDER BY order_status_id;
+    RETURN QUERY
+    SELECT ost.order_status_id, ost.order_status
+    FROM admin_schema.order_status_table ost
+    ORDER BY ost.order_status_id;
 END;
 $$;
 
