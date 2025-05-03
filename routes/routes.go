@@ -128,5 +128,5 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/ProductRegionalUpdate", Masterhandlers.UpdateProductRegionalName) 
 
 	// DELETE Routes
-	app.Delete("/:cart_id/items/:product_id", handlers.DeleteCartItem) 
+	app.Delete("cart/:cart_id/items/:product_id", handlers.DeleteCartItem)
 }
