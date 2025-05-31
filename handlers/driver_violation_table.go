@@ -1,11 +1,12 @@
 package handlers
 
 import (
-"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
-	
-	"time"
+	"farmerapp/go_backend/db"
+
+	"github.com/gofiber/fiber/v2"
+
 	"context"
+	"time"
 )
 
 type DriverViolation struct {
@@ -37,12 +38,12 @@ func GetDriverViolations(c *fiber.Ctx) error {
 		}
 
 		violations = append(violations, map[string]interface{}{
-			"id":            id,
-			"driver_id":     driverID,
-			"driver_name":   driverName,
-			"violation_id":  violationID,
+			"id":             id,
+			"driver_id":      driverID,
+			"driver_name":    driverName,
+			"violation_id":   violationID,
 			"violation_name": violationName,
-			"entry_date":    entryDate,
+			"entry_date":     entryDate,
 		})
 	}
 

@@ -5,16 +5,17 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"farmerapp/go_backend/db"
+
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 func InsertMasterViolation(c *fiber.Ctx) error {
 	type Request struct {
-		ViolationName   string `json:"violation_name" validate:"required,max=255"`
-		LevelOfSerious  string `json:"level_of_serious" validate:"required,max=255"`
-		Status          int    `json:"status" validate:"required"`
+		ViolationName  string `json:"violation_name" validate:"required,max=255"`
+		LevelOfSerious string `json:"level_of_serious" validate:"required,max=255"`
+		Status         int    `json:"status" validate:"required"`
 	}
 	var req Request
 	if err := c.BodyParser(&req); err != nil {
@@ -36,10 +37,10 @@ func InsertMasterViolation(c *fiber.Ctx) error {
 
 func UpdateMasterViolation(c *fiber.Ctx) error {
 	type Request struct {
-		ID              int    `json:"id" validate:"required,min=1"`
-		ViolationName   string `json:"violation_name" validate:"required,max=255"`
-		LevelOfSerious  string `json:"level_of_serious" validate:"required,max=255"`
-		Status          int    `json:"status" validate:"required"`
+		ID             int    `json:"id" validate:"required,min=1"`
+		ViolationName  string `json:"violation_name" validate:"required,max=255"`
+		LevelOfSerious string `json:"level_of_serious" validate:"required,max=255"`
+		Status         int    `json:"status" validate:"required"`
 	}
 	var req Request
 	if err := c.BodyParser(&req); err != nil {

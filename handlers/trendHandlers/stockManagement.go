@@ -3,46 +3,49 @@ package TrendHandlers
 import (
 	"context"
 	"encoding/json"
+	"farmerapp/go_backend/db"
 	"log"
 	"net/http"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 )
+
 type CurrentStockData struct {
-	ProductID     int     `json:"product_id"`
-	ProductName   string  `json:"product_name"`
-	MandiID       int     `json:"mandi_id"`
-	MandiName     string  `json:"mandi_name"`
-	CurrentStock  float64 `json:"current_stock"`
+	ProductID    int     `json:"product_id"`
+	ProductName  string  `json:"product_name"`
+	MandiID      int     `json:"mandi_id"`
+	MandiName    string  `json:"mandi_name"`
+	CurrentStock float64 `json:"current_stock"`
 }
 type LeastStockedData struct {
-	ProductID     int     `json:"product_id"`
-	ProductName   string  `json:"product_name"`
-	MandiID       int     `json:"mandi_id"`
-	MandiName     string  `json:"mandi_name"`
-	StockLeft     float64 `json:"stock_left"`
+	ProductID   int     `json:"product_id"`
+	ProductName string  `json:"product_name"`
+	MandiID     int     `json:"mandi_id"`
+	MandiName   string  `json:"mandi_name"`
+	StockLeft   float64 `json:"stock_left"`
 }
 type StockAvailabilityData struct {
-	StockID                    int     `json:"stock_id"`
-	ProductID                  int     `json:"product_id"`
-	ProductName                string  `json:"product_name"`
-	MandiID                    int     `json:"mandi_id"`
-	MandiName                  string  `json:"mandi_name"`
-	StockLeft                  float64 `json:"stock_left"`
-	MaximumStockLevel         float64 `json:"maximum_stock_level"`
+	StockID                     int     `json:"stock_id"`
+	ProductID                   int     `json:"product_id"`
+	ProductName                 string  `json:"product_name"`
+	MandiID                     int     `json:"mandi_id"`
+	MandiName                   string  `json:"mandi_name"`
+	StockLeft                   float64 `json:"stock_left"`
+	MaximumStockLevel           float64 `json:"maximum_stock_level"`
 	StockAvailabilityPercentage float64 `json:"stock_availability_percentage"`
 }
 type LowStockProduct struct {
-	ProductID     int         `json:"product_id"`
-	ProductName   string      `json:"product_name"`
-	CurrentStock  float64     `json:"current_stock"`
-	Mandis        []MandiData `json:"mandis"`
+	ProductID    int         `json:"product_id"`
+	ProductName  string      `json:"product_name"`
+	CurrentStock float64     `json:"current_stock"`
+	Mandis       []MandiData `json:"mandis"`
 }
 type MandiData struct {
 	MandiID    int     `json:"mandi_id"`
 	MandiName  string  `json:"mandi_name"`
 	MandiStock float64 `json:"mandi_stock"`
 }
+
 func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 	mandiID := c.Params("mandi_id")
 	query := `SELECT * FROM business_schema.get_current_stock_by_mandi($1);`

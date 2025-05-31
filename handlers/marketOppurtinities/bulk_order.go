@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type OrderItem struct {
@@ -36,7 +37,7 @@ type OrderDetail struct {
 // @Router       /api/orders/bulk [get]
 func GetAllBulkOrderDetailsHandler(c *fiber.Ctx) error {
 	orderQuery := `
-		SELECT order_id, date_of_order, total_order_amount, retailer_name, wholeseller_name 
+		SELECT order_id, date_of_order, total_order_amount, retailer_name, wholeseller_name
 		FROM business_schema.get_all_order_details();
 	`
 
@@ -72,7 +73,7 @@ func GetAllBulkOrderDetailsHandler(c *fiber.Ctx) error {
 	}
 
 	itemQuery := `
-		SELECT order_id, product_id, product_name, quantity, price_of_product 
+		SELECT order_id, product_id, product_name, quantity, price_of_product
 		FROM business_schema.get_bulk_order_items_details();
 	`
 

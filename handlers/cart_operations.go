@@ -6,25 +6,26 @@ import (
 	"log"
 	"strconv"
 
+	"database/sql"
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/guregu/null"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
-	"database/sql"
 )
 
 // Structs with json tags optimized for minimal size
 type (
 	CartDetails struct {
-		CartID                 int64   `json:"cart_id"`
-		RetailerID             int64   `json:"retailer_id"`
-		RetailerName           string  `json:"retailer_name,omitempty"`
-		RetailerAddress        string  `json:"retailer_address,omitempty"`
-		RetailerStateName      string  `json:"retailer_state_name,omitempty"`
-		RetailerStateShortname string  `json:"retailer_state_shortname,omitempty"`
-		RetailerLocationName   string  `json:"retailer_location_name,omitempty"`
-		WholesellerID          *int64  `json:"wholeseller_id,omitempty"`
-		WholesellerName        string  `json:"wholeseller_name,omitempty"`
-		CartStatus             int     `json:"cart_status"`
+		CartID                 int64  `json:"cart_id"`
+		RetailerID             int64  `json:"retailer_id"`
+		RetailerName           string `json:"retailer_name,omitempty"`
+		RetailerAddress        string `json:"retailer_address,omitempty"`
+		RetailerStateName      string `json:"retailer_state_name,omitempty"`
+		RetailerStateShortname string `json:"retailer_state_shortname,omitempty"`
+		RetailerLocationName   string `json:"retailer_location_name,omitempty"`
+		WholesellerID          *int64 `json:"wholeseller_id,omitempty"`
+		WholesellerName        string `json:"wholeseller_name,omitempty"`
+		CartStatus             int    `json:"cart_status"`
 	}
 
 	CartProduct struct {
@@ -93,7 +94,7 @@ func GetCart(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Invalid cart ID")
 	}
 
-	rows, err := db.Pool.Query(context.Background(), 
+	rows, err := db.Pool.Query(context.Background(),
 		"SELECT * FROM business_schema.get_cart_details($1)", cartID)
 	if err != nil {
 		log.Printf("Error fetching cart: %v", err)
@@ -105,7 +106,7 @@ func GetCart(c *fiber.Ctx) error {
 		response  CartResponse
 		products  []CartProduct
 		tempNulls struct {
-			retailerName, retailerAddress, stateName, 
+			retailerName, retailerAddress, stateName,
 			shortname, locationName, wholesellerName sql.NullString
 			wholesellerID sql.NullInt64
 		}

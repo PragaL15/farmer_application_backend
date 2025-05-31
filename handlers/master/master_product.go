@@ -4,19 +4,20 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/guregu/null/v5"
 )
 
 type Productget struct {
-	ProductID         int64  `json:"product_id"`
-	CategoryID        int64  `json:"category_id"`
-	CategoryName      string `json:"category_name"`
-	ProductName       string `json:"product_name"`
-	ImagePath         null.String `json:"image_path"`
-	ActiveStatus      int    `json:"active_status"`
-	ProductRegionalID null.Int64  `json:"product_regional_id"`
+	ProductID           int64       `json:"product_id"`
+	CategoryID          int64       `json:"category_id"`
+	CategoryName        string      `json:"category_name"`
+	ProductName         string      `json:"product_name"`
+	ImagePath           null.String `json:"image_path"`
+	ActiveStatus        int         `json:"active_status"`
+	ProductRegionalID   null.Int64  `json:"product_regional_id"`
 	ProductRegionalName null.String `json:"product_regional_name"`
 }
 

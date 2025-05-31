@@ -5,8 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type OrderStatus struct {

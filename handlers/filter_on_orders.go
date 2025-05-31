@@ -6,7 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/lib/pq"
 )
@@ -17,7 +18,7 @@ type FilterOrder struct {
 	OrderStatus           sql.NullInt64   `json:"order_status"` // 0 to 6 or NULL
 	ActualDeliveryDate    sql.NullTime    `json:"actual_delivery_date"`
 	RetailerID            int             `json:"retailer_id"`
-	WholesellerID          []int64   `json:"wholeseller_id"` 
+	WholesellerID         []int64         `json:"wholeseller_id"`
 	TotalOrderAmount      sql.NullFloat64 `json:"total_order_amount"`
 	DiscountAmount        sql.NullFloat64 `json:"discount_amount"`
 	TaxAmount             sql.NullFloat64 `json:"tax_amount"`

@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"time"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v4"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 // Order represents the structure of an order request
@@ -72,24 +73,24 @@ type OrderItemDetail struct {
 
 // OrderDetailResponse represents the detailed response for an order
 type OrderDetailResponse struct {
-	OrderID             int64           `json:"order_id"`
-	DateOfOrder         time.Time       `json:"date_of_order"`
-	OrderStatus         int             `json:"order_status"`
-	ActualDeliveryDate  *time.Time      `json:"actual_delivery_date,omitempty"`
-	RetailerID          int             `json:"retailer_id"`
-	ShopName            string          `json:"shop_name"`
-	WholesellerIDs      []int           `json:"wholeseller_ids,omitempty"`
-	TotalOrderAmount    float64         `json:"total_order_amount"`
-	DiscountAmount      float64         `json:"discount_amount"`
-	TaxAmount           float64         `json:"tax_amount"`
-	FinalAmount         float64         `json:"final_amount"`
-	Products            []ProductDetail `json:"products"`
+	OrderID            int64           `json:"order_id"`
+	DateOfOrder        time.Time       `json:"date_of_order"`
+	OrderStatus        int             `json:"order_status"`
+	ActualDeliveryDate *time.Time      `json:"actual_delivery_date,omitempty"`
+	RetailerID         int             `json:"retailer_id"`
+	ShopName           string          `json:"shop_name"`
+	WholesellerIDs     []int           `json:"wholeseller_ids,omitempty"`
+	TotalOrderAmount   float64         `json:"total_order_amount"`
+	DiscountAmount     float64         `json:"discount_amount"`
+	TaxAmount          float64         `json:"tax_amount"`
+	FinalAmount        float64         `json:"final_amount"`
+	Products           []ProductDetail `json:"products"`
 }
 
 // CompletedOrderDetail represents a completed order with its items
 type CompletedOrderDetail struct {
-	OrderID          int64            `json:"order_id"`
-	TotalOrderAmount float64          `json:"total_order_amount"`
+	OrderID          int64             `json:"order_id"`
+	TotalOrderAmount float64           `json:"total_order_amount"`
 	OrderItems       []OrderItemDetail `json:"order_items"`
 }
 
@@ -118,9 +119,9 @@ func CreateRetailerOrderHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	if len(req.ProductIDs) != len(req.Quantities) || 
-	   len(req.ProductIDs) != len(req.UnitIDs) || 
-	   len(req.ProductIDs) != len(req.MaxItemPrices) {
+	if len(req.ProductIDs) != len(req.Quantities) ||
+		len(req.ProductIDs) != len(req.UnitIDs) ||
+		len(req.ProductIDs) != len(req.MaxItemPrices) {
 		return c.Status(fiber.StatusBadRequest).JSON(OrderResponse{
 			Status:  "error",
 			Message: "Product IDs, quantities, unit IDs, and max prices arrays must have the same length",
@@ -185,22 +186,22 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 
 	// Get basic order information
 	var order struct {
-		OrderID             int64
-		DateOfOrder         time.Time
-		OrderStatus         int
-		ActualDeliveryDate  *time.Time
-		RetailerID          int
-		TotalOrderAmount    *float64
-		DiscountAmount      *float64
-		TaxAmount           *float64
-		FinalAmount         *float64
+		OrderID            int64
+		DateOfOrder        time.Time
+		OrderStatus        int
+		ActualDeliveryDate *time.Time
+		RetailerID         int
+		TotalOrderAmount   *float64
+		DiscountAmount     *float64
+		TaxAmount          *float64
+		FinalAmount        *float64
 	}
 
 	orderQuery := `
-		SELECT 
-			order_id, date_of_order, order_status, 
-			actual_delivery_date, retailer_id, 
-			total_order_amount, discount_amount, 
+		SELECT
+			order_id, date_of_order, order_status,
+			actual_delivery_date, retailer_id,
+			total_order_amount, discount_amount,
 			tax_amount, final_amount
 		FROM business_schema.order_table
 		WHERE order_id = $1`
@@ -249,18 +250,18 @@ func GetOrderDetailsHandler(c *fiber.Ctx) error {
 
 	// Prepare response
 	response := OrderDetailResponse{
-		OrderID:             order.OrderID,
-		DateOfOrder:         order.DateOfOrder,
-		OrderStatus:         order.OrderStatus,
-		ActualDeliveryDate:  order.ActualDeliveryDate,
-		RetailerID:          order.RetailerID,
-		ShopName:            shopName,
-		WholesellerIDs:      wholesellerIDs,
-		TotalOrderAmount:    derefFloat(order.TotalOrderAmount),
-		DiscountAmount:      derefFloat(order.DiscountAmount),
-		TaxAmount:           derefFloat(order.TaxAmount),
-		FinalAmount:         derefFloat(order.FinalAmount),
-		Products:            products,
+		OrderID:            order.OrderID,
+		DateOfOrder:        order.DateOfOrder,
+		OrderStatus:        order.OrderStatus,
+		ActualDeliveryDate: order.ActualDeliveryDate,
+		RetailerID:         order.RetailerID,
+		ShopName:           shopName,
+		WholesellerIDs:     wholesellerIDs,
+		TotalOrderAmount:   derefFloat(order.TotalOrderAmount),
+		DiscountAmount:     derefFloat(order.DiscountAmount),
+		TaxAmount:          derefFloat(order.TaxAmount),
+		FinalAmount:        derefFloat(order.FinalAmount),
+		Products:           products,
 	}
 
 	return c.JSON(response)
@@ -329,7 +330,7 @@ func GetAllCompletedOrderItemHandler(c *fiber.Ctx) error {
 func getWholesellerIDs(orderID int64) ([]int, error) {
 	var wholesellerIDs []int
 	query := `
-		SELECT wholeseller_id 
+		SELECT wholeseller_id
 		FROM business_schema.order_wholeseller_mapping
 		WHERE order_id = $1 AND status = 1`
 
@@ -354,9 +355,9 @@ func getWholesellerIDs(orderID int64) ([]int, error) {
 func getOrderProducts(orderID int64) ([]ProductDetail, error) {
 	var products []ProductDetail
 	query := `
-		SELECT 
-			oi.product_id, mp.product_name, mp.category_id, 
-			mpc.category_name, oi.quantity, 
+		SELECT
+			oi.product_id, mp.product_name, mp.category_id,
+			mpc.category_name, oi.quantity,
 			oi.unit_id, ut.unit_name, oi.max_item_price
 		FROM business_schema.order_item_table oi
 		JOIN admin_schema.master_product mp ON oi.product_id = mp.product_id

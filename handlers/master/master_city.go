@@ -2,11 +2,12 @@ package Masterhandlers
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
-	"github.com/go-playground/validator/v10"
+	"farmerapp/go_backend/db"
 	"log"
 	"strconv"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 // Insert City
