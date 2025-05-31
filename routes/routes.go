@@ -1,19 +1,23 @@
 package routes
 
 import (
-	_ "github.com/PragaL15/go_newBackend/docs"
-	"github.com/PragaL15/go_newBackend/handlers"
-	Marketoppurtinities "github.com/PragaL15/go_newBackend/handlers/marketOppurtinities"
-	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
-	RestockingStock "github.com/PragaL15/go_newBackend/handlers/restocking"
-	TrendHandlers "github.com/PragaL15/go_newBackend/handlers/trendHandlers"
+	_ "farmerapp/docs"
+	"farmerapp/handlers"
+	Marketoppurtinities "farmerapp/handlers/marketOppurtinities"
+	Masterhandlers "farmerapp/handlers/master"
+	RestockingStock "farmerapp/handlers/restocking"
+	TrendHandlers "farmerapp/handlers/trendHandlers"
+	"farmerapp/internal/transportation"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 )
 
 func RegisterRoutes(app *fiber.App) {
 
-	app.Get("/swagger/*", swagger.HandlerDefault) 
+	transportation.RegisterRoutes(app.Group("/transportation"))
+
+	app.Get("/swagger/*", swagger.HandlerDefault)
 	// Registering routes for GET methods
 	app.Get("/getUsers", Masterhandlers.GetAllUsers)
 	app.Get("/getCategoriesBySupID/:super_cat_id", Masterhandlers.GetCategoriesBySuperCatID)
@@ -41,17 +45,17 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessUsers", Masterhandlers.GetAllBusinessUsers)
 	app.Get("/getCategoryRegionalName", Masterhandlers.GetProductCategoryRegional)
 	app.Get("/getProductRegionalName", Masterhandlers.GetAllProductRegionalNames)
-	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)  
-	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)    
-	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler) 
-	app.Get("/getTopSellingWeekly", TrendHandlers.GetTopSellingWeeklyHandler) 
-	app.Get("/getTopSellingMonthly", TrendHandlers.GetTopSellingMonthlyHandler) 
-	app.Get("/getTopSellingYearly", TrendHandlers.GetTopSellingYearlyHandler) 
-	app.Get("/getMandiStockedProduct", TrendHandlers.GetLeastStockedProductsHandler) 
-	app.Get("/getLowStockItems", TrendHandlers.GetLowStockItemsHandler) 
-	app.Get("/getOrderFilter",handlers.GetFilteredOrders) 
+	app.Get("/getSalesValue/monthly", TrendHandlers.GetSalesMonthlyHandler)
+	app.Get("/getSalesValue/weekly", TrendHandlers.GetSalesWeeklyHandler)
+	app.Get("/getSalesValue/yearly", TrendHandlers.GetSalesYearlyHandler)
+	app.Get("/getTopSellingWeekly", TrendHandlers.GetTopSellingWeeklyHandler)
+	app.Get("/getTopSellingMonthly", TrendHandlers.GetTopSellingMonthlyHandler)
+	app.Get("/getTopSellingYearly", TrendHandlers.GetTopSellingYearlyHandler)
+	app.Get("/getMandiStockedProduct", TrendHandlers.GetLeastStockedProductsHandler)
+	app.Get("/getLowStockItems", TrendHandlers.GetLowStockItemsHandler)
+	app.Get("/getOrderFilter", handlers.GetFilteredOrders)
 	app.Get("/getSlowMovingProducts", Marketoppurtinities.GetSlowMovingProductsHandler)
-	app.Get("/getStockAvailability", TrendHandlers.GetStockAvailabilityPercentageHandler) 
+	app.Get("/getStockAvailability", TrendHandlers.GetStockAvailabilityPercentageHandler)
 	app.Get("/getCurrentStockByMandi/:mandi_id", TrendHandlers.GetCurrentStockByMandiHandler)
 	app.Get("/getAllBulkOrderDetails", Marketoppurtinities.GetAllBulkOrderDetailsHandler)
 	app.Get("/getTopRetailerDetails", Marketoppurtinities.GetTopRetailersHandler)
@@ -60,8 +64,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getCompletedOrderSummary", handlers.GetAllCompletedOrderItemHandler)
 
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
-//http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
-
+	//http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 
 	// Registering routes for GET methods with ID
 	app.Get("/getProducts/:product_id", Masterhandlers.GetProductByID)
@@ -76,10 +79,10 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getBusinessTypeById/:id", Masterhandlers.GetBusinessTypeByID)
 	app.Get("/getDriverById/:id", Masterhandlers.GetDriverByID)
 	app.Get("/getBusinessesbranch/:id", Masterhandlers.GetBusinessBranchByID)
-	app.Get("/getBusinessUser/:id", Masterhandlers.GetBusinessUserByID) 
-	app.Get("/getProductCategoryRegional/:id", Masterhandlers.GetProductCategoryRegionalByID) 
+	app.Get("/getBusinessUser/:id", Masterhandlers.GetBusinessUserByID)
+	app.Get("/getProductCategoryRegional/:id", Masterhandlers.GetProductCategoryRegionalByID)
 	app.Get("/invoice/:invoice_id", handlers.GetInvoiceDetails)
-  
+
 	// POST Routes
 	app.Post("/categoryDetails", Masterhandlers.InsertCategory)
 	app.Post("/locationDetails", Masterhandlers.InsertLocation)
@@ -125,9 +128,9 @@ func RegisterRoutes(app *fiber.App) {
 	app.Put("/CashPaymentTypeUpdate", Masterhandlers.UpdateCashPaymentType)
 	app.Put("/businessCategoryUpdate", Masterhandlers.UpdateBusinessCategory)
 	app.Put("/branchDetailsUpdate", Masterhandlers.UpdateBusinessBranch)
-	app.Put("/businessUserDetailesUpdate", Masterhandlers.UpdateBusinessUser) 
-	app.Put("/CategoryRegionalUpdate", Masterhandlers.UpdateProductCategoryRegional) 
-	app.Put("/ProductRegionalUpdate", Masterhandlers.UpdateProductRegionalName) 
+	app.Put("/businessUserDetailesUpdate", Masterhandlers.UpdateBusinessUser)
+	app.Put("/CategoryRegionalUpdate", Masterhandlers.UpdateProductCategoryRegional)
+	app.Put("/ProductRegionalUpdate", Masterhandlers.UpdateProductRegionalName)
 
 	// DELETE Routes
 	app.Delete("cart/:cart_id/items/:product_id", handlers.DeleteCartItem)
