@@ -20,12 +20,54 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string) ([]Deli
 
 	switch deliveryType {
 	case "active":
-		query = `SELECT * FROM transport_schema.trip_assignments WHERE delivery_status = 'active'`
+		query = `
+
+			SELECT
+    				A.job_id,
+    				B.pickup_address,
+				B.drop_address
+			FROM
+    				transport_schema.trip_assignments A
+			JOIN
+    				transport_schema.transport_jobs B ON A.job_id = B.job_id
+			WHERE
+    				A.delivery_status = 'pending'
+    			AND
+				B.status = 'picked';
+			`
 
 	case "upcoming":
-		query = `SELECT * FROM transport_schema.trip_assignments WHERE delivery_status = 'upcoming'`
+		query = `
+			SELECT
+    				A.job_id,
+    				B.pickup_address,
+				B.drop_address
+			FROM
+    				transport_schema.trip_assignments A
+			JOIN
+    				transport_schema.transport_jobs B ON A.job_id = B.job_id
+			WHERE
+    				A.delivery_status = 'pending'
+    			AND
+				B.status = 'accepted';
+
+			`
 	case "completed":
-		query = `SELECT job_id,transporter_id FROM transport_schema.trip_assignments WHERE delivery_status = 'delivered'`
+		query = `
+			SELECT
+    				A.job_id,
+    				B.pickup_address,
+				B.drop_address
+			FROM
+    				transport_schema.trip_assignments A
+			JOIN
+    				transport_schema.transport_jobs B ON A.job_id = B.job_id
+			WHERE
+    				A.delivery_status = 'delivered'
+    			AND
+				B.status = 'delivered';
+
+			`
 	default:
 		return nil, fmt.Errorf("Invalid delivery type: %s", deliveryType)
 	}
@@ -39,7 +81,7 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string) ([]Deli
 	for rows.Next() {
 		var d Delivery
 		err := rows.Scan(
-			&d.JobID, &d.TransporterID,
+			&d.JobID, &d.PickupAddress, &d.DropAddress,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("Row scan failed: %w", err)
