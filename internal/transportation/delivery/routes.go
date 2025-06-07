@@ -21,4 +21,6 @@ func (router *DeliveryRouter) RegisterRoutes(r fiber.Router) {
 	g.Get("/active-deliveries", router.handler.GetActiveDeliveries)
 	g.Get("/upcoming-deliveries", router.handler.GetUpcomingDeliveries)
 	g.Get("/completed-deliveries", router.handler.GetCompletedDeliveries)
+	g.Get("/delivery-history", router.handler.GetDeliveryHistory)
+	g.Post("/confirm-delivery", router.handler.ConfirmDelivery) /* To be implemented */
 }
