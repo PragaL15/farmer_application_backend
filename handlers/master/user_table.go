@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v4"
 )
@@ -153,7 +154,6 @@ func InsertUser(c *fiber.Ctx) error {
 	// Step 5: Success response
 	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "User created successfully"})
 }
-
 
 // UpdateUser godoc
 // @Summary      Update an existing user

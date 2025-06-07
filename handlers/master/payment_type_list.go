@@ -3,8 +3,9 @@ package Masterhandlers
 import (
 	"context"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type CashPayment struct {
@@ -12,7 +13,6 @@ type CashPayment struct {
 	PaymentType string `json:"payment_type"`
 	IsActive    bool   `json:"is_active"`
 }
-
 
 func GetAllCashPaymentsType(c *fiber.Ctx) error {
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_payment_types()")
@@ -38,7 +38,6 @@ func GetAllCashPaymentsType(c *fiber.Ctx) error {
 	return c.JSON(payments)
 }
 
-
 func InsertCashPaymentType(c *fiber.Ctx) error {
 	type Request struct {
 		PaymentType string `json:"payment_type"`
@@ -59,12 +58,11 @@ func InsertCashPaymentType(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Payment type added successfully"})
 }
 
-
 func UpdateCashPaymentType(c *fiber.Ctx) error {
 	type Request struct {
 		ID          int64   `json:"id"`
-		PaymentType *string `json:"payment_type"` 
-		IsActive    *bool   `json:"is_active"`    
+		PaymentType *string `json:"payment_type"`
+		IsActive    *bool   `json:"is_active"`
 	}
 
 	var req Request

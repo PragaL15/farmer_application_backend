@@ -5,9 +5,10 @@ import (
 	"log"
 	"strconv"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v4"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 func InsertPaymentMode(c *fiber.Ctx) error {

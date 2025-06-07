@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/jackc/pgconn"
+	"github.com/joho/godotenv"
 	"github.com/pashagolub/pgxmock"
 )
 
@@ -18,6 +18,7 @@ type Database interface {
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row // ✅ Added
 	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 	Ping(ctx context.Context) error
+	Begin(ctx context.Context) (pgx.Tx, error)
 	Close()
 }
 
@@ -40,6 +41,10 @@ func (db *PgxDB) Exec(ctx context.Context, sql string, args ...interface{}) (pgc
 
 func (db *PgxDB) Ping(ctx context.Context) error {
 	return db.Pool.Ping(ctx)
+}
+
+func (db *PgxDB) Begin(ctx context.Context) (pgx.Tx, error) {
+	return db.Pool.Begin(ctx)
 }
 
 func (db *PgxDB) Close() {

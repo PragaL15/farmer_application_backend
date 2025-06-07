@@ -2,10 +2,11 @@ package Marketoppurtinities
 
 import (
 	"context"
+	"farmerapp/go_backend/db"
 	"log"
 	"net/http"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type TopRetailerProduct struct {
@@ -17,6 +18,7 @@ type TopRetailerProduct struct {
 	Quantity     float64 `json:"quantity"`
 	OrderValue   float64 `json:"order_value"`
 }
+
 // GetTopRetailersHandler godoc
 // @Summary      Get top 5 bulk ordering retailers (product-wise)
 // @Description  Returns top 5 bulk orders made by retailers per product

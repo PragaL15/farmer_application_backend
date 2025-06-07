@@ -2,27 +2,28 @@ package Masterhandlers
 
 import (
 	"context"
+	"database/sql"
+	"farmerapp/go_backend/db"
 	"log"
 	"strconv"
-		"database/sql"
-"time"
-	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"time"
+
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 func InsertDriver(c *fiber.Ctx) error {
 	type Request struct {
-		DriverName       string  `json:"driver_name" validate:"required,max=255"`
+		DriverName       string `json:"driver_name" validate:"required,max=255"`
 		DriverAge        int    `json:"driver_age"`
-		DriverLicense    string  `json:"driver_license" validate:"required,max=50"`
-		DriverNumber     string  `json:"driver_number" validate:"required,max=15"`
+		DriverLicense    string `json:"driver_license" validate:"required,max=50"`
+		DriverNumber     string `json:"driver_number" validate:"required,max=15"`
 		DriverAddress    string `json:"driver_address"`
 		DriverStatus     string `json:"driver_status"`
 		DateOfJoining    string `json:"date_of_joining"`
 		ExperienceYears  int    `json:"experience_years"`
 		VehicleID        int    `json:"vehicle_id"`
-		LicenseExpiry    string  `json:"license_expiry_date" validate:"required"`
+		LicenseExpiry    string `json:"license_expiry_date" validate:"required"`
 		EmergencyContact string `json:"emergency_contact"`
 		AssignedRouteID  int    `json:"assigned_route_id"`
 		Col1             string `json:"col1"`
@@ -57,7 +58,7 @@ func InsertDriver(c *fiber.Ctx) error {
 
 func UpdateDriver(c *fiber.Ctx) error {
 	type Request struct {
-		DriverID         int     `json:"driver_id" validate:"required,min=1"`
+		DriverID         int    `json:"driver_id" validate:"required,min=1"`
 		DriverName       string `json:"driver_name"`
 		DriverAge        int    `json:"driver_age"`
 		DriverLicense    string `json:"driver_license"`
@@ -120,17 +121,16 @@ func DeleteDriver(c *fiber.Ctx) error {
 
 func GetDrivers(c *fiber.Ctx) error {
 	type Driver struct {
-		DriverID         int     `json:"driver_id"`
-		DriverName       string  `json:"driver_name"`
-		DriverLicense    string  `json:"driver_license"`
-		DriverNumber     string  `json:"driver_number"`
-		DriverAddress    string  `json:"driver_address"`
-		DateOfJoining    *string `json:"date_of_joining"`
-		EmergencyContact string  `json:"emergency_contact"`
-		CreatedAt        *string `json:"created_at"`
-		DOB              *string `json:"d_o_b"`
-		LicenseTypeID sql.NullInt32 `json:"driver_license_type"`
-
+		DriverID         int           `json:"driver_id"`
+		DriverName       string        `json:"driver_name"`
+		DriverLicense    string        `json:"driver_license"`
+		DriverNumber     string        `json:"driver_number"`
+		DriverAddress    string        `json:"driver_address"`
+		DateOfJoining    *string       `json:"date_of_joining"`
+		EmergencyContact string        `json:"emergency_contact"`
+		CreatedAt        *string       `json:"created_at"`
+		DOB              *string       `json:"d_o_b"`
+		LicenseTypeID    sql.NullInt32 `json:"driver_license_type"`
 	}
 
 	rows, err := db.Pool.Query(context.Background(), "SELECT * FROM admin_schema.get_all_drivers()")
@@ -146,11 +146,11 @@ func GetDrivers(c *fiber.Ctx) error {
 		var driver Driver
 
 		var (
-			doj            sql.NullTime
-			created        sql.NullTime
-			dob            sql.NullTime
-			driverAddress  sql.NullString
-			emergency      sql.NullString
+			doj           sql.NullTime
+			created       sql.NullTime
+			dob           sql.NullTime
+			driverAddress sql.NullString
+			emergency     sql.NullString
 		)
 
 		err := rows.Scan(
@@ -199,7 +199,7 @@ func GetDriverByID(c *fiber.Ctx) error {
 	}
 
 	var driver struct {
-		DriverID int 
+		DriverID         int
 		DriverName       string
 		DriverAge        *int
 		DriverLicense    string
@@ -219,13 +219,13 @@ func GetDriverByID(c *fiber.Ctx) error {
 	}
 
 	err = db.Pool.QueryRow(context.Background(), "SELECT * FROM get_driver_by_id($1)", idInt).Scan(
-		&driver.DriverID,&driver.DriverName, &driver.DriverAge, &driver.DriverLicense, &driver.DriverNumber,
+		&driver.DriverID, &driver.DriverName, &driver.DriverAge, &driver.DriverLicense, &driver.DriverNumber,
 		&driver.DriverAddress, &driver.DriverStatus, &driver.DateOfJoining, &driver.ExperienceYears,
 		&driver.LicenseExpiry, &driver.EmergencyContact, &driver.AssignedRouteID, &driver.CreatedAt,
 		&driver.UpdatedAt, &driver.DOB, &driver.Col1, &driver.Col2,
 	)
 	if err != nil {
-		
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 

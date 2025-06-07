@@ -4,8 +4,9 @@ import (
 	"context"
 	"strconv"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type BusinessType struct {
@@ -76,7 +77,6 @@ func InsertBusinessType(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(inserted)
 }
-
 
 func UpdateBusinessType(c *fiber.Ctx) error {
 	var req BusinessType

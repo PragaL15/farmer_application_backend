@@ -5,22 +5,23 @@ import (
 	"log"
 	"net/http"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 	"gopkg.in/guregu/null.v4"
 )
 
 type TopSalesData struct {
-	ProductID           int         `json:"product_id"`
-	ProductName         null.String `json:"product_name"`
-	MandiID             int         `json:"mandi_id"`
-	MandiName           null.String `json:"mandi_name"`
-	UnitID              int         `json:"unit_id"`
-	Quantity            int         `json:"quantity"`
-	Price               null.Float  `json:"price"`
-	TotalQuantityKg     null.Float  `json:"total_quantity_kg"`
-	ActualDeliveryDate  null.String `json:"actual_delivery_date"`
-	TotalPrice          null.Float  `json:"total_price"`
+	ProductID          int         `json:"product_id"`
+	ProductName        null.String `json:"product_name"`
+	MandiID            int         `json:"mandi_id"`
+	MandiName          null.String `json:"mandi_name"`
+	UnitID             int         `json:"unit_id"`
+	Quantity           int         `json:"quantity"`
+	Price              null.Float  `json:"price"`
+	TotalQuantityKg    null.Float  `json:"total_quantity_kg"`
+	ActualDeliveryDate null.String `json:"actual_delivery_date"`
+	TotalPrice         null.Float  `json:"total_price"`
 }
 
 func GetTopSellingWeeklyHandler(c *fiber.Ctx) error {

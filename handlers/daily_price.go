@@ -5,8 +5,9 @@ import (
 	"log"
 	"time"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type PriceData struct {
@@ -79,8 +80,8 @@ type PriceRow struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 	Remarks        string    `json:"remarks"`
-	BranchID       *int      `json:"b_branch_id"`   // Nullable
-	BranchShopName *string   `json:"b_shop_name"`   // Nullable
+	BranchID       *int      `json:"b_branch_id"` // Nullable
+	BranchShopName *string   `json:"b_shop_name"` // Nullable
 }
 
 func GetAllPriceDetailsHandler(c *fiber.Ctx) error {
@@ -131,7 +132,6 @@ func GetAllPriceDetailsHandler(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(results)
 }
-
 
 // Insert Price Handler
 func InsertPriceHandler(c *fiber.Ctx) error {

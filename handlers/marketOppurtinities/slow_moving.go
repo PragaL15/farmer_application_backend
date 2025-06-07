@@ -5,20 +5,23 @@ import (
 	"log"
 	"net/http"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
+
 type SlowMovingProduct struct {
-	ProductName   string  `json:"product_name"`
-	MandiName     string  `json:"mandi_name"`
-	StockLeft     float64 `json:"stock_left"`
-	WeeklySales   float64 `json:"weekly_sales"`
-	DaysInStock   int     `json:"days_in_stock"`
+	ProductName string  `json:"product_name"`
+	MandiName   string  `json:"mandi_name"`
+	StockLeft   float64 `json:"stock_left"`
+	WeeklySales float64 `json:"weekly_sales"`
+	DaysInStock int     `json:"days_in_stock"`
 }
+
 // GetSlowMovingProductsHandler godoc
 // @Summary      Get slow moving products
 // @Description  Returns products that have been in stock for more than 3 days and are moving slowly
-// @Tags         Market Opportunities 
+// @Tags         Market Opportunities
 // @Accept       json
 // @Produce      json
 // @Success      200  {array}   SlowMovingProduct
@@ -56,5 +59,6 @@ func GetSlowMovingProductsHandler(c *fiber.Ctx) error {
 	}
 	return c.Status(http.StatusOK).JSON(slowProducts)
 }
+
 // Product is in stock more than 7 days
 // Its weekly sales < 10% of current stock

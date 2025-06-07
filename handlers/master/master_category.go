@@ -6,7 +6,8 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"farmerapp/go_backend/db"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/guregu/null/v5"
@@ -14,11 +15,11 @@ import (
 
 func InsertCategory(c *fiber.Ctx) error {
 	type Request struct {
-		CategoryName       string    `json:"category_name" validate:"required,max=255"`
-		SuperCatID         null.Int  `json:"super_cat_id"`
-		ImgPath            *string   `json:"img_path"`
-		ActiveStatus       *int      `json:"active_status"`
-		CategoryRegionalID *int      `json:"category_regional_id"`
+		CategoryName       string   `json:"category_name" validate:"required,max=255"`
+		SuperCatID         null.Int `json:"super_cat_id"`
+		ImgPath            *string  `json:"img_path"`
+		ActiveStatus       *int     `json:"active_status"`
+		CategoryRegionalID *int     `json:"category_regional_id"`
 	}
 
 	var req Request
@@ -49,12 +50,12 @@ func InsertCategory(c *fiber.Ctx) error {
 
 func UpdateCategory(c *fiber.Ctx) error {
 	type Request struct {
-		CategoryID         int      `json:"category_id" validate:"required,min=1"`
-		CategoryName       string   `json:"category_name" validate:"required,max=255"`
-		SuperCatID         *int     `json:"super_cat_id"`
-		ImgPath            *string  `json:"img_path"`
-		ActiveStatus       *int     `json:"active_status"`
-		CategoryRegionalID *int     `json:"category_regional_id"`
+		CategoryID         int     `json:"category_id" validate:"required,min=1"`
+		CategoryName       string  `json:"category_name" validate:"required,max=255"`
+		SuperCatID         *int    `json:"super_cat_id"`
+		ImgPath            *string `json:"img_path"`
+		ActiveStatus       *int    `json:"active_status"`
+		CategoryRegionalID *int    `json:"category_regional_id"`
 	}
 
 	var req Request
@@ -96,12 +97,12 @@ func GetCategoryByID(c *fiber.Ctx) error {
 
 	// Define struct to match the returned JSON
 	type Category struct {
-		CategoryID         int      `json:"category_id"`
-		CategoryName       string   `json:"category_name"`
-		SuperCatID         *int     `json:"super_cat_id"`
-		ImgPath            *string  `json:"img_path"`
-		ActiveStatus       *int     `json:"active_status"`
-		CategoryRegionalID *int     `json:"category_regional_id"`
+		CategoryID         int        `json:"category_id"`
+		CategoryName       string     `json:"category_name"`
+		SuperCatID         *int       `json:"super_cat_id"`
+		ImgPath            *string    `json:"img_path"`
+		ActiveStatus       *int       `json:"active_status"`
+		CategoryRegionalID *int       `json:"category_regional_id"`
 		Subcategories      []Category `json:"subcategories"`
 	}
 

@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"context"
+	"farmerapp/go_backend/db"
 	"log"
 	"net/http"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type WholesellerStockDetail struct {

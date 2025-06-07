@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type OrderItems struct {
@@ -22,16 +23,16 @@ type OrderItems struct {
 }
 
 type OrderDetail struct {
-	OrderID           sql.NullInt64
-	RetailerID        sql.NullInt64
-	RetailerName      sql.NullString
-	RetailerAddress   sql.NullString
-	RetailerMobile    sql.NullString
+	OrderID            sql.NullInt64
+	RetailerID         sql.NullInt64
+	RetailerName       sql.NullString
+	RetailerAddress    sql.NullString
+	RetailerMobile     sql.NullString
 	ActualDeliveryDate sql.NullTime
-	OrderStatusID     sql.NullInt64
-	OrderStatus       sql.NullString
-	TotalOrderAmount  sql.NullFloat64
-	OrderItems        []OrderItems
+	OrderStatusID      sql.NullInt64
+	OrderStatus        sql.NullString
+	TotalOrderAmount   sql.NullFloat64
+	OrderItems         []OrderItems
 }
 
 type CleanOrderItem struct {
@@ -59,7 +60,7 @@ type CleanOrderDetail struct {
 
 func GetAllOrderItemDetailsHandler(c *fiber.Ctx) error {
 	query := `
-		SELECT 
+		SELECT
 			order_id,
 			retailer_id,
 			retailer_name,
@@ -76,7 +77,7 @@ func GetAllOrderItemDetailsHandler(c *fiber.Ctx) error {
 			unit_id,
 			max_item_price,
 			unit_name
-		FROM 
+		FROM
 			business_schema.get_order_details_v2();
 	`
 

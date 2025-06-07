@@ -2,23 +2,24 @@ package Masterhandlers
 
 import (
 	"context"
+	"farmerapp/go_backend/db"
 	"log"
 	"net/http"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type UserDetails struct {
-	UserID      int    `json:"user_id"`
-	Name        string `json:"name"`
-	MobileNum   string `json:"mobile_num"`
-	Email       string `json:"email"`
-	Address     string `json:"address"`
-	Pincode     string `json:"pincode"`
-	Location    int `json:"location"`
-	State       int `json:"state"`
-	ActiveStatus int   `json:"active_status"`
-	RoleID      int    `json:"role_id"`
+	UserID       int    `json:"user_id"`
+	Name         string `json:"name"`
+	MobileNum    string `json:"mobile_num"`
+	Email        string `json:"email"`
+	Address      string `json:"address"`
+	Pincode      string `json:"pincode"`
+	Location     int    `json:"location"`
+	State        int    `json:"state"`
+	ActiveStatus int    `json:"active_status"`
+	RoleID       int    `json:"role_id"`
 }
 
 func LoginUser(c *fiber.Ctx) error {

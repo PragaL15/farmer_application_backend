@@ -5,8 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type WholesellerPrice struct {
@@ -15,8 +16,8 @@ type WholesellerPrice struct {
 }
 
 type GroupedPriceComparison struct {
-	ProductName string              `json:"product_name"`
-	Prices      []WholesellerPrice  `json:"prices"`
+	ProductName string             `json:"product_name"`
+	Prices      []WholesellerPrice `json:"prices"`
 }
 
 func GetWholesellerPriceComparisonHandler(c *fiber.Ctx) error {

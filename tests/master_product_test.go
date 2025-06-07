@@ -1,4 +1,4 @@
- package tests
+package tests
 
 // import (
 // 	"encoding/json"
@@ -7,8 +7,8 @@
 // 	"strings"
 // 	"testing"
 
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
-// 	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+// 	"farmerapp/go_backend/db"
+// 	Masterhandlers "farmerapp/handlers/master"
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/pashagolub/pgxmock"
 // 	"github.com/stretchr/testify/assert"
@@ -42,15 +42,13 @@
 // 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 // }
 
-
-
 // func TestUpdateMasterProduct_Success(t *testing.T) {
 // 	app := setupApp()
 // 	mockDB, err := pgxmock.NewPool()
 // 	assert.NoError(t, err)
 // 	db.Pool = mockDB
 // 	mockDB.ExpectExec(`(?i)CALL update_master_product\(\$1, \$2, \$3, \$4\)`).
-//     WithArgs(int32(1), int32(1), "Updated Product", int32(1)). 
+//     WithArgs(int32(1), int32(1), "Updated Product", int32(1)).
 //     WillReturnResult(pgxmock.NewResult("CALL", 1))
 
 // 	requestBody := `{"product_id":1, "category_id":1, "product_name":"Updated Product", "status":1}`
@@ -61,8 +59,6 @@
 // 	assert.NoError(t, err)
 // 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 // }
-
-
 
 // func TestDeleteMasterProduct_Success(t *testing.T) {
 // 	app := setupApp()
@@ -89,7 +85,7 @@
 // 	catName, prodName := "Category A", "Product A"
 
 // 	rows := mockDB.NewRows([]string{"product_id", "category_id", "category_name", "product_name", "status"}).
-// 			AddRow(&prodID, &catID, &catName, &prodName, &status) 
+// 			AddRow(&prodID, &catID, &catName, &prodName, &status)
 
 // 	mockDB.ExpectQuery(`SELECT \* FROM get_master_products\(\)`).WillReturnRows(rows)
 
@@ -109,4 +105,3 @@
 // 	assert.Equal(t, "Product A", products[0]["product_name"])
 // 	assert.Equal(t, float64(1), products[0]["status"])
 // }
-

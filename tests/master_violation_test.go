@@ -10,8 +10,8 @@ package tests
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/pashagolub/pgxmock"
 // 	"github.com/stretchr/testify/assert"
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
-// 	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+// 	"farmerapp/go_backend/db"
+// 	Masterhandlers "farmerapp/handlers/master"
 // )
 
 // func setupMockDB(t *testing.T) pgxmock.PgxPoolIface {
@@ -120,7 +120,7 @@ package tests
 // 	json.Unmarshal(respBody, &jsonResponse)
 
 // 	assert.Len(t, jsonResponse, 2)
-// 	assert.Equal(t, float64(1), jsonResponse[0]["id"]) 
+// 	assert.Equal(t, float64(1), jsonResponse[0]["id"])
 // 	assert.Equal(t, "Violation A", jsonResponse[0]["violation_name"])
 // 	assert.Equal(t, "High", jsonResponse[0]["level_of_serious"])
 // 	assert.Equal(t, float64(1), jsonResponse[0]["status"])

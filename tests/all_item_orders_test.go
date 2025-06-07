@@ -1,31 +1,31 @@
+package tests
 
-package tests 
 // import (
-// 	"database/sql" 
+// 	"database/sql"
 // 	"encoding/json"
 // 	"net/http"
 // 	"net/http/httptest"
 // 	"testing"
 // 	"time"
 
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
-// 	"github.com/PragaL15/go_newBackend/handlers"
+// 	"farmerapp/go_backend/db"
+// 	"farmerapp/handlers"
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/pashagolub/pgxmock"
 // 	"github.com/stretchr/testify/assert"
 // )
 
 // func TestGetOrderDetails_Success(t *testing.T) {
-	
+
 // 	app := fiber.New()
 // 	app.Get("/orders", handlers.GetOrderDetails)
 
 // 	mockDB, err := pgxmock.NewPool()
 // 	assert.NoError(t, err, "Failed to create mock DB")
-// 	db.Pool = mockDB 
+// 	db.Pool = mockDB
 // 	now := time.Now()
-// 	expectedDelivery := sql.NullTime{Time: now.AddDate(0, 0, 7), Valid: true} 
-// 	actualDelivery := sql.NullTime{Valid: false}                              
+// 	expectedDelivery := sql.NullTime{Time: now.AddDate(0, 0, 7), Valid: true}
+// 	actualDelivery := sql.NullTime{Valid: false}
 
 // 	expectedRows := mockDB.NewRows([]string{
 //     "order_id", "order_item_id", "date_of_order", "expected_delivery_date", "actual_delivery_date",
@@ -34,7 +34,7 @@ package tests
 //     "product_id", "product_name", "quantity", "unit_id", "unit_name",
 //     "amt_of_order_item", "order_item_status_name",
 // }).AddRow(
-//     1, 1, 
+//     1, 1,
 //     now,
 //     expectedDelivery,
 //     actualDelivery,
@@ -45,7 +45,6 @@ package tests
 //     int64(10), "Product A", 5.0, 1, "Kg",
 //     50.25, "Completed",
 // )
-
 
 // 	mockDB.ExpectQuery(`(?i)^SELECT \* FROM get_order_details\(\)$`).WillReturnRows(expectedRows)
 

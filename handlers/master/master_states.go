@@ -2,10 +2,12 @@ package Masterhandlers
 
 import (
 	"context"
+	"farmerapp/go_backend/db"
 	"strconv"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
+
 type State struct {
 	ID              int64  `json:"id"`
 	State           string `json:"state"`

@@ -10,16 +10,16 @@ package tests
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/pashagolub/pgxmock"
 // 	"github.com/stretchr/testify/assert"
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
-// handlers	"github.com/PragaL15/go_newBackend/handlers"
+// 	"farmerapp/go_backend/db"
+// handlers	"farmerapp/handlers"
 // )
 
 // func TestGetInvoiceDetails(t *testing.T) {
 // 	app := fiber.New()
-	
+
 // 	mockPool, err := pgxmock.NewPool()
 // 	assert.NoError(t, err)
-// 	db.Pool = mockPool 
+// 	db.Pool = mockPool
 // 	invoiceDate := time.Now()
 // 	dueDate := invoiceDate.AddDate(0, 0, 30)
 

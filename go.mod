@@ -1,8 +1,9 @@
-module github.com/PragaL15/go_newBackend
+module farmerapp
 
 go 1.23.1
 
 require (
+	github.com/gavv/httpexpect/v2 v2.15.0
 	github.com/go-playground/validator/v10 v10.24.0
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/gofiber/swagger v1.1.1
@@ -61,6 +62,7 @@ require (
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
