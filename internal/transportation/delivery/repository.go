@@ -7,13 +7,13 @@ import (
 )
 
 type DeliveryRepositoryInterface interface {
-	GetDeliveries(deliveryType string) ([]Delivery, error)
+	GetDeliveries(deliveryType string, transporterId int) ([]Delivery, error)
 }
 
 type DeliveryRepository struct {
 }
 
-func (repository *DeliveryRepository) GetDeliveries(deliveryType string) ([]Delivery, error) {
+func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transporterId int) ([]Delivery, error) {
 	// THOUGHT:- deliveryType can be an enum
 	// Returning orders related to a certain user(transporter)
 	var query string
@@ -32,6 +32,8 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string) ([]Deli
     				transport_schema.transport_jobs B ON A.job_id = B.job_id
 			WHERE
     				A.delivery_status = 'pending'
+			AND
+				A.transporter_id = $1
     			AND
 				B.status = 'picked';
 			`
@@ -48,7 +50,9 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string) ([]Deli
     				transport_schema.transport_jobs B ON A.job_id = B.job_id
 			WHERE
     				A.delivery_status = 'pending'
-    			AND
+			AND
+				A.transporter_id = $1
+			AND
 				B.status = 'accepted';
 
 			`
@@ -64,14 +68,30 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string) ([]Deli
     				transport_schema.transport_jobs B ON A.job_id = B.job_id
 			WHERE
     				A.delivery_status = 'delivered'
+			AND
+				A.transporter_id = $1
     			AND
 				B.status = 'delivered';
+
+			`
+	case "history":
+		query = `
+			SELECT
+    				A.job_id,
+    				B.pickup_address,
+				B.drop_address
+			FROM
+    				transport_schema.trip_assignments A
+			JOIN
+    				transport_schema.transport_jobs B ON A.job_id = B.job_id
+			WHERE
+    				A.transporter_id = $1;
 
 			`
 	default:
 		return nil, fmt.Errorf("Invalid delivery type: %s", deliveryType)
 	}
-	rows, err := db.Pool.Query(context.Background(), query)
+	rows, err := db.Pool.Query(context.Background(), query, transporterId)
 	if err != nil {
 		return nil, fmt.Errorf("Query failed: %w", err)
 	}
