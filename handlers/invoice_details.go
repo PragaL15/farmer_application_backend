@@ -5,20 +5,21 @@ import (
 	"encoding/json"
 	"log"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type InvoiceRequest struct {
 	OrderID              int     `json:"order_id"`
 	WholesellerID        int     `json:"wholeseller_id"`
-	TotalAmount         float64 `json:"total_amount"`
-	DiscountAmount      float64 `json:"discount_amount,omitempty"`
-	TaxAmount           float64 `json:"tax_amount,omitempty"`
+	TotalAmount          float64 `json:"total_amount"`
+	DiscountAmount       float64 `json:"discount_amount,omitempty"`
+	TaxAmount            float64 `json:"tax_amount,omitempty"`
 	ProposedDeliveryDate string  `json:"proposed_delivery_date,omitempty"`
-	Notes               string  `json:"notes,omitempty"`
-	DecisionNotes       string  `json:"decision_notes,omitempty"`
-	InvoiceNumber       string  `json:"invoice_number,omitempty"`
+	Notes                string  `json:"notes,omitempty"`
+	DecisionNotes        string  `json:"decision_notes,omitempty"`
+	InvoiceNumber        string  `json:"invoice_number,omitempty"`
 }
 
 func InsertInvoiceDetails(c *fiber.Ctx) error {
@@ -49,8 +50,6 @@ func InsertInvoiceDetails(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-
-
 type InvoiceDetail struct {
 	InvoiceID      int64       `json:"invoice_id"`
 	OrderID        int64       `json:"order_id"`
@@ -74,29 +73,29 @@ type OrderItem struct {
 }
 
 func GetInvoiceDetails(c *fiber.Ctx) error {
-	invoiceID := c.Params("invoice_id") 
+	invoiceID := c.Params("invoice_id")
 
-	query := `SELECT 
-			i.id AS invoice_id, 
-			i.order_id, 
-			i.wholeseller_id, 
-			i.total_amount, 
-			i.discount_amount, 
-			i.tax_amount, 
-			i.final_amount, 
-			i.invoice_date, 
+	query := `SELECT
+			i.id AS invoice_id,
+			i.order_id,
+			i.wholeseller_id,
+			i.total_amount,
+			i.discount_amount,
+			i.tax_amount,
+			i.final_amount,
+			i.invoice_date,
 			i.due_date,
-			oi.order_item_id, 
-			oi.product_id, 
-			mp.product_name, 
-			oi.unit_id,  
-			mu.unit_name, 
+			oi.order_item_id,
+			oi.product_id,
+			mp.product_name,
+			oi.unit_id,
+			mu.unit_name,
 			oi.quantity
 		FROM business_schema.invoice_table AS i
 		JOIN business_schema.invoice_details_table AS idt ON i.id = idt.invoice_id
 		JOIN business_schema.order_item_table AS oi ON idt.order_item_id = oi.order_item_id
 		JOIN admin_schema.master_product AS mp ON oi.product_id = mp.product_id
-		JOIN admin_schema.units_table AS mu ON oi.unit_id = mu.id  
+		JOIN admin_schema.units_table AS mu ON oi.unit_id = mu.id
 		WHERE i.id = $1;`
 
 	rows, err := db.Pool.Query(context.Background(), query, invoiceID)

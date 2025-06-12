@@ -4,13 +4,14 @@ import (
 	"context"
 	"strconv"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type CategoryRegionalLanguage struct {
 	ID           int64  `json:"id"`
-	LanguageName string `json:"language_name"` 
+	LanguageName string `json:"language_name"`
 	RegionalName string `json:"regional_name"`
 }
 

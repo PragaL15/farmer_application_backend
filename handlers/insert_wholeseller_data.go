@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type WholesellerEntry struct {
@@ -19,8 +20,8 @@ type WholesellerEntry struct {
 	Datetime      time.Time `json:"datetime"`
 	WholesellerID int       `json:"wholeseller_id"`
 	MandiID       int       `json:"mandi_id"`
-	WarehouseID   int       `json:"warehouse_id"`  // ✅ New field
-	UnitID        int       `json:"unit_id"`       // ✅ New field
+	WarehouseID   int       `json:"warehouse_id"` // ✅ New field
+	UnitID        int       `json:"unit_id"`      // ✅ New field
 }
 
 // InsertWholesellerEntryHandler godoc

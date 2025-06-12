@@ -10,8 +10,8 @@ package tests
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/pashagolub/pgxmock"
 // 	"github.com/stretchr/testify/assert"
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
-// 		Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+// 	"farmerapp/go_backend/db"
+// 		Masterhandlers "farmerapp/handlers/master"
 // )
 
 // func setupMockDB(t *testing.T) pgxmock.PgxPoolIface {

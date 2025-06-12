@@ -4,9 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/PragaL15/go_newBackend/go_backend/db"
-	"github.com/gofiber/fiber/v2"
+	"farmerapp/go_backend/db"
+
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 var validate1 = validator.New()
@@ -41,15 +42,15 @@ func InsertMandiDetails(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(), "SELECT admin_schema.insert_mandi($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-req.MandiLocation,        
-req.MandiIncharge,       
-req.MandiInchargeNum,     
-req.MandiPincode,        
-req.MandiAddress,         
-req.MandiStateID,        
-req.MandiName,           
-req.MandiShortnames,      
-req.MandiCityID           )
+		req.MandiLocation,
+		req.MandiIncharge,
+		req.MandiInchargeNum,
+		req.MandiPincode,
+		req.MandiAddress,
+		req.MandiStateID,
+		req.MandiName,
+		req.MandiShortnames,
+		req.MandiCityID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to insert mandi", "details": err.Error()})
 	}

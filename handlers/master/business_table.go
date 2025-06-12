@@ -5,7 +5,8 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/PragaL15/go_newBackend/go_backend/db"
+	"farmerapp/go_backend/db"
+
 	"github.com/gofiber/fiber/v2"
 )
 

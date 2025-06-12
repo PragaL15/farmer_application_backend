@@ -2,27 +2,28 @@ package Masterhandlers
 
 import (
 	"context"
+	"database/sql"
+	"farmerapp/go_backend/db"
 	"log"
 	"net/http"
 	"time"
-"database/sql"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
 )
 
 type Vehicle struct {
-	VehicleID             int64     `json:"vehicle_id"`
-	VehicleName           string    `json:"vehicle_name"`
-	VehicleRegistrationNo string    `json:"vehicle_registration_no"`
-	VehicleYear           string    `json:"vehicle_manufacture_year"`
-	VehicleWarranty       string    `json:"vehicle_warranty"`
-	VehicleMake           sql.NullInt64     `json:"vehicle_make"`
-	VehicleModel          sql.NullInt64      `json:"vehicle_model"`
-	VehicleEngineType     sql.NullInt64     `json:"vehicle_engine_type"`
-	VehiclePurchaseDate   time.Time `json:"vehicle_purchase_date"`
-	VehicleColor          string    `json:"vehicle_color"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	VehicleID             int64         `json:"vehicle_id"`
+	VehicleName           string        `json:"vehicle_name"`
+	VehicleRegistrationNo string        `json:"vehicle_registration_no"`
+	VehicleYear           string        `json:"vehicle_manufacture_year"`
+	VehicleWarranty       string        `json:"vehicle_warranty"`
+	VehicleMake           sql.NullInt64 `json:"vehicle_make"`
+	VehicleModel          sql.NullInt64 `json:"vehicle_model"`
+	VehicleEngineType     sql.NullInt64 `json:"vehicle_engine_type"`
+	VehiclePurchaseDate   time.Time     `json:"vehicle_purchase_date"`
+	VehicleColor          string        `json:"vehicle_color"`
+	CreatedAt             time.Time     `json:"created_at"`
+	UpdatedAt             time.Time     `json:"updated_at"`
 }
 
 func GetAllVehicles(c *fiber.Ctx) error {

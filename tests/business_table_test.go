@@ -1,16 +1,16 @@
- package tests
+package tests
 
 // import (
-	
+
 // 	"net/http"
 // 	"net/http/httptest"
 // 	"testing"
 // "strings"
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
+// 	"farmerapp/go_backend/db"
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/stretchr/testify/assert"
 
-// 	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+// 	Masterhandlers "farmerapp/handlers/master"
 // 	"github.com/pashagolub/pgxmock"
 // )
 

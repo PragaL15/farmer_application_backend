@@ -9,8 +9,8 @@ package tests
 // 	"github.com/gofiber/fiber/v2"
 // 	"github.com/pashagolub/pgxmock"
 // 	"github.com/stretchr/testify/assert"
-// 	"github.com/PragaL15/go_newBackend/go_backend/db"
-// 	Masterhandlers "github.com/PragaL15/go_newBackend/handlers/master"
+// 	"farmerapp/go_backend/db"
+// 	Masterhandlers "farmerapp/handlers/master"
 // )
 
 // func setupMockDB(t *testing.T) pgxmock.PgxPoolIface {
@@ -29,12 +29,12 @@ package tests
 // 	defer mockPool.Close()
 
 // 	mockPool.ExpectExec(`CALL insert_category\(\$1, \$2\)`).
-// 		WithArgs("Electronics", pgxmock.AnyArg()). 
+// 		WithArgs("Electronics", pgxmock.AnyArg()).
 // 		WillReturnResult(pgxmock.NewResult("CALL", 1))
 
 // 	payload := map[string]interface{}{
 // 		"category_name": "Electronics",
-// 		"super_cat_id":  nil, 
+// 		"super_cat_id":  nil,
 // 	}
 // 	body, _ := json.Marshal(payload)
 // 	req := httptest.NewRequest(http.MethodPost, "/category", bytes.NewBuffer(body))
@@ -50,13 +50,13 @@ package tests
 // 	defer mockPool.Close()
 
 // 	mockPool.ExpectExec(`CALL update_category\(\$1, \$2, \$3\)`).
-// 		WithArgs(1, "Updated Category", pgxmock.AnyArg()). 
+// 		WithArgs(1, "Updated Category", pgxmock.AnyArg()).
 // 		WillReturnResult(pgxmock.NewResult("CALL", 1))
 
 // 	payload := map[string]interface{}{
 // 		"category_id":   1,
 // 		"category_name": "Updated Category",
-// 		"super_cat_id":  nil, 
+// 		"super_cat_id":  nil,
 // 	}
 // 	body, _ := json.Marshal(payload)
 // 	req := httptest.NewRequest(http.MethodPut, "/category", bytes.NewBuffer(body))
@@ -64,7 +64,6 @@ package tests
 // 	resp, _ := app.Test(req)
 // 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 // }
-
 
 // func TestDeleteCategory(t *testing.T) {
 // 	app := fiber.New()
