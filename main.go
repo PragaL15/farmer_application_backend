@@ -1,4 +1,5 @@
 package main
+
 // @title           Go New Backend API
 // @version         1.0
 // @description     This is the API documentation for Go Fiber App.
@@ -15,12 +16,13 @@ import (
 	"syscall"
 	"time"
 
+	_ "farmerapp/docs"
+	"farmerapp/go_backend/db"
+	"farmerapp/routes"
+	"farmerapp/utils"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
-	_ "github.com/PragaL15/go_newBackend/docs"
-	"github.com/PragaL15/go_newBackend/go_backend/db"
-	"github.com/PragaL15/go_newBackend/routes"
-	"github.com/PragaL15/go_newBackend/utils"
 	"github.com/joho/godotenv"
 )
 
