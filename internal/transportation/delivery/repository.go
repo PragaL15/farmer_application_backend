@@ -7,13 +7,13 @@ import (
 )
 
 type DeliveryRepositoryInterface interface {
-	GetDeliveries(deliveryType string, transporterId int) ([]Delivery, error)
+	GetDeliveries(deliveryType string, transporterId string) ([]Delivery, error)
 }
 
 type DeliveryRepository struct {
 }
 
-func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transporterId int) ([]Delivery, error) {
+func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transporterId string) ([]Delivery, error) {
 	// THOUGHT:- deliveryType can be an enum
 	// Returning orders related to a certain user(transporter)
 	var query string

@@ -24,8 +24,7 @@ func AuthMiddleware() fiber.Handler {
 			})
 		}
 
-		// DISCUSSION :->  save user to context for use in handler
-		c.Locals("user", claims["user"])
+		c.Locals("user_id", claims["user_id"])
 
 		return c.Next()
 	}
