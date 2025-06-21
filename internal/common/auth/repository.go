@@ -22,7 +22,7 @@ type AuthRepository struct {
 
 func (repository *AuthRepository) RegisterUserUsingPhone(phoneNumber string, password string) error {
 
-	//  Checks for user exitence and creates a new user if not exists
+	//  Checks for user existence and creates a new user if not exists
 	// TODO: Check if fields like mobile number, email, etc. are unique
 	var query string
 	query = `INSERT INTO admin.user_table (mobile_num,password) VALUES ($1,$2)`

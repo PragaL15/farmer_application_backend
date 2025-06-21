@@ -7,6 +7,7 @@ import (
 	Masterhandlers "farmerapp/handlers/master"
 	RestockingStock "farmerapp/handlers/restocking"
 	TrendHandlers "farmerapp/handlers/trendHandlers"
+	"farmerapp/internal/common"
 	"farmerapp/internal/transportation"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,7 @@ import (
 func RegisterRoutes(app *fiber.App) {
 
 	transportation.RegisterRoutes(app.Group("/transportation"))
+	common.RegisterRoutes(app.Group(""))
 
 	app.Get("/swagger/*", swagger.HandlerDefault)
 	// Registering routes for GET methods
