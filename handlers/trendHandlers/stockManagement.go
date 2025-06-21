@@ -72,6 +72,38 @@ func GetCurrentStockByMandiHandler(c *fiber.Ctx) error {
 	}
 	return c.JSON(results)
 }
+
+func GetCurrentStockByProductHandler(c *fiber.Ctx) error {
+	productID := c.Params("product_id")
+	query := `SELECT * FROM business_schema.get_current_stock_by_product($1);`
+
+	rows, err := db.Pool.Query(context.Background(), query, productID)
+	if err != nil {
+		log.Println("Error fetching stock by product:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":  "Database query failed",
+			"detail": err.Error(),
+		})
+	}
+	defer rows.Close()
+
+	var results []CurrentStockData
+	for rows.Next() {
+		var data CurrentStockData
+		if err := rows.Scan(&data.ProductID, &data.ProductName, &data.MandiID, &data.MandiName, &data.CurrentStock); err != nil {
+			log.Println("Error scanning row:", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":  "Failed to scan row",
+				"detail": err.Error(),
+			})
+		}
+		results = append(results, data)
+	}
+
+	return c.JSON(results)
+}
+
+
 func GetLeastStockedProductsHandler(c *fiber.Ctx) error {
 	query := `SELECT * FROM business_schema.get_least_stocked_products();`
 	rows, err := db.Pool.Query(context.Background(), query)
