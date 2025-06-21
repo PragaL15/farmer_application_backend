@@ -51,9 +51,9 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func GenerateAccessToken(user string) (string, error) {
+func GenerateAccessToken(userId string) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": user,
+		"user_id": userId,
 		"exp":     time.Now().Add(5 * time.Minute).Unix(),
 		"iat":     time.Now().Unix(),
 	}

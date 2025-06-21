@@ -120,12 +120,12 @@ func (handler *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid refresh token"})
 	}
 
-	user, err := handler.service.ValidateRefreshToken(input.RefreshToken)
+	userId, err := handler.service.ValidateRefreshToken(input.RefreshToken)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired refresh token"})
 	}
 
-	accessToken, err := utils.GenerateAccessToken(user)
+	accessToken, err := utils.GenerateAccessToken(userId)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate access token"})
 	}

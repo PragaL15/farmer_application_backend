@@ -68,7 +68,7 @@ func (service *AuthService) LoginUser(identifier string, identifierType Identifi
 	}
 
 	// Generate JWT
-	accessToken, err := utils.GenerateAccessToken(user.PhoneNumber)
+	accessToken, err := utils.GenerateAccessToken(user.UserID)
 	if err != nil {
 		return "", "", fmt.Errorf("could not generate token: %w", err)
 	}
@@ -78,10 +78,12 @@ func (service *AuthService) LoginUser(identifier string, identifierType Identifi
 		return "", "", err
 	}
 
-	err = service.repository.StoreRefreshToken(user.PhoneNumber, refreshToken)
+	err = service.repository.StoreRefreshToken(user.UserID, refreshToken)
 	if err != nil {
 		return "", "", err
 	}
+
+	// return accessToken, refreshToken, nil
 
 	return accessToken, refreshToken, nil
 }
