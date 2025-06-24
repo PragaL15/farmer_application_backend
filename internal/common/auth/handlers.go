@@ -21,6 +21,13 @@ func (handler *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 	var userInput struct {
 		Identifier string `json:"identifier"`
 		Password   string `json:"password"`
+		Name       string `json:"name"`
+		Address    string `json:"address"`
+		Pincode    string `json:"pincode"`
+		Location   int    `json:"location"`
+		State      int    `json:"state"`
+		RoleID     int    `json:"role_id"`
+		Active     int    `json:"active_status"`
 	}
 
 	if err := c.BodyParser(&userInput); err != nil {
@@ -51,7 +58,8 @@ func (handler *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 		identifierType = IdentifierEmail
 	}
 
-	err := handler.service.RegisterUser(identifier, identifierType, userInput.Password)
+	err := handler.service.RegisterUser(identifier, identifierType, userInput.Password, userInput.Name, userInput.Address,
+		userInput.Pincode, userInput.Location, userInput.State, userInput.RoleID, userInput.Active)
 	if err != nil {
 		log.Println("Handler error:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -97,7 +105,7 @@ func (handler *AuthHandler) LoginUser(c *fiber.Ctx) error {
 		identifierType = IdentifierEmail
 	}
 
-	accessToken, refreshToken, err := handler.service.LoginUser(identifier, identifierType, userInput.Password)
+	roleID, accessToken, refreshToken, err := handler.service.LoginUser(identifier, identifierType, userInput.Password)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Login failed: " + err.Error(),
@@ -106,6 +114,7 @@ func (handler *AuthHandler) LoginUser(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":       "User logged in successfully",
+		"role_id":       roleID,
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 	})
