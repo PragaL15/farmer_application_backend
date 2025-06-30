@@ -1,88 +1,89 @@
 package main
 
-// @title           Go New Backend API
-// @version         1.0
-// @description     This is the API documentation for Go Fiber App.
-// @termsOfService  http://yourterms.com
-// @contact.name    Pragalya Kanakaraj
-// @contact.email   your-email@example.com
-// @host            localhost:3000
-// @BasePath        /
-// @schemes         http
-
 import (
-	"farmerapp/go_backend/db"
-	"farmerapp/routes"
-	"farmerapp/utils"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+        "os"
+        "os/signal"
+        "path/filepath"
+        "syscall"
+        "time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/swagger"
-	"github.com/joho/godotenv"
+        "github.com/gofiber/fiber/v2"
+        "github.com/gofiber/fiber/v2/middleware/cors"
+        "github.com/gofiber/swagger"
+        "github.com/joho/godotenv"
+
+        _ "farmerapp/docs"
+        "farmerapp/go_backend/db"
+        "farmerapp/routes"
+        "farmerapp/utils"
 )
 
 func main() {
-	_ = godotenv.Load()
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
+        _ = godotenv.Load()
 
-	logFile := utils.InitLogger()
-	defer logFile.Close()
-	utils.Logger.Println("Server is starting...")
+        port := os.Getenv("PORT")
+        if port == "" {
+                port = "3000"
+        }
 
-	db.ConnectDB()
-	defer db.CloseDB()
+        logFile := utils.InitLogger()
+        defer logFile.Close()
+        utils.Logger.Println("Server is starting...")
 
-	app := fiber.New()
+        db.ConnectDB()
+        defer db.CloseDB()
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:8100, http://localhost:5500",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-	}))
+        app := fiber.New()
 
-	// Request logger middleware
-	app.Use(func(c *fiber.Ctx) error {
-		start := time.Now()
-		err := c.Next()
-		utils.Logger.Printf(
-			"METHOD=%s PATH=%s STATUS=%d DURATION=%v\n",
-			c.Method(), c.Path(), c.Response().StatusCode(), time.Since(start),
-		)
-		return err
-	})
+        // Enable CORS
+        app.Use(cors.New(cors.Config{
+                AllowOrigins: "http://localhost:3000, http://api.ekadyu.org:8081, http://localhost:8100, http://localhost:5500",
+                AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+                AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+        }))
 
-	// Swagger documentation route
-	app.Get("/swagger/*", swagger.HandlerDefault)
+        // Serve static files
+        wd, _ := os.Getwd()
+        staticPath := filepath.Join(wd, "farmer_application_backend-master", "static")
+        app.Static("/", staticPath)
 
-	// Sample GET endpoint to test CORS
-	app.Get("/ping", func(c *fiber.Ctx) error {
-		return c.SendString("pong")
-	})
+ // Serve index.html at root
+        app.Get("/", func(c *fiber.Ctx) error {
+                return c.SendFile(filepath.Join(staticPath, "index.html"))
+        })
 
-	// Register your API routes
-	routes.RegisterRoutes(app)
+        // Request logging
+        app.Use(func(c *fiber.Ctx) error {
+                start := time.Now()
+                err := c.Next()
+                utils.Logger.Printf(
+                        "METHOD=%s PATH=%s STATUS=%d DURATION=%v\n",
+                        c.Method(), c.Path(), c.Response().StatusCode(), time.Since(start),
+                )
+                return err
+        })
 
-	// Graceful shutdown
-	go func() {
-		utils.Logger.Printf("Server is running on port %s", port)
-		if err := app.Listen(":" + port); err != nil {
-			utils.Logger.Fatalf("Server error: %v", err)
-		}
-	}()
+        // Swagger docs
+        app.Get("/swagger/*", swagger.HandlerDefault)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+        // Register routes
+        routes.RegisterRoutes(app)
 
-	utils.Logger.Println("Shutting down server gracefully...")
-	if err := app.Shutdown(); err != nil {
-		utils.Logger.Fatalf("Server forced shutdown: %v", err)
-	}
-	utils.Logger.Println("Server stopped cleanly")
+        // Graceful shutdown
+        go func() {
+                utils.Logger.Printf("Server is running on port %s", port)
+                if err := app.Listen(":" + port); err != nil {
+                        utils.Logger.Fatalf("Server error: %v", err)
+                }
+        }()
+
+        quit := make(chan os.Signal, 1)
+        signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+        <-quit
+
+        utils.Logger.Println("Shutting down server gracefully...")
+        if err := app.Shutdown(); err != nil {
+                utils.Logger.Fatalf("Server forced shutdown: %v", err)
+        }
+        utils.Logger.Println("Server stopped cleanly")
 }
