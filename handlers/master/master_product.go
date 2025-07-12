@@ -7,6 +7,7 @@ import (
 	"farmerapp/go_backend/db"
 
 	"github.com/gofiber/fiber/v2"
+	//"github.com/google/uuid"
 	"github.com/guregu/null/v5"
 )
 
@@ -130,6 +131,7 @@ func GetProductsByCategoryID(c *fiber.Ctx) error {
 }
 
 func GetProductByID(c *fiber.Ctx) error {
+
 	productID, err := strconv.ParseInt(c.Params("product_id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid product ID format"})

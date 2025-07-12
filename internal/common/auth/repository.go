@@ -9,8 +9,8 @@ import (
 )
 
 type AuthRepositoryInterface interface {
-	RegisterUserUsingPhone(phoneNumber string, password string) error
-	RegisterUserUsingEmail(email string, password string) error
+	RegisterUserUsingPhone(phoneNumber string, password string, name string, address string, pincode string, location int, state int, roleID int, active int) error
+	RegisterUserUsingEmail(email string, password string, name string, address string, pincode string, location int, state int, roleID int, active int) error
 	FindUserUsingPhone(phoneNumber string) (User, error)
 	FindUserUsingEmail(email string) (User, error)
 	StoreRefreshToken(user string, token string) error
@@ -20,14 +20,14 @@ type AuthRepositoryInterface interface {
 type AuthRepository struct {
 }
 
-func (repository *AuthRepository) RegisterUserUsingPhone(phoneNumber string, password string) error {
+func (repository *AuthRepository) RegisterUserUsingPhone(phoneNumber string, password string, name string, address string, pincode string, location int, state int, roleID int, active int) error {
 
 	//  Checks for user existence and creates a new user if not exists
 	// TODO: Check if fields like mobile number, email, etc. are unique
-	var query string
-	query = `INSERT INTO admin_schema.user_table (mobile_num,password) VALUES ($1,$2)`
+	var query string = ""
+	query = `INSERT INTO admin_schema.user_table (mobile_num,password,name,address,pincode,location,state,role_id,active_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
 
-	_, err := db.Pool.Exec(context.Background(), query, phoneNumber, password)
+	_, err := db.Pool.Exec(context.Background(), query, phoneNumber, password, name, address, pincode, location, state, roleID, active)
 
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok {
@@ -40,14 +40,14 @@ func (repository *AuthRepository) RegisterUserUsingPhone(phoneNumber string, pas
 	return nil
 }
 
-func (repository *AuthRepository) RegisterUserUsingEmail(email string, password string) error {
+func (repository *AuthRepository) RegisterUserUsingEmail(email string, password string, name string, address string, pincode string, location int, state int, roleID int, active int) error {
 
 	//  Checks for user exitence and creates a new user if not exists
 	// TODO: Check if fields like mobile number, email, etc. are unique
 	var query string
-	query = `INSERT INTO admin_schema.user_table (email,password) VALUES ($1,$2)`
+	query = `INSERT INTO admin_schema.user_table (email,password,name,address,pincode,location,state,role_id,active_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
 
-	_, err := db.Pool.Exec(context.Background(), query, email, password)
+	_, err := db.Pool.Exec(context.Background(), query, email, password, name, address, pincode, location, state, roleID, active)
 
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok {
@@ -66,14 +66,14 @@ func (repository *AuthRepository) FindUserUsingPhone(phoneNumber string) (User, 
 	var query string
 	query = `
 		SELECT
-			user_id, password
+			user_id,role_id, password
 		FROM
 			admin_schema.user_table
 		WHERE
 			mobile_num = $1
 		`
 	err := db.Pool.QueryRow(context.Background(), query, phoneNumber).
-		Scan(&user.UserID, &user.Password)
+		Scan(&user.UserID, &user.RoleID, &user.Password)
 	if err != nil {
 		return user, fmt.Errorf("Query failed: %w", err)
 	}
@@ -84,17 +84,17 @@ func (repository *AuthRepository) FindUserUsingPhone(phoneNumber string) (User, 
 
 func (repository *AuthRepository) FindUserUsingEmail(email string) (User, error) {
 	var user User
-	var query string
-	query = `
+
+	query := `
 		SELECT
-			user_id, password
+			cast(user_id as TEXT),role_id , password
 		FROM
 			admin_schema.user_table
 		WHERE
 			email = $1
 		`
 	err := db.Pool.QueryRow(context.Background(), query, email).
-		Scan(&user.UserID, &user.Password)
+		Scan(&user.UserID, &user.RoleID, &user.Password)
 	if err != nil {
 		return user, fmt.Errorf("Query failed: %w", err)
 	}

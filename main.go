@@ -22,6 +22,7 @@ import (
 	"farmerapp/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
 	"github.com/joho/godotenv"
 )
@@ -47,6 +48,13 @@ func main() {
 	defer db.CloseDB()
 
 	app := fiber.New()
+	app.Use(cors.New())
+
+	/*
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"*"},
+			AllowCredentials: true,
+		})) */
 
 	// Request logger middleware
 	app.Use(func(c *fiber.Ctx) error {

@@ -89,7 +89,7 @@ func ConnectDB() {
 	LoadEnv()
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgresql://postgres:pragalya123@localhost:5432/broker_retailer"
+		dbURL = "postgresql://postgres:Alekya@54321@localhost:5433/brokerdb"
 		log.Println("Warning: Using default database connection string.")
 	}
 
@@ -101,10 +101,11 @@ func ConnectDB() {
 	pool, err := pgxpool.ConnectConfig(context.Background(), config)
 	if err != nil {
 		log.Fatalf("Failed to create connection pool: %v", err)
+		return
 	}
 
 	Pool = &PgxDB{Pool: pool}
-
+	// code has to be modified to handle db related issues
 	if err := Pool.Ping(context.Background()); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}

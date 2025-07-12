@@ -10,10 +10,17 @@ const (
 )
 
 type User struct {
-	UserID      string `json:"user_id"` // UUID
-	Email       string `json:"email"`
-	PhoneNumber string `json:"mobile_num"`
-	Password    string `json:"password"`
+	UserID    string `json:"user_id"`       // UUID
+	Name      string `json:"name"`          // Name of user
+	MobileNum string `json:"mobile_num"`    // Phone number
+	Email     string `json:"email"`         // Email address
+	Address   string `json:"address"`       // Street address
+	Pincode   string `json:"pincode"`       // Postal code
+	Location  int    `json:"location"`      // City or locality
+	State     int    `json:"state"`         // State
+	RoleID    int    `json:"role_id"`       // Role: admin/retailer/etc.
+	Password  string `json:"password"`      // Hashed password
+	IsActive  int    `json:"active_status"` // Active status
 }
 
 type RefreshToken struct {
