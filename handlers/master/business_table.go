@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// business table modified
 type Business struct {
 	BID              int64  `json:"bid"`
 	BRegistrationNum string `json:"b_registration_num"`
