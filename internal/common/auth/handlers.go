@@ -105,7 +105,11 @@ func (handler *AuthHandler) LoginUser(c *fiber.Ctx) error {
 		identifierType = IdentifierEmail
 	}
 
+<<<<<<< HEAD
 	UserID, roleID, accessToken, refreshToken, err := handler.service.LoginUser(identifier, identifierType, userInput.Password)
+=======
+	roleID, accessToken, refreshToken, err := handler.service.LoginUser(identifier, identifierType, userInput.Password)
+>>>>>>> 89c8837d6c691851780de9cd6d15506fa99fd796
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Login failed: " + err.Error(),

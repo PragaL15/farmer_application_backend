@@ -52,7 +52,11 @@ func (service *DeliveryService) GetDeliveryHistory(transporterId string) ([]Deli
 	if err != nil {
 		return nil, fmt.Errorf("service failed to get delivery history: %w", err)
 	}
-	return deliveries, nil
+	if deliveries != nil {
+		return deliveries, nil
+
+	}
+	return []Delivery{}, nil
 }
 
 func (service *DeliveryService) ConfirmDelivery(otp int) error {

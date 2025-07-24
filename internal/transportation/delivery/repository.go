@@ -25,7 +25,10 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transpo
 			SELECT
     				A.job_id,
     				B.pickup_address,
-				B.drop_address
+				B.drop_address,
+				B.order_id,
+				B.weight_kg,
+				B.base_price
 			FROM
     				transport_schema.trip_assignments A
 			JOIN
@@ -43,7 +46,11 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transpo
 			SELECT
     				A.job_id,
     				B.pickup_address,
-				B.drop_address
+				B.drop_address,
+				B.order_id,
+				B.weight_kg,
+				B.base_price
+
 			FROM
     				transport_schema.trip_assignments A
 			JOIN
@@ -61,7 +68,10 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transpo
 			SELECT
     				A.job_id,
     				B.pickup_address,
-				B.drop_address
+				B.drop_address,
+				B.order_id,
+				B.weight_kg,
+				B.base_price
 			FROM
     				transport_schema.trip_assignments A
 			JOIN
@@ -79,7 +89,10 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transpo
 			SELECT
     				A.job_id,
     				B.pickup_address,
-				B.drop_address
+				B.drop_address,
+				B.order_id,
+				B.weight_kg,
+				B.base_price
 			FROM
     				transport_schema.trip_assignments A
 			JOIN
@@ -101,7 +114,7 @@ func (repository *DeliveryRepository) GetDeliveries(deliveryType string, transpo
 	for rows.Next() {
 		var d Delivery
 		err := rows.Scan(
-			&d.JobID, &d.PickupAddress, &d.DropAddress,
+			&d.JobID, &d.PickupAddress, &d.DropAddress, &d.OrderID, &d.WeightKg, &d.BasePrice,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("Row scan failed: %w", err)

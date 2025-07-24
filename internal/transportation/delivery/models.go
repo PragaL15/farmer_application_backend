@@ -13,4 +13,7 @@ type Delivery struct {
 	// DeliveryStatus    string     `json:"delivery_status"`
 	PickupAddress string `json:"pickup_address"`
 	DropAddress   string `json:"drop_address"`
+	OrderID      int    `json:"order_id"`
+	WeightKg     float64 `json:"weight_kg"`
+	BasePrice    float64 `json:"base_price"`
 }

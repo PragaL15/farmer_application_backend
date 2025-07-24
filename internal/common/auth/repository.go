@@ -24,7 +24,11 @@ func (repository *AuthRepository) RegisterUserUsingPhone(phoneNumber string, pas
 
 	//  Checks for user existence and creates a new user if not exists
 	// TODO: Check if fields like mobile number, email, etc. are unique
+<<<<<<< HEAD
 	var query string = ""
+=======
+	var query string
+>>>>>>> 89c8837d6c691851780de9cd6d15506fa99fd796
 	query = `INSERT INTO admin_schema.user_table (mobile_num,password,name,address,pincode,location,state,role_id,active_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
 
 	_, err := db.Pool.Exec(context.Background(), query, phoneNumber, password, name, address, pincode, location, state, roleID, active)
@@ -87,7 +91,11 @@ func (repository *AuthRepository) FindUserUsingEmail(email string) (User, error)
 
 	query := `
 		SELECT
+<<<<<<< HEAD
 			user_id ,role_id , password
+=======
+			user_id,role_id, password
+>>>>>>> 89c8837d6c691851780de9cd6d15506fa99fd796
 		FROM
 			admin_schema.user_table
 		WHERE
