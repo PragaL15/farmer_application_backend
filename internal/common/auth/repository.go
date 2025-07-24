@@ -13,8 +13,8 @@ type AuthRepositoryInterface interface {
 	RegisterUserUsingEmail(email string, password string, name string, address string, pincode string, location int, state int, roleID int, active int) error
 	FindUserUsingPhone(phoneNumber string) (User, error)
 	FindUserUsingEmail(email string) (User, error)
-	StoreRefreshToken(user string, token string) error
-	GetUserByRefreshToken(token string) (string, error)
+	StoreRefreshToken(user int, token string) error
+	GetUserByRefreshToken(token string) (int, error)
 }
 
 type AuthRepository struct {
@@ -87,7 +87,7 @@ func (repository *AuthRepository) FindUserUsingEmail(email string) (User, error)
 
 	query := `
 		SELECT
-			cast(user_id as TEXT),role_id , password
+			user_id ,role_id , password
 		FROM
 			admin_schema.user_table
 		WHERE
@@ -103,14 +103,14 @@ func (repository *AuthRepository) FindUserUsingEmail(email string) (User, error)
 
 }
 
-func (repository *AuthRepository) StoreRefreshToken(userId string, token string) error {
+func (repository *AuthRepository) StoreRefreshToken(userId int, token string) error {
 	query := `INSERT INTO admin_schema.refresh_tokens (user_id, token,issued_at, expires_at) VALUES ($1, $2,NOW(),NOW() + interval '7 days')`
 	_, err := db.Pool.Exec(context.Background(), query, userId, token)
 	return err
 }
 
-func (repository *AuthRepository) GetUserByRefreshToken(token string) (string, error) {
-	var userId string
+func (repository *AuthRepository) GetUserByRefreshToken(token string) (int, error) {
+	var userId int
 	query := `SELECT user_id FROM admin_schema.refresh_tokens WHERE token = $1 AND expires_at > NOW()`
 	err := db.Pool.QueryRow(context.Background(), query, token).Scan(&userId)
 	return userId, err

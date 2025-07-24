@@ -9,8 +9,8 @@ import (
 
 type AuthServiceInterface interface {
 	RegisterUser(identifier string, identifierType IdentifierType, password string, name string, address string, pincode string, location int, state int, roleID int, active int) error
-	LoginUser(identifier string, identifierType IdentifierType, password string) (int, string, string, error)
-	ValidateRefreshToken(token string) (string, error)
+	LoginUser(identifier string, identifierType IdentifierType, password string) (int, int, string, string, error)
+	ValidateRefreshToken(token string) (int, error)
 }
 
 type AuthService struct {
@@ -47,7 +47,7 @@ func (service *AuthService) RegisterUser(identifier string, identifierType Ident
 
 }
 
-func (service *AuthService) LoginUser(identifier string, identifierType IdentifierType, password string) (int, string, string, error) {
+func (service *AuthService) LoginUser(identifier string, identifierType IdentifierType, password string) (int, int, string, string, error) {
 	var user User
 	var err error
 
@@ -57,39 +57,39 @@ func (service *AuthService) LoginUser(identifier string, identifierType Identifi
 	case IdentifierPhone:
 		user, err = service.repository.FindUserUsingPhone(identifier)
 	default:
-		return -1, "", "", fmt.Errorf("invalid identifier type")
+		return -1, -1, "", "", fmt.Errorf("invalid identifier type")
 	}
-    
+
 	if err != nil {
-		return -1, "", "", err
+		return -1, -1, "", "", err
 	}
 
 	// Check hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return -1, "", "", fmt.Errorf("invalid credentials")
+		return -1, -1, "", "", fmt.Errorf("invalid credentials")
 	}
 
 	// Generate JWT
 	accessToken, err := utils.GenerateAccessToken(user.UserID)
 	if err != nil {
-		return -1, "", "", fmt.Errorf("could not generate token: %w", err)
+		return -1, -1, "", "", fmt.Errorf("could not generate token: %w", err)
 	}
 
 	refreshToken, err := utils.GenerateRefreshToken()
 	if err != nil {
-		return -1, "", "", err
+		return -1, -1, "", "", err
 	}
 
 	err = service.repository.StoreRefreshToken(user.UserID, refreshToken)
 	if err != nil {
-		return -1, "", "", err
+		return -1, -1, "", "", err
 	}
 
 	// return accessToken, refreshToken, nil
 
-	return user.RoleID, accessToken, refreshToken, nil
+	return user.UserID, user.RoleID, accessToken, refreshToken, nil
 }
 
-func (service *AuthService) ValidateRefreshToken(token string) (string, error) {
+func (service *AuthService) ValidateRefreshToken(token string) (int, error) {
 	return service.repository.GetUserByRefreshToken(token)
 }

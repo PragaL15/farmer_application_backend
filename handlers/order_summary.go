@@ -19,7 +19,8 @@ type WholesellerStockDetail struct {
 }
 
 func GetAllWholesellerStockDetailsHandler(c *fiber.Ctx) error {
-	query := "SELECT * FROM business_schema.get_wholeseller_stock_details();"
+	userId := c.Params("user_Id")
+	query := "SELECT * FROM business_schema.get_wholeseller_stock_details(" + userId + ")"
 
 	rows, err := db.Pool.Query(context.Background(), query)
 	if err != nil {
@@ -31,7 +32,7 @@ func GetAllWholesellerStockDetailsHandler(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	var stockDetails []WholesellerStockDetail
+	stockDetails := []WholesellerStockDetail{}
 	for rows.Next() {
 		var sd WholesellerStockDetail
 		if err := rows.Scan(

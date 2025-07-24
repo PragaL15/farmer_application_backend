@@ -97,7 +97,7 @@ func InsertBusinessBranch(c *fiber.Ctx) error {
 	}
 
 	var newID int
-	err := db.Pool.QueryRow(context.Background(), "SELECT admin_schema.insert_business_branch($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING b_branch_id",
+	err := db.Pool.QueryRow(context.Background(), "SELECT admin_schema.create_business_branch($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING b_branch_id",
 		req.BID, req.ShopName, req.TypeID, req.Location, req.State, req.Address, req.Email, req.Number, req.GSTNum, req.PANNum, req.PrivilegeUser, req.EstablishedYear, req.ActiveStatus).Scan(&newID)
 
 	if err != nil {

@@ -10,7 +10,7 @@ const (
 )
 
 type User struct {
-	UserID    string `json:"user_id"`       // UUID
+	UserID    int `json:"user_id"`       // UUID
 	Name      string `json:"name"`          // Name of user
 	MobileNum string `json:"mobile_num"`    // Phone number
 	Email     string `json:"email"`         // Email address

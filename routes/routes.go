@@ -63,10 +63,11 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/getAllBulkOrderDetails", Marketoppurtinities.GetAllBulkOrderDetailsHandler)
 	app.Get("/getTopRetailerDetails", Marketoppurtinities.GetTopRetailersHandler)
 	app.Get("/getReStockProductsHandler", RestockingStock.GetRestockingProductsHandler)
-	app.Get("/getOrderSummary", handlers.GetAllWholesellerStockDetailsHandler)
+	app.Get("/getOrderSummary/:user_id", handlers.GetAllWholesellerStockDetailsHandler)
 	app.Get("/getCompletedOrderSummary", handlers.GetAllCompletedOrderItemHandler)
 
 	app.Get("/getWholesellerPriceComparison", TrendHandlers.GetWholesellerPriceComparisonHandler)
+	app.Get("/getAllBusinessesOfWholesaler/:user_id", handlers.GetAllBusinessesOfWholeSaler)
 	//http://localhost:3000/getWholesellerPriceComparison?product_ids=2,3
 
 	// Registering routes for GET methods with ID
@@ -110,6 +111,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Post("/InserWholesellerOffers", handlers.CreateWholesellerOfferHandler)
 	app.Post("/PostCategoryRegional", Masterhandlers.InsertProductCategoryRegional)
 	app.Post("/PostProductRegional", Masterhandlers.InsertProductRegionalName)
+	app.Post("/AddNewBusiness", Masterhandlers.AddNewBusiness)
 
 	// PUT Routes
 	app.Put("/user-bank-details", handlers.UpdateUserBankDetail)

@@ -17,6 +17,16 @@ type Business struct {
 	BCategoryID      int64  `json:"b_category_id"`
 	BTypeID          int64  `json:"b_type_id"`
 	IsActive         bool   `json:"is_active"`
+	StateID          int    `json:"state_id"`
+	LocationID       int    `json:"location_id"`
+	Address          string `json:"address"`
+	MobileNumber     string `json:"mobile_number"`
+	Email            string `json:"email"`
+	EstablishedYear  string `json:"established_year"`
+	User_ID          int    `json:"user_id"`
+	GSTNumber        string `json:"gst_number"`
+	PANNumber        string `json:"pan_number"`
+	PrivilegedUser   int    `json:"privileged_user"`
 }
 
 // GetAllBusinesses godoc
@@ -91,6 +101,35 @@ func GetBusinessByID(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /business [post]
+
+func AddNewBusiness(c *fiber.Ctx) error {
+	var req Business
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request format",
+		})
+	}
+
+	var newID int64
+	err := db.Pool.QueryRow(context.Background(),
+		`SELECT admin_schema.create_new_business($1, $2, $3, $4, $5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+		req.BRegistrationNum, req.BOwnerName, req.BCategoryID, req.BTypeID, req.LocationID,
+		req.StateID, req.Address, req.Email, req.MobileNumber, req.GSTNumber, req.PANNumber,
+		req.PrivilegedUser, req.EstablishedYear).Scan(&newID)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Failed to insert business",
+			"details": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Business inserted successfully",
+		"bid":     newID,
+	})
+}
+
 func InsertBusiness(c *fiber.Ctx) error {
 	var req Business
 	if err := c.BodyParser(&req); err != nil {
@@ -138,8 +177,8 @@ func UpdateBusiness(c *fiber.Ctx) error {
 	}
 
 	_, err := db.Pool.Exec(context.Background(), `
-		SELECT admin_schema.update_business($1, $2, $3, $4, $5, $6)
-	`, req.BID, req.BRegistrationNum, req.BOwnerName, req.BCategoryID, req.BTypeID, req.IsActive)
+		SELECT admin_schema.update_business($1, $2, $3, $4,$5)
+	`, req.BID, req.Email, req.MobileNumber, req.Address, req.IsActive)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
